@@ -20,7 +20,7 @@ const rays = {
     "k": [N, S, E, W, N + W, N + E, S + W, S + E],
     "K": [N, S, E, W, N + W, N + E, S + W, S + E],
 }
-an
+
 const sliders = {
     "n": false,
     "N": false,
@@ -52,16 +52,131 @@ pieceValues = {
     undefined: 0,
 }
 
-psqtPawn = [
-
-]
-psqtKnight = []
-psqtBishop = []
-psqtRook = []
-psqtQueen = []
-psqtKing = []
-
-
+psqt = {
+    "P": [
+        106,106,106,106,106,106,106,106,  0,0,0,0,0,0,0,0,
+        283,263,256,235,240,238,273,263,  0,0,0,0,0,0,0,0,
+        177,186,175,154,164,166,181,174,  0,0,0,0,0,0,0,0,
+        125,121,107,111,113,109,120,111,  0,0,0,0,0,0,0,0,
+        95,107,96,112,105,95,108,88,  0,0,0,0,0,0,0,0,
+        95,106,98,96,106,92,118,96,  0,0,0,0,0,0,0,0,
+        94,111,91,80,86,111,122,94,  0,0,0,0,0,0,0,0,
+        106,106,106,106,106,106,106,106,  0,0,0,0,0,0,0,0,
+    ],
+    "p":[
+        -106,-106,-106,-106,-106,-106,-106,-106,  0,0,0,0,0,0,0,0,
+        -94,-111,-91,-80,-86,-111,-122,-94,  0,0,0,0,0,0,0,0,
+        -95,-106,-98,-96,-106,-92,-118,-96,  0,0,0,0,0,0,0,0,
+        -95,-107,-96,-112,-105,-95,-108,-88,  0,0,0,0,0,0,0,0,
+        -125,-121,-107,-111,-113,-109,-120,-111,  0,0,0,0,0,0,0,0,
+        -177,-186,-175,-154,-164,-166,-181,-174,  0,0,0,0,0,0,0,0,
+        -283,-263,-256,-235,-240,-238,-273,-263,  0,0,0,0,0,0,0,0,
+        -106,-106,-106,-106,-106,-106,-106,-106,  0,0,0,0,0,0,0,0,
+    ],
+    "N": [
+        217,248,336,318,345,284,269,253,  0,0,0,0,0,0,0,0,
+        317,335,397,355,385,387,344,319,  0,0,0,0,0,0,0,0,
+        342,361,391,410,410,413,380,373,  0,0,0,0,0,0,0,0,
+        353,376,381,407,386,392,357,364,  0,0,0,0,0,0,0,0,
+        347,360,378,375,388,378,366,337,  0,0,0,0,0,0,0,0,
+        341,352,367,374,383,364,368,331,  0,0,0,0,0,0,0,0,
+        318,338,337,353,354,361,342,336,  0,0,0,0,0,0,0,0,
+        295,325,326,334,326,332,319,328,  0,0,0,0,0,0,0,0,
+    ],
+    "n": [
+        -295,-325,-326,-334,-326,-332,-319,-328,  0,0,0,0,0,0,0,0,
+        -318,-338,-337,-353,-354,-361,-342,-336,  0,0,0,0,0,0,0,0,
+        -341,-352,-367,-374,-383,-364,-368,-331,  0,0,0,0,0,0,0,0,
+        -347,-360,-378,-375,-388,-378,-366,-337,  0,0,0,0,0,0,0,0,
+        -353,-376,-381,-407,-386,-392,-357,-364,  0,0,0,0,0,0,0,0,
+        -342,-361,-391,-410,-410,-413,-380,-373,  0,0,0,0,0,0,0,0,
+        -317,-335,-397,-355,-385,-387,-344,-319,  0,0,0,0,0,0,0,0,
+        -217,-248,-336,-318,-345,-284,-269,-253,  0,0,0,0,0,0,0,0,
+    ],
+    "B": [
+        355,343,372,369,373,363,354,363,  0,0,0,0,0,0,0,0,
+        360,401,382,383,405,403,398,385,  0,0,0,0,0,0,0,0,
+        385,398,416,410,397,415,409,408,  0,0,0,0,0,0,0,0,
+        379,385,394,409,414,391,393,382,  0,0,0,0,0,0,0,0,
+        372,395,404,406,416,397,379,360,  0,0,0,0,0,0,0,0,
+        387,398,401,396,399,402,398,383,  0,0,0,0,0,0,0,0,
+        380,394,382,385,386,388,404,381,  0,0,0,0,0,0,0,0,
+        375,372,372,370,366,353,381,359,  0,0,0,0,0,0,0,0,
+    ],
+    "b": [
+        -375,-372,-372,-370,-366,-353,-381,-359,  0,0,0,0,0,0,0,0,
+        -380,-394,-382,-385,-386,-388,-404,-381,  0,0,0,0,0,0,0,0,
+        -387,-398,-401,-396,-399,-402,-398,-383,  0,0,0,0,0,0,0,0,
+        -372,-395,-404,-406,-416,-397,-379,-360,  0,0,0,0,0,0,0,0,
+        -379,-385,-394,-409,-414,-391,-393,-382,  0,0,0,0,0,0,0,0,
+        -385,-398,-416,-410,-397,-415,-409,-408,  0,0,0,0,0,0,0,0,
+        -360,-401,-382,-383,-405,-403,-398,-385,  0,0,0,0,0,0,0,0,
+        -355,-343,-372,-369,-373,-363,-354,-363,  0,0,0,0,0,0,0,0,
+    ],
+    "R": [
+        603,598,605,597,602,587,591,582,  0,0,0,0,0,0,0,0,
+        601,602,607,611,601,602,597,586,  0,0,0,0,0,0,0,0,
+        592,588,592,595,599,596,586,601,  0,0,0,0,0,0,0,0,
+        581,583,589,598,585,590,582,586,  0,0,0,0,0,0,0,0,
+        578,572,574,586,581,585,569,560,  0,0,0,0,0,0,0,0,
+        566,568,565,575,566,566,557,554,  0,0,0,0,0,0,0,0,
+        559,578,575,575,564,567,587,537,  0,0,0,0,0,0,0,0,
+        559,566,578,579,578,562,545,535,  0,0,0,0,0,0,0,0,
+    ],
+    "r": [
+        -559,-566,-578,-579,-578,-562,-545,-535,  0,0,0,0,0,0,0,0,
+        -559,-578,-575,-575,-564,-567,-587,-537,  0,0,0,0,0,0,0,0,
+        -566,-568,-565,-575,-566,-566,-557,-554,  0,0,0,0,0,0,0,0,
+        -578,-572,-574,-586,-581,-585,-569,-560,  0,0,0,0,0,0,0,0,
+        -581,-583,-589,-598,-585,-590,-582,-586,  0,0,0,0,0,0,0,0,
+        -592,-588,-592,-595,-599,-596,-586,-601,  0,0,0,0,0,0,0,0,
+        -601,-602,-607,-611,-601,-602,-597,-586,  0,0,0,0,0,0,0,0,
+        -603,-598,-605,-597,-602,-587,-591,-582,  0,0,0,0,0,0,0,0,
+    ],
+    "Q": [
+        1116,1123,1163,1171,1131,1163,1118,1131,  0,0,0,0,0,0,0,0,
+        1107,1105,1130,1135,1129,1209,1162,1177,  0,0,0,0,0,0,0,0,
+        1099,1116,1134,1164,1196,1170,1206,1183,  0,0,0,0,0,0,0,0,
+        1095,1111,1142,1139,1160,1151,1139,1151,  0,0,0,0,0,0,0,0,
+        1107,1125,1131,1131,1143,1135,1149,1110,  0,0,0,0,0,0,0,0,
+        1104,1121,1123,1127,1126,1128,1133,1116,  0,0,0,0,0,0,0,0,
+        1114,1120,1126,1122,1129,1137,1113,1118,  0,0,0,0,0,0,0,0,
+        1134,1106,1114,1120,1103,1088,1065,1094,  0,0,0,0,0,0,0,0,
+    ],
+    "q": [
+        -1134,-1106,-1114,-1120,-1103,-1088,-1065,-1094,  0,0,0,0,0,0,0,0,
+        -1114,-1120,-1126,-1122,-1129,-1137,-1113,-1118,  0,0,0,0,0,0,0,0,
+        -1104,-1121,-1123,-1127,-1126,-1128,-1133,-1116,  0,0,0,0,0,0,0,0,
+        -1107,-1125,-1131,-1131,-1143,-1135,-1149,-1110,  0,0,0,0,0,0,0,0,
+        -1095,-1111,-1142,-1139,-1160,-1151,-1139,-1151,  0,0,0,0,0,0,0,0,
+        -1099,-1116,-1134,-1164,-1196,-1170,-1206,-1183,  0,0,0,0,0,0,0,0,
+        -1107,-1105,-1130,-1135,-1129,-1209,-1162,-1177,  0,0,0,0,0,0,0,0,
+        -1116,-1123,-1163,-1171,-1131,-1163,-1118,-1131,  0,0,0,0,0,0,0,0,
+    ],
+    "K":[
+        -53,-5,-36,-4,-6,32,-21,-70,   0,0,0,0,0,0,0,0,
+        4,32,-6,5,18,20,12,-22,  0,0,0,0,0,0,0,0,
+        -20,6,26,25,24,35,41,5,  0,0,0,0,0,0,0,0,
+        -16,0,36,27,31,30,21,-6,  0,0,0,0,0,0,0,0,
+        -34,5,26,29,35,23,5,-22,  0,0,0,0,0,0,0,0,
+        -22,7,16,18,24,17,4,-26,  0,0,0,0,0,0,0,0,
+        -27,-10,0,-7,0,6,2,-26,  0,0,0,0,0,0,0,0,
+        -55,-6,-11,-27,-18,-30,-10,-36,   0,0,0,0,0,0,0,0,
+    ],
+    "k":[
+        55,6,11,27,18,30,10,36,   0,0,0,0,0,0,0,0,
+        27,10,0,7,0,-6,-2,26,   0,0,0,0,0,0,0,0,
+        22,-7,-16,-18,-24,-17,-4,26,   0,0,0,0,0,0,0,0,
+        34,-5,-26,-29,-35,-23,-5,22,   0,0,0,0,0,0,0,0,
+        16,0,-36,-27,-31,-30,-21,6,   0,0,0,0,0,0,0,0,
+        20,-6,-26,-25,-24,-35,-41,-5,   0,0,0,0,0,0,0,0,
+        -4,-32,6,-5,-18,-20,-12,22,   0,0,0,0,0,0,0,0,
+        53,5,36,4,6,-32,21,70,   0,0,0,0,0,0,0,0,
+    ],
+    " ": new Int32Array(128).fill(0),
+    "\n": new Int32Array(128).fill(0),
+    undefined: new Int32Array(128).fill(0),
+}
 
 function sqstr(n) {
     let rank = n >> 4
@@ -69,24 +184,6 @@ function sqstr(n) {
     return "abcdefgh"[file] + "87654321"[rank]
 }
 
-lookup = [
-    N + W, 0, 0, 0, 0, 0, 0, N, 0, 0, 0, 0, 0, 0, N + E, 0,
-    0, N + W, 0, 0, 0, 0, 0, N, 0, 0, 0, 0, 0, N + E, 0, 0,
-    0, 0, N + W, 0, 0, 0, 0, N, 0, 0, 0, 0, N + E, 0, 0, 0,
-    0, 0, 0, N + W, 0, 0, 0, N, 0, 0, 0, N + E, 0, 0, 0, 0,
-    0, 0, 0, 0, N + W, 0, 0, N, 0, 0, N + E, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, N + W, 0, N, 0, N + E, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, N + W, N, N + E, 0, 0, 0, 0, 0, 0, 0,
-    W, W, W, W, W, W, W, 0, E, E, E, E, E, E, E, 0,
-    0, 0, 0, 0, 0, 0, S + W, S, S + E, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, S + W, 0, S, 0, S + E, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, S + W, 0, 0, S, 0, 0, S + E, 0, 0, 0, 0, 0,
-    0, 0, 0, S + W, 0, 0, 0, S, 0, 0, 0, S + E, 0, 0, 0, 0,
-    0, 0, S + W, 0, 0, 0, 0, S, 0, 0, 0, 0, S + E, 0, 0, 0,
-    0, S + W, 0, 0, 0, 0, 0, S, 0, 0, 0, 0, 0, S + E, 0, 0,
-    S + W, 0, 0, 0, 0, 0, 0, S, 0, 0, 0, 0, 0, 0, S + E, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-]
 
 function initZobrist(n) {
     let byteArray = new BigUint64Array(n)
@@ -111,7 +208,8 @@ const zobristTable = {
 }
 
 const zobristSTM = initZobrist(2)
-const zobristCastling = initZobrist(8)
+const zobristCastlingQ = initZobrist(2)
+const zobristCastlingK = initZobrist(2)
 const zobristEnpassant = initZobrist(128)
 
 class Move {
@@ -149,7 +247,8 @@ class Board {
         this.whiteToMove = parts[1] == "w"
         this.enpassant = 0
         this.kings = [this.squares.indexOf("k"), this.squares.indexOf("K")]
-        this.castlingRights = [[parts[2].indexOf('q') > -1, parts[2].indexOf('k') > -1], [parts[2].indexOf('Q') > -1, parts[2].indexOf('K') > -1]]
+        this.castleQueenside = [parts[2].indexOf('q') > -1, , parts[2].indexOf('Q') > -1]
+        this.castleKingside = [parts[2].indexOf('k') > -1, parts[2].indexOf('K') > -1]
     }
 
     isHomeRow(i) {
@@ -209,13 +308,13 @@ class Board {
     }
 
     getHash() {
-        return this.zobrist ^
-            zobristSTM[Number(this.whiteToMove)] ^
-            zobristEnpassant[Number(this.enpassant)] ^
-            zobristCastling[0 + Number(this.castlingRights[0][0])] ^
-            zobristCastling[2 + Number(this.castlingRights[0][1])] ^
-            zobristCastling[4 + Number(this.castlingRights[1][0])] ^
-            zobristCastling[6 + Number(this.castlingRights[1][1])]
+        let stm = Number(this.whiteToMove)
+        let hash = this.zobrist ^ zobristSTM[stm] ^ zobristEnpassant[this.enpassant]
+        if (this.castleKingside[0]) hash ^= zobristCastlingK[0]
+        if (this.castleQueenside[0]) hash ^= zobristCastlingQ[0]
+        if (this.castleKingside[1]) hash ^= zobristCastlingK[1]
+        if (this.castleQueenside[1]) hash ^= zobristCastlingQ[1]
+        return hash
     }
 
     generateLegalMoves() {
@@ -242,6 +341,7 @@ class Board {
                 }
 
                 for (let pawnCapture of [i + advance + W, i + advance + E]) {
+                    if ((pawnCapture & 0x88) != 0) continue
                     let victim = this.squares[pawnCapture]
                     if (victim <= " ") continue
                     if ((victim < "a") != this.whiteToMove) moves.push(new Move(i, pawnCapture))
@@ -265,9 +365,8 @@ class Board {
         // Castling 
 
         if (!this.inCheck) {
-            let rights = this.castlingRights[Number(this.whiteToMove)]
-            if (rights[1] && this.squares[kingIndex + E] == " " && this.squares[kingIndex + E + E] == " ") moves.push(new Move(kingIndex, kingIndex + E + E))
-            if (rights[0] && this.squares[kingIndex + W] == " " && this.squares[kingIndex + W + W] == " " && this.squares[kingIndex + W + W + W] == " ") moves.push(new Move(kingIndex, kingIndex + W + W))
+            if (this.castleKingside[Number(this.whiteToMove)] && this.squares[kingIndex + E] == " " && this.squares[kingIndex + E + E] == " ") moves.push(new Move(kingIndex, kingIndex + E + E))
+            if (this.castleQueenside[Number(this.whiteToMove)] && this.squares[kingIndex + W] == " " && this.squares[kingIndex + W + W] == " " && this.squares[kingIndex + W + W + W] == " ") moves.push(new Move(kingIndex, kingIndex + W + W))
         }
 
         return moves
@@ -282,7 +381,8 @@ class Board {
         this.squares = this.squares.substring(0, i) + newpiece + this.squares.substring(i + 1);
 
 
-        this.incremental += pieceValues[newpiece] - pieceValues[oldpiece]
+        //this.incremental += pieceValues[newpiece] - pieceValues[oldpiece]
+        this.incremental += psqt[newpiece][i] - psqt[oldpiece][i]
     }
 
     apply(move) {
@@ -295,14 +395,18 @@ class Board {
 
         let movingPiece = this.squares[move.start]
 
+        if (move.end == -1) console.log("???", move.start)
+
         copyBoard.edit(move.start, " ")
         copyBoard.edit(move.end, movingPiece)
+        
 
 
         copyBoard.whiteToMove = this.whiteToMove
         copyBoard.enpassant = 0
         copyBoard.kings = this.kings.slice()
-        copyBoard.castlingRights = [this.castlingRights[0].slice(), this.castlingRights[1].slice()]
+        copyBoard.castleKingside = this.castleKingside.slice()
+        copyBoard.castleQueenside =  this.castleQueenside.slice()
 
 
         if (movingPiece == "p") {
@@ -315,7 +419,8 @@ class Board {
             if (move.end == this.enpassant) copyBoard.edit(move.end + S, " ")
         } else if (movingPiece == "k" || movingPiece == "K") {
             copyBoard.kings[Number(this.whiteToMove)] = move.end
-            copyBoard.castlingRights[Number(this.whiteToMove)] = [false, false]
+            copyBoard.castleKingside[Number(this.whiteToMove)] = false
+            copyBoard.castleQueenside[Number(this.whiteToMove)] = false
             let coloredRook = "r"
             if (this.whiteToMove) coloredRook = "R"
 
@@ -333,10 +438,10 @@ class Board {
 
         if (copyBoard.attacked(copyBoard.kings[Number(this.whiteToMove)])) return null
 
-        if (move.start == H1 || move.end == H1) copyBoard.castlingRights[1][1] = false
-        if (move.start == H8 || move.end == H8) copyBoard.castlingRights[0][1] = false
-        if (move.start == A1 || move.end == A1) copyBoard.castlingRights[1][0] = false
-        if (move.start == A8 || move.end == A8) copyBoard.castlingRights[0][0] = false
+        if (move.start == H1 || move.end == H1) copyBoard.castleKingside[1] = false
+        if (move.start == H8 || move.end == H8) copyBoard.castleKingside[0] = false
+        if (move.start == A1 || move.end == A1) copyBoard.castleQueenside[1] = false
+        if (move.start == A8 || move.end == A8) copyBoard.castleQueenside[0] = false
 
         copyBoard.whiteToMove = !copyBoard.whiteToMove
         return copyBoard
@@ -357,36 +462,6 @@ function perft(perftboard, depth) {
 
     return nodes
 }
-
-function tester(depth, fenstr = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8") {
-    start = Date.now()
-
-    let totalNodes = 0
-    let movecount = 0
-
-    testboard = new Board(fenstr)
-    let testmoves = testboard.generateLegalMoves()
-    for (let move of testmoves) {
-        let perftboard = testboard.apply(move)
-        if (perftboard != null) {
-            movecount += 1
-            let nodes = perft(perftboard, depth - 1)
-            totalNodes += nodes
-            try {
-                console.log(move.str(), nodes)
-            } catch (err) {
-                console.log(move)
-
-            }
-        }
-    }
-
-    console.log(totalNodes, "nodes", movecount, "moves", Date.now() - start, "ms")
-}
-
-tester(4)
-
-
 
 const MVVLVA = { "p": 100, "P": 100, "n": 300, "N": 300, "b": 300, "B": 300, "r": 500, "R": 500, "q": 900, "Q": 900, "k": 999, "K": 999, " ": -100 }
 
@@ -414,6 +489,16 @@ class TranspositionTable {
         this.table[hash % this.size] = new TableEntry(hash, bestmove)
     }
 }
+
+// In general I want to have an evaluation function centered around 4 components
+// 1. Material
+// 2. King Safety
+// 3. Activity
+// /4. Pawn Structure
+
+// Things I want to try right now
+// Pawn/Nonpawn attacks / defence bonuses
+// Attack penalty for biting on granite? 
 
 function eval(board) {
     let score = board.incremental
@@ -479,23 +564,70 @@ function alphabeta(board, depth, alpha = -10000, beta = 10000) {
     return bestScore
 }
 
-
-
-//tester(4)
-
-let board = new Board("r1bqkb1r/ppp2ppp/2n5/3np1N1/2B5/8/PPPP1PPP/RNBQK2R w KQkq - 0 6")
-
-console.log()
-
 function iterativeDeepening(board) {
     nodes = 0
-    for (let depth = 2; depth < 128; depth++) {
+    for (let depth = 1; depth < 128; depth++) {
         let start = new Date()
         alphabeta(board, depth)
         let end = new Date()
-        console.log(globalTT.get(board.getHash()).bestmove.str(), nodes, end - start)
+        console.log(depth, globalTT.get(board.getHash()).bestmove.str(), nodes, end - start)
         if (end - start > 1000) break
     }
 }
 
-iterativeDeepening(board)
+function getWordsAfter(base, word) {
+    let indexof = base.indexOf(word)
+    if (indexof == -1) return ""
+    return base.substring(indexof + word.length + 1).split(" ")
+}
+
+var uciBoard = new Board()
+
+function parseUCI(ucistr){
+    command = ucistr.replace("startpos", "fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").split(" ")[0]
+    switch(command){
+        case "uci":
+            console.log("id name Tabby")
+            console.log("id author ffloof")
+            console.log("uciok")
+            break
+        case "isready":
+            console.log("readyok")
+            break
+        case "position":
+            uciBoard = new Board(getWordsAfter(ucistr, "position fen").slice(0,4).join(" "))
+            let movestrs = getWordsAfter("moves")
+            break
+        case "go":
+            iterativeDeepening(uciBoard)
+            break
+        case "perft":
+            let depth = Number(getWordsAfter(ucistr, "perft")[0])
+            start = Date.now()
+
+            let totalNodes = 0
+            let movecount = 0
+
+            let testmoves = uciBoard.generateLegalMoves()
+            for (let move of testmoves) {
+                let perftboard = uciBoard.apply(move)
+                if (perftboard != null) {
+                    movecount += 1
+                    let nodes = perft(perftboard, depth - 1)
+                    totalNodes += nodes
+                    try {
+                        console.log(move.str(), nodes)
+                    } catch (err) {
+                        console.log(move)
+
+                    }
+                }
+            }
+
+            console.log(totalNodes, "nodes", movecount, "moves", Date.now() - start, "ms")
+            break
+    }
+}
+
+parseUCI("position fen r1bq3r/ppp1kppp/2nbpn2/3p4/3P4/2NBPN2/PPP1KPPP/R1BQ3R w - - 6 7")
+parseUCI("go")
