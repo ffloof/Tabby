@@ -463,7 +463,7 @@ function perft(perftboard, depth) {
     return nodes
 }
 
-const MVVLVA = { "p": 100, "P": 100, "n": 300, "N": 300, "b": 300, "B": 300, "r": 500, "R": 500, "q": 900, "Q": 900, "k": 999, "K": 999, " ": -100 }
+const MVVLVA = { "p": 100, "P": 100, "n": 300, "N": 300, "b": 300, "B": 300, "r": 500, "R": 500, "q": 900, "Q": 900, "k": 999, "K": 999, " ": 0 }
 
 class TableEntry {
     constructor(hash, bestmove) {
@@ -494,7 +494,7 @@ class TranspositionTable {
 // 1. Material
 // 2. King Safety
 // 3. Activity
-// /4. Pawn Structure
+// 4. Pawn Structure
 
 // Things I want to try right now
 // Pawn/Nonpawn attacks / defence bonuses
@@ -509,6 +509,12 @@ function eval(board) {
 
 const globalTT = new TranspositionTable()
 var nodes = 0
+
+function swap(list, a, b){
+    let temp = list[a]
+    list[a] = list[b]
+    list[b] = temp
+}
 
 function alphabeta(board, depth, alpha = -10000, beta = 10000) {
     let hash = board.getHash()
@@ -534,15 +540,26 @@ function alphabeta(board, depth, alpha = -10000, beta = 10000) {
 
     let heuristic = new Array(moves.length).fill(0)
     for (let i in moves) {
-        heuristic[i] = 1000 * MVVLVA[board.squares[moves[i].end]] - MVVLVA[board.squares[moves[i].start]]
+        heuristic[i] = Math.max(1000 * MVVLVA[board.squares[moves[i].end]] - MVVLVA[board.squares[moves[i].start]], 0)
         if (moves[i].equals(tableMove)) heuristic[i] = 10000000
     }
 
-    let indices = [...Array(moves.length).keys()];
-    indices.sort((a, b) => heuristic[b] - heuristic[a]);
-    moves = indices.map(i => moves[i]);
+    for (let i=0;i<moves.length;i++){
+        let bestIndex = -1;
+        let bestHeuristic = -100000;
+        for(let j=i;j<moves.length;j++){
+            if (bestHeuristic < heuristic[j]) {
+                bestIndex = j
+                bestHeuristic = heuristic[j]
+            }
+        }
 
-    for (let move of moves) {
+        let move = moves[bestIndex]
+        swap(moves, i, bestIndex)
+        swap(heuristic, i, bestIndex)
+        
+
+    //for (let move of moves) {
         if (depth <= 0 && board.squares[move.end] == " ") continue
         let nextboard = board.apply(move)
 
@@ -568,9 +585,9 @@ function iterativeDeepening(board) {
     nodes = 0
     for (let depth = 1; depth < 128; depth++) {
         let start = new Date()
-        alphabeta(board, depth)
+        let score = alphabeta(board, depth)
         let end = new Date()
-        console.log(depth, globalTT.get(board.getHash()).bestmove.str(), nodes, end - start)
+        console.log(depth, score, globalTT.get(board.getHash()).bestmove.str(), nodes, end - start)
         if (end - start > 1000) break
     }
 }
@@ -630,4 +647,9 @@ function parseUCI(ucistr){
 }
 
 parseUCI("position fen r1bq3r/ppp1kppp/2nbpn2/3p4/3P4/2NBPN2/PPP1KPPP/R1BQ3R w - - 6 7")
-parseUCI("go")
+//parseUCI("go")
+parseUCI("perft 4")
+
+function tester(){
+    parseUCI("perft 4")
+}
