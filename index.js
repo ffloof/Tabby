@@ -7,48 +7,81 @@ const A8 = 0
 const H8 = 7
 const A1 = 112
 const H1 = 119
+const CASTLE = E*8
 
 const rays = {
-    "n": [N + N + W, N + N + E, S + S + W, S + S + E, W + W + N, W + W + S, E + E + N, E + E + S],
-    "N": [N + N + W, N + N + E, S + S + W, S + S + E, W + W + N, W + W + S, E + E + N, E + E + S],
-    "b": [N + W, N + E, S + W, S + E],
-    "B": [N + W, N + E, S + W, S + E],
-    "r": [N, S, E, W],
-    "R": [N, S, E, W],
-    "q": [N, S, E, W, N + W, N + E, S + W, S + E],
-    "Q": [N, S, E, W, N + W, N + E, S + W, S + E],
-    "k": [N, S, E, W, N + W, N + E, S + W, S + E],
-    "K": [N, S, E, W, N + W, N + E, S + W, S + E],
+    ["n".charCodeAt()]: [N + N + W, N + N + E, S + S + W, S + S + E, W + W + N, W + W + S, E + E + N, E + E + S],
+    ["N".charCodeAt()]: [N + N + W, N + N + E, S + S + W, S + S + E, W + W + N, W + W + S, E + E + N, E + E + S],
+    ["b".charCodeAt()]: [N + W, N + E, S + W, S + E],
+    ["B".charCodeAt()]: [N + W, N + E, S + W, S + E],
+    ["r".charCodeAt()]: [N, S, E, W],
+    ["R".charCodeAt()]: [N, S, E, W],
+    ["q".charCodeAt()]: [N, S, E, W, N + W, N + E, S + W, S + E],
+    ["Q".charCodeAt()]: [N, S, E, W, N + W, N + E, S + W, S + E],
+    ["k".charCodeAt()]: [N, S, E, W, N + W, N + E, S + W, S + E],
+    ["K".charCodeAt()]: [N, S, E, W, N + W, N + E, S + W, S + E],
 }
 
+
+lookup = [
+    N+W, 0, 0, 0, 0, 0, 0, N, 0, 0, 0, 0, 0, 0, N+E, 0,
+    0, N+W, 0, 0, 0, 0, 0, N, 0, 0, 0, 0, 0, N+E, 0, 0, 
+    0, 0, N+W, 0, 0, 0, 0, N, 0, 0, 0, 0, N+E, 0, 0, 0, 
+    0, 0, 0, N+W, 0, 0, 0, N, 0, 0, 0, N+E, 0, 0, 0, 0, 
+    0, 0, 0, 0, N+W, 0, 0, N, 0, 0, N+E, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, N+W, 0, N, 0, N+E, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, N+W, N, N+E, 0, 0, 0, 0, 0, 0, 0, 
+    W, W, W, W, W, W, W, 0, E, E, E, E, E, E, E, 0, 
+    0, 0, 0, 0, 0, 0, S+W, S, S+E, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, S+W, 0, S, 0, S+E, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, S+W, 0, 0, S, 0, 0, S+E, 0, 0, 0, 0, 0, 
+    0, 0, 0, S+W, 0, 0, 0, S, 0, 0, 0, S+E, 0, 0, 0, 0, 
+    0, 0, S+W, 0, 0, 0, 0, S, 0, 0, 0, 0, S+E, 0, 0, 0, 
+    0, S+W, 0, 0, 0, 0, 0, S, 0, 0, 0, 0, 0, S+E, 0, 0, 
+    S+W, 0, 0, 0, 0, 0, 0, S, 0, 0, 0, 0, 0, 0, S+E, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+]
+
+lookupTable = {
+    [N]: "rq",
+    [S]: "rq",
+    [E]: "rq",
+    [W]: "rq",
+    [S+E]: "bq",
+    [S+W]: "bq",
+    [N+E]: "bq",
+    [N+W]: "bq",
+}
+
+
 const sliders = {
-    "n": false,
-    "N": false,
-    "b": true,
-    "B": true,
-    "r": true,
-    "R": true,
-    "q": true,
-    "Q": true,
-    "k": false,
-    "K": false,
+    ["n".charCodeAt()]: false,
+    ["N".charCodeAt()]: false,
+    ["b".charCodeAt()]: true,
+    ["B".charCodeAt()]: true,
+    ["r".charCodeAt()]: true,
+    ["R".charCodeAt()]: true,
+    ["q".charCodeAt()]: true,
+    ["Q".charCodeAt()]: true,
+    ["k".charCodeAt()]: false,
+    ["K".charCodeAt()]: false,
 }
 
 pieceValues = {
-    "p": -100,
-    "P": 100,
-    "n": -300,
-    "N": 300,
-    "b": -300,
-    "B": 300,
-    "r": -500,
-    "R": 500,
-    "q": -900,
-    "Q": 900,
-    "k": 0,
-    "K": 0,
-    " ": 0,
-    "\n": 0,
+    ["p".charCodeAt()]: -100,
+    ["P".charCodeAt()]: 100,
+    ["n".charCodeAt()]: -300,
+    ["N".charCodeAt()]: 300,
+    ["b".charCodeAt()]: -300,
+    ["B".charCodeAt()]: 300,                                      
+    ["r".charCodeAt()]: -500,
+    ["R".charCodeAt()]: 500,
+    ["q".charCodeAt()]: -900,
+    ["Q".charCodeAt()]: 900,
+    ["k".charCodeAt()]: 0,
+    ["K".charCodeAt()]: 0,
+    [" ".charCodeAt()]: 0,
+    ["\n".charCodeAt()]: 0,
     undefined: 0,
 }
 
@@ -234,21 +267,26 @@ class Board {
 
         this.incremental = 0
         this.zobrist = 0n
-        this.squares = new Array(128 + 1).join(" ")
+        this.squares = new Array(128).fill(" ".charCodeAt())
 
         let parts = fen.split(" ")
 
         let i = 0
-        for (let char of parts[0].replaceAll("/", "       \n").replaceAll("1", " ").replaceAll("2", "  ").replaceAll("3", "   ").replaceAll("4", "    ").replaceAll("5", "     ").replaceAll("6", "      ").replaceAll("7", "       ").replaceAll("8", "        ")) {
-            this.edit(i, char)
+        for (let char of parts[0].replaceAll("/", "        ").replaceAll("1", " ").replaceAll("2", "  ").replaceAll("3", "   ").replaceAll("4", "    ").replaceAll("5", "     ").replaceAll("6", "      ").replaceAll("7", "       ").replaceAll("8", "        ")) {
+            this.edit(i, char.charCodeAt())
             i++
         }
 
         this.whiteToMove = parts[1] == "w"
         this.enpassant = 0
-        this.kings = [this.squares.indexOf("k"), this.squares.indexOf("K")]
-        this.castleQueenside = [parts[2].indexOf('q') > -1, , parts[2].indexOf('Q') > -1]
-        this.castleKingside = [parts[2].indexOf('k') > -1, parts[2].indexOf('K') > -1]
+        this.kings = [this.squares.indexOf("k".charCodeAt()), this.squares.indexOf("K".charCodeAt())]
+        if (parts[2].indexOf('q') > -1) this.squares[A8 + CASTLE] = ".".charCodeAt()
+        if (parts[2].indexOf('Q') > -1) this.squares[A1 + CASTLE] = ".".charCodeAt()
+        if (parts[2].indexOf('k') > -1) this.squares[H8 + CASTLE] = ".".charCodeAt()
+        if (parts[2].indexOf('K') > -1) this.squares[H1 + CASTLE] = ".".charCodeAt()
+
+        //console.log(this)
+        //this.print()
     }
 
     isHomeRow(i) {
@@ -261,8 +299,8 @@ class Board {
             for (let end = start + dir; (end & 0x88) == 0; end += dir) {
                 let victim = this.squares[end]
 
-                if (victim != " ") {
-                    if ((victim < "a") != this.whiteToMove) moves.push(new Move(start, end))
+                if (victim != " ".charCodeAt()) {
+                    if ((victim < "a".charCodeAt()) != this.whiteToMove) moves.push(new Move(start, end))
                     break
                 }
 
@@ -278,7 +316,7 @@ class Board {
             for (let end = start + dir; (end & 0x88) == 0; end += dir) {
                 let victim = this.squares[end]
 
-                if (victim != " ") {
+                if (victim != " ".charCodeAt()) {
                     if (victim == checker) return true
                     break
                 }
@@ -287,23 +325,6 @@ class Board {
                 if (!slider) break
             }
         }
-        return false
-    }
-
-    // TODO: implement faster cached version
-    attacked(index) {
-        let pieces = "NBRQK"
-        if (this.whiteToMove) {
-            pieces = "nbrqk"
-            if (this.scan(index, [N + W, N + E], false, "p")) return true
-        } else {
-            if (this.scan(index, [S + W, S + E], false, "P")) return true
-        }
-
-        for (let checkingPiece of pieces) {
-            if (this.scan(index, rays[checkingPiece], sliders[checkingPiece], checkingPiece)) return true
-        }
-
         return false
     }
 
@@ -317,12 +338,59 @@ class Board {
         return hash
     }
 
+    // TODO: implement faster cached version
+    isInCheck(index=-1, cachedSquare=-1){
+        let kindex = index
+        let cache = false
+        if (index == -1) {
+            cache = true
+            if (this.inCheck != undefined && cachedSquare == -1) return this.inCheck
+
+            kindex = this.kings[Number(this.whiteToMove)]
+        }
+
+
+        if (cachedSquare != -1) {
+            let dir = lookup[cachedSquare-kindex+H1]
+            let pieces = lookupTable[dir]
+            if ((pieces) == undefined) return false
+            if (!this.whiteToMove) pieces = pieces.toUpperCase()
+
+            let result = this.scan(kindex, [dir], true, pieces[0].charCodeAt()) || this.scan(kindex, [dir], true, pieces[1].charCodeAt())
+            return result
+        }
+
+        let pieces = "NBRQK"
+        if (this.whiteToMove) {
+            pieces = "nbrqk"
+            if (this.scan(kindex, [N + W, N + E], false, "p".charCodeAt())) {
+                this.inCheck = true
+                return true
+            }
+        } else {
+            if (this.scan(kindex, [S + W, S + E], false, "P".charCodeAt())) {
+                this.inCheck = true
+                return true
+            }
+        }
+
+        for (let checkingPiece of pieces) {
+            if (this.scan(kindex, rays[checkingPiece.charCodeAt()], sliders[checkingPiece.charCodeAt()], checkingPiece.charCodeAt())) {
+                if (cache) this.inCheck = true
+                return true
+            }
+        }
+
+        if (cache) this.inCheck = false
+        return false
+    }
+
     generateLegalMoves() {
         let moves = []
         let advance = S
-        let pawntype = "p"
+        let pawntype = "p".charCodeAt()
         if (this.whiteToMove) {
-            pawntype = "P"
+            pawntype = "P".charCodeAt()
             advance = N
         }
 
@@ -331,20 +399,20 @@ class Board {
             if ((i & 0x88) != 0) continue
 
             let piece = this.squares[i]
-            if (piece == " ") continue
-            if ((piece < "a") != this.whiteToMove) continue
+            if (piece == " ".charCodeAt()) continue
+            if ((piece < "a".charCodeAt()) != this.whiteToMove) continue
 
             if (piece == pawntype) {
-                if (this.squares[i + advance] == " ") {
+                if (this.squares[i + advance] == " ".charCodeAt()) {
                     moves.push(new Move(i, i + advance))
-                    if (this.isHomeRow(i) && this.squares[i + advance + advance] == " ") moves.push(new Move(i, i + advance + advance))
+                    if (this.isHomeRow(i) && this.squares[i + advance + advance] == " ".charCodeAt()) moves.push(new Move(i, i + advance + advance))
                 }
 
                 for (let pawnCapture of [i + advance + W, i + advance + E]) {
                     if ((pawnCapture & 0x88) != 0) continue
                     let victim = this.squares[pawnCapture]
-                    if (victim <= " ") continue
-                    if ((victim < "a") != this.whiteToMove) moves.push(new Move(i, pawnCapture))
+                    if (victim <= " ".charCodeAt()) continue
+                    if ((victim < "a".charCodeAt()) != this.whiteToMove) moves.push(new Move(i, pawnCapture))
                 }
             } else {
                 this.pieceMoves(moves, i, rays[piece], sliders[piece])
@@ -359,37 +427,64 @@ class Board {
         }
 
 
-        let kingIndex = this.kings[Number(this.whiteToMove)]
-        this.inCheck = this.attacked(kingIndex)
+        let kingIndex = this.kings[0]
+        let canQueensideCastle = (this.squares[A8 + CASTLE] != " ".charCodeAt())
+        let canKingsideCastle = (this.squares[H8 + CASTLE] != " ".charCodeAt())
+
+        if (this.whiteToMove) {
+            kingIndex = this.kings[1]
+            canQueensideCastle = (this.squares[A1 + CASTLE] != " ".charCodeAt())
+            canKingsideCastle = (this.squares[H1 + CASTLE] != " ".charCodeAt())
+        }
+
+        this.isInCheck()
 
         // Castling 
 
         if (!this.inCheck) {
-            if (this.castleKingside[Number(this.whiteToMove)] && this.squares[kingIndex + E] == " " && this.squares[kingIndex + E + E] == " ") moves.push(new Move(kingIndex, kingIndex + E + E))
-            if (this.castleQueenside[Number(this.whiteToMove)] && this.squares[kingIndex + W] == " " && this.squares[kingIndex + W + W] == " " && this.squares[kingIndex + W + W + W] == " ") moves.push(new Move(kingIndex, kingIndex + W + W))
+            if (canKingsideCastle && this.squares[kingIndex + E] == " ".charCodeAt() && this.squares[kingIndex + E + E] == " ".charCodeAt()) moves.push(new Move(kingIndex, kingIndex + E + E))
+            if (canQueensideCastle && this.squares[kingIndex + W] == " ".charCodeAt() && this.squares[kingIndex + W + W] == " ".charCodeAt() && this.squares[kingIndex + W + W + W] == " ".charCodeAt()) moves.push(new Move(kingIndex, kingIndex + W + W))
         }
 
         return moves
+    }
+
+    print() {
+        let lines = ""
+        for (let i=0;i<128;i++){
+            lines += String.fromCharCode(this.squares[i])
+            if ((i % 16) == 15) lines += "\n"
+            
+        }
+        console.log(lines)
     }
 
     edit(i, newpiece) {
         // Arrays are immutable in js sadge
         let oldpiece = this.squares[i]
 
-        this.zobrist ^= zobristTable[oldpiece][i]
-        this.zobrist ^= zobristTable[newpiece][i]
-        this.squares = this.squares.substring(0, i) + newpiece + this.squares.substring(i + 1);
+        if(oldpiece != " ".charCodeAt()) {
+            //this.zobrist ^= zobristTable[oldpiece][i]
+            //this.incremental -= psqt[oldpiece][i]
 
+        }
+        if(newpiece != " ".charCodeAt()) {
+            //this.zobrist ^= zobristTable[newpiece][i]
+            //this.incremental += psqt[newpiece][i] 
+        }
+        this.squares[i] = newpiece 
+        //s = this.squares.substring(0, i) + newpiece + this.squares.substring(i + 1);
 
         //this.incremental += pieceValues[newpiece] - pieceValues[oldpiece]
-        this.incremental += psqt[newpiece][i] - psqt[oldpiece][i]
+        
+        
     }
 
     apply(move) {
         let copyBoard = new Board("")
         // Object.assign(copyBoard, this) <- would work we have to be careful with removing check tho
 
-        copyBoard.squares = this.squares
+        copyBoard.squares = this.squares.slice(0)
         copyBoard.incremental = this.incremental
         copyBoard.zobrist = this.zobrist
 
@@ -397,7 +492,7 @@ class Board {
 
         if (move.end == -1) console.log("???", move.start)
 
-        copyBoard.edit(move.start, " ")
+        copyBoard.edit(move.start, " ".charCodeAt())
         copyBoard.edit(move.end, movingPiece)
         
 
@@ -405,44 +500,49 @@ class Board {
         copyBoard.whiteToMove = this.whiteToMove
         copyBoard.enpassant = 0
         copyBoard.kings = this.kings.slice()
-        copyBoard.castleKingside = this.castleKingside.slice()
-        copyBoard.castleQueenside =  this.castleQueenside.slice()
 
+        let cachedSquare = this.inCheck ? -1 : move.start
 
-        if (movingPiece == "p") {
-            if (move.end >= A1) copyBoard.edit(move.end, "q")
+        if (movingPiece == "p".charCodeAt()) {
+            if (move.end >= A1) copyBoard.edit(move.end, "q".charCodeAt())
             if (move.end - move.start == S + S) copyBoard.enpassant = move.start + S
-            if (move.end == this.enpassant) copyBoard.edit(move.end + N, " ")
-        } else if (movingPiece == "P") {
-            if (move.end <= H8) copyBoard.edit(move.end, "Q")
+            if (move.end == this.enpassant) copyBoard.edit(move.end + N, " ".charCodeAt())
+        } else if (movingPiece == "P".charCodeAt()) {
+            if (move.end <= H8) copyBoard.edit(move.end, "Q".charCodeAt())
             if (move.end - move.start == N + N) copyBoard.enpassant = move.start + N
-            if (move.end == this.enpassant) copyBoard.edit(move.end + S, " ")
-        } else if (movingPiece == "k" || movingPiece == "K") {
+            if (move.end == this.enpassant) copyBoard.edit(move.end + S, " ".charCodeAt())
+        } else if (movingPiece == "k".charCodeAt() || movingPiece == "K".charCodeAt()) {
+            cachedSquare = -1
             copyBoard.kings[Number(this.whiteToMove)] = move.end
-            copyBoard.castleKingside[Number(this.whiteToMove)] = false
-            copyBoard.castleQueenside[Number(this.whiteToMove)] = false
-            let coloredRook = "r"
-            if (this.whiteToMove) coloredRook = "R"
+
+            if (this.whiteToMove) {
+                copyBoard.squares[A1+CASTLE] = " ".charCodeAt()
+                copyBoard.squares[H1+CASTLE] = " ".charCodeAt()
+            } else {
+                copyBoard.squares[A8+CASTLE] = " ".charCodeAt()
+                copyBoard.squares[H8+CASTLE] = " ".charCodeAt()
+            }
+
+            let coloredRook = "r".charCodeAt()
+            if (this.whiteToMove) coloredRook = "R".charCodeAt()
 
             if (move.end - move.start == W + W) {
-                if (copyBoard.attacked(move.start + W)) return null
+                if (copyBoard.isInCheck(move.start + W)) return null
                 copyBoard.edit(move.end + E, coloredRook)
-                copyBoard.edit(move.end + W + W, " ")
+                copyBoard.edit(move.end + W + W, " ".charCodeAt())
             }
             if (move.end - move.start == E + E) {
-                if (copyBoard.attacked(move.start + E)) return null
+                if (copyBoard.isInCheck(move.start + E)) return null
                 copyBoard.edit(move.end + W, coloredRook)
-                copyBoard.edit(move.end + E, " ")
+                copyBoard.edit(move.end + E, " ".charCodeAt())
             }
         }
 
-        if (copyBoard.attacked(copyBoard.kings[Number(this.whiteToMove)])) return null
+        if (copyBoard.isInCheck(-1, cachedSquare)) return null
+        copyBoard.squares[move.start + CASTLE] = " ".charCodeAt()
+        copyBoard.squares[move.end + CASTLE] = " ".charCodeAt()
 
-        if (move.start == H1 || move.end == H1) copyBoard.castleKingside[1] = false
-        if (move.start == H8 || move.end == H8) copyBoard.castleKingside[0] = false
-        if (move.start == A1 || move.end == A1) copyBoard.castleQueenside[1] = false
-        if (move.start == A8 || move.end == A8) copyBoard.castleQueenside[0] = false
-
+        copyBoard.inCheck = undefined
         copyBoard.whiteToMove = !copyBoard.whiteToMove
         return copyBoard
     }
@@ -458,7 +558,6 @@ function perft(perftboard, depth) {
         let nextBoard = perftboard.apply(move)
         if (nextBoard != null) nodes += perft(nextBoard, depth - 1)
     }
-
 
     return nodes
 }
@@ -494,7 +593,7 @@ class TranspositionTable {
 // 1. Material
 // 2. King Safety
 // 3. Activity
-// 4. Pawn Structure
+// 4. Pawn Structure?
 
 // Things I want to try right now
 // Pawn/Nonpawn attacks / defence bonuses
@@ -558,8 +657,6 @@ function alphabeta(board, depth, alpha = -10000, beta = 10000) {
         swap(moves, i, bestIndex)
         swap(heuristic, i, bestIndex)
         
-
-    //for (let move of moves) {
         if (depth <= 0 && board.squares[move.end] == " ") continue
         let nextboard = board.apply(move)
 
@@ -646,10 +743,13 @@ function parseUCI(ucistr){
     }
 }
 
-parseUCI("position fen r1bq3r/ppp1kppp/2nbpn2/3p4/3P4/2NBPN2/PPP1KPPP/R1BQ3R w - - 6 7")
+parseUCI("position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -")
 //parseUCI("go")
-parseUCI("perft 4")
+
+parseUCI("perft 5")
 
 function tester(){
+    
     parseUCI("perft 4")
+    
 }
