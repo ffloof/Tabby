@@ -81,12 +81,11 @@ pieceValues = {
     ["k".charCodeAt()]: 0,
     ["K".charCodeAt()]: 0,
     [" ".charCodeAt()]: 0,
-    ["\n".charCodeAt()]: 0,
-    undefined: 0,
+    [".".charCodeAt()]: 0,
 }
 
 psqt = {
-    "P": [
+    ["P".charCodeAt()]: [
         106,106,106,106,106,106,106,106,  0,0,0,0,0,0,0,0,
         283,263,256,235,240,238,273,263,  0,0,0,0,0,0,0,0,
         177,186,175,154,164,166,181,174,  0,0,0,0,0,0,0,0,
@@ -96,7 +95,7 @@ psqt = {
         94,111,91,80,86,111,122,94,  0,0,0,0,0,0,0,0,
         106,106,106,106,106,106,106,106,  0,0,0,0,0,0,0,0,
     ],
-    "p":[
+    ["p".charCodeAt()]:[
         -106,-106,-106,-106,-106,-106,-106,-106,  0,0,0,0,0,0,0,0,
         -94,-111,-91,-80,-86,-111,-122,-94,  0,0,0,0,0,0,0,0,
         -95,-106,-98,-96,-106,-92,-118,-96,  0,0,0,0,0,0,0,0,
@@ -106,7 +105,7 @@ psqt = {
         -283,-263,-256,-235,-240,-238,-273,-263,  0,0,0,0,0,0,0,0,
         -106,-106,-106,-106,-106,-106,-106,-106,  0,0,0,0,0,0,0,0,
     ],
-    "N": [
+    ["N".charCodeAt()]: [
         217,248,336,318,345,284,269,253,  0,0,0,0,0,0,0,0,
         317,335,397,355,385,387,344,319,  0,0,0,0,0,0,0,0,
         342,361,391,410,410,413,380,373,  0,0,0,0,0,0,0,0,
@@ -116,7 +115,7 @@ psqt = {
         318,338,337,353,354,361,342,336,  0,0,0,0,0,0,0,0,
         295,325,326,334,326,332,319,328,  0,0,0,0,0,0,0,0,
     ],
-    "n": [
+    ["n".charCodeAt()]: [
         -295,-325,-326,-334,-326,-332,-319,-328,  0,0,0,0,0,0,0,0,
         -318,-338,-337,-353,-354,-361,-342,-336,  0,0,0,0,0,0,0,0,
         -341,-352,-367,-374,-383,-364,-368,-331,  0,0,0,0,0,0,0,0,
@@ -126,7 +125,7 @@ psqt = {
         -317,-335,-397,-355,-385,-387,-344,-319,  0,0,0,0,0,0,0,0,
         -217,-248,-336,-318,-345,-284,-269,-253,  0,0,0,0,0,0,0,0,
     ],
-    "B": [
+    ["B".charCodeAt()]: [
         355,343,372,369,373,363,354,363,  0,0,0,0,0,0,0,0,
         360,401,382,383,405,403,398,385,  0,0,0,0,0,0,0,0,
         385,398,416,410,397,415,409,408,  0,0,0,0,0,0,0,0,
@@ -136,7 +135,7 @@ psqt = {
         380,394,382,385,386,388,404,381,  0,0,0,0,0,0,0,0,
         375,372,372,370,366,353,381,359,  0,0,0,0,0,0,0,0,
     ],
-    "b": [
+    ["b".charCodeAt()]: [
         -375,-372,-372,-370,-366,-353,-381,-359,  0,0,0,0,0,0,0,0,
         -380,-394,-382,-385,-386,-388,-404,-381,  0,0,0,0,0,0,0,0,
         -387,-398,-401,-396,-399,-402,-398,-383,  0,0,0,0,0,0,0,0,
@@ -146,7 +145,7 @@ psqt = {
         -360,-401,-382,-383,-405,-403,-398,-385,  0,0,0,0,0,0,0,0,
         -355,-343,-372,-369,-373,-363,-354,-363,  0,0,0,0,0,0,0,0,
     ],
-    "R": [
+    ["R".charCodeAt()]: [
         603,598,605,597,602,587,591,582,  0,0,0,0,0,0,0,0,
         601,602,607,611,601,602,597,586,  0,0,0,0,0,0,0,0,
         592,588,592,595,599,596,586,601,  0,0,0,0,0,0,0,0,
@@ -156,7 +155,7 @@ psqt = {
         559,578,575,575,564,567,587,537,  0,0,0,0,0,0,0,0,
         559,566,578,579,578,562,545,535,  0,0,0,0,0,0,0,0,
     ],
-    "r": [
+    ["r".charCodeAt()]: [
         -559,-566,-578,-579,-578,-562,-545,-535,  0,0,0,0,0,0,0,0,
         -559,-578,-575,-575,-564,-567,-587,-537,  0,0,0,0,0,0,0,0,
         -566,-568,-565,-575,-566,-566,-557,-554,  0,0,0,0,0,0,0,0,
@@ -166,7 +165,7 @@ psqt = {
         -601,-602,-607,-611,-601,-602,-597,-586,  0,0,0,0,0,0,0,0,
         -603,-598,-605,-597,-602,-587,-591,-582,  0,0,0,0,0,0,0,0,
     ],
-    "Q": [
+    ["Q".charCodeAt()]: [
         1116,1123,1163,1171,1131,1163,1118,1131,  0,0,0,0,0,0,0,0,
         1107,1105,1130,1135,1129,1209,1162,1177,  0,0,0,0,0,0,0,0,
         1099,1116,1134,1164,1196,1170,1206,1183,  0,0,0,0,0,0,0,0,
@@ -176,7 +175,7 @@ psqt = {
         1114,1120,1126,1122,1129,1137,1113,1118,  0,0,0,0,0,0,0,0,
         1134,1106,1114,1120,1103,1088,1065,1094,  0,0,0,0,0,0,0,0,
     ],
-    "q": [
+    ["q".charCodeAt()]: [
         -1134,-1106,-1114,-1120,-1103,-1088,-1065,-1094,  0,0,0,0,0,0,0,0,
         -1114,-1120,-1126,-1122,-1129,-1137,-1113,-1118,  0,0,0,0,0,0,0,0,
         -1104,-1121,-1123,-1127,-1126,-1128,-1133,-1116,  0,0,0,0,0,0,0,0,
@@ -186,7 +185,7 @@ psqt = {
         -1107,-1105,-1130,-1135,-1129,-1209,-1162,-1177,  0,0,0,0,0,0,0,0,
         -1116,-1123,-1163,-1171,-1131,-1163,-1118,-1131,  0,0,0,0,0,0,0,0,
     ],
-    "K":[
+    ["K".charCodeAt()]:[
         -53,-5,-36,-4,-6,32,-21,-70,   0,0,0,0,0,0,0,0,
         4,32,-6,5,18,20,12,-22,  0,0,0,0,0,0,0,0,
         -20,6,26,25,24,35,41,5,  0,0,0,0,0,0,0,0,
@@ -196,7 +195,7 @@ psqt = {
         -27,-10,0,-7,0,6,2,-26,  0,0,0,0,0,0,0,0,
         -55,-6,-11,-27,-18,-30,-10,-36,   0,0,0,0,0,0,0,0,
     ],
-    "k":[
+    ["k".charCodeAt()]:[
         55,6,11,27,18,30,10,36,   0,0,0,0,0,0,0,0,
         27,10,0,7,0,-6,-2,26,   0,0,0,0,0,0,0,0,
         22,-7,-16,-18,-24,-17,-4,26,   0,0,0,0,0,0,0,0,
@@ -206,9 +205,8 @@ psqt = {
         -4,-32,6,-5,-18,-20,-12,22,   0,0,0,0,0,0,0,0,
         53,5,36,4,6,-32,21,70,   0,0,0,0,0,0,0,0,
     ],
-    " ": new Int32Array(128).fill(0),
-    "\n": new Int32Array(128).fill(0),
-    undefined: new Int32Array(128).fill(0),
+    [" ".charCodeAt()]: new Int32Array(128).fill(0),
+    [".".charCodeAt()]: new Int32Array(128).fill(0)
 }
 
 function sqstr(n) {
@@ -224,25 +222,23 @@ function initZobrist(n) {
 }
 
 const zobristTable = {
-    "p": initZobrist(128),
-    "P": initZobrist(128),
-    "n": initZobrist(128),
-    "N": initZobrist(128),
-    "b": initZobrist(128),
-    "B": initZobrist(128),
-    "r": initZobrist(128),
-    "R": initZobrist(128),
-    "q": initZobrist(128),
-    "Q": initZobrist(128),
-    "k": initZobrist(128),
-    "K": initZobrist(128),
-    " ": new BigUint64Array(128).fill(0n),
-    "\n": new BigUint64Array(128).fill(0n),
+    ["p".charCodeAt()]: initZobrist(128),
+    ["P".charCodeAt()]: initZobrist(128),
+    ["n".charCodeAt()]: initZobrist(128),
+    ["N".charCodeAt()]: initZobrist(128),
+    ["b".charCodeAt()]: initZobrist(128),
+    ["B".charCodeAt()]: initZobrist(128),
+    ["r".charCodeAt()]: initZobrist(128),
+    ["R".charCodeAt()]: initZobrist(128),
+    ["q".charCodeAt()]: initZobrist(128),
+    ["Q".charCodeAt()]: initZobrist(128),
+    ["k".charCodeAt()]: initZobrist(128),
+    ["K".charCodeAt()]: initZobrist(128),
+    [".".charCodeAt()]: initZobrist(128),
+    [" ".charCodeAt()]: new BigUint64Array(128).fill(0n),
 }
 
 const zobristSTM = initZobrist(2)
-const zobristCastlingQ = initZobrist(2)
-const zobristCastlingK = initZobrist(2)
 const zobristEnpassant = initZobrist(128)
 
 class Move {
@@ -268,6 +264,7 @@ class Board {
         this.incremental = 0
         this.zobrist = 0n
         this.squares = new Array(128).fill(" ".charCodeAt())
+        this.ply = 0
 
         let parts = fen.split(" ")
 
@@ -280,10 +277,10 @@ class Board {
         this.whiteToMove = parts[1] == "w"
         this.enpassant = 0
         this.kings = [this.squares.indexOf("k".charCodeAt()), this.squares.indexOf("K".charCodeAt())]
-        if (parts[2].indexOf('q') > -1) this.squares[A8 + CASTLE] = ".".charCodeAt()
-        if (parts[2].indexOf('Q') > -1) this.squares[A1 + CASTLE] = ".".charCodeAt()
-        if (parts[2].indexOf('k') > -1) this.squares[H8 + CASTLE] = ".".charCodeAt()
-        if (parts[2].indexOf('K') > -1) this.squares[H1 + CASTLE] = ".".charCodeAt()
+        if (parts[2].indexOf('q') > -1) this.edit([A8 + CASTLE], ".".charCodeAt())
+        if (parts[2].indexOf('Q') > -1) this.edit([A1 + CASTLE], ".".charCodeAt())
+        if (parts[2].indexOf('k') > -1) this.edit([H8 + CASTLE], ".".charCodeAt())
+        if (parts[2].indexOf('K') > -1) this.edit([H1 + CASTLE], ".".charCodeAt())
 
         //console.log(this)
         //this.print()
@@ -331,10 +328,6 @@ class Board {
     getHash() {
         let stm = Number(this.whiteToMove)
         let hash = this.zobrist ^ zobristSTM[stm] ^ zobristEnpassant[this.enpassant]
-        if (this.castleKingside[0]) hash ^= zobristCastlingK[0]
-        if (this.castleQueenside[0]) hash ^= zobristCastlingQ[0]
-        if (this.castleKingside[1]) hash ^= zobristCastlingK[1]
-        if (this.castleQueenside[1]) hash ^= zobristCastlingQ[1]
         return hash
     }
 
@@ -464,16 +457,15 @@ class Board {
         let oldpiece = this.squares[i]
 
         if(oldpiece != " ".charCodeAt()) {
-            //this.zobrist ^= zobristTable[oldpiece][i]
-            //this.incremental -= psqt[oldpiece][i]
+            this.zobrist ^= zobristTable[oldpiece][i]
+            this.incremental -= psqt[oldpiece][i]
 
         }
         if(newpiece != " ".charCodeAt()) {
-            //this.zobrist ^= zobristTable[newpiece][i]
-            //this.incremental += psqt[newpiece][i] 
+            this.zobrist ^= zobristTable[newpiece][i]
+            this.incremental += psqt[newpiece][i] 
         }
         this.squares[i] = newpiece 
-        //s = this.squares.substring(0, i) + newpiece + this.squares.substring(i + 1);
 
         //this.incremental += pieceValues[newpiece] - pieceValues[oldpiece]
         
@@ -500,6 +492,7 @@ class Board {
         copyBoard.whiteToMove = this.whiteToMove
         copyBoard.enpassant = 0
         copyBoard.kings = this.kings.slice()
+        copyBoard.ply = this.ply + 1
 
         let cachedSquare = this.inCheck ? -1 : move.start
 
@@ -539,8 +532,8 @@ class Board {
         }
 
         if (copyBoard.isInCheck(-1, cachedSquare)) return null
-        copyBoard.squares[move.start + CASTLE] = " ".charCodeAt()
-        copyBoard.squares[move.end + CASTLE] = " ".charCodeAt()
+        if (copyBoard.squares[move.start + CASTLE] != " ".charCodeAt()) copyBoard.edit(move.start + CASTLE, " ".charCodeAt())
+        if (copyBoard.squares[move.end + CASTLE] != " ".charCodeAt()) copyBoard.edit(move.end + CASTLE, " ".charCodeAt())
 
         copyBoard.inCheck = undefined
         copyBoard.whiteToMove = !copyBoard.whiteToMove
@@ -562,7 +555,7 @@ function perft(perftboard, depth) {
     return nodes
 }
 
-const MVVLVA = { "p": 100, "P": 100, "n": 300, "N": 300, "b": 300, "B": 300, "r": 500, "R": 500, "q": 900, "Q": 900, "k": 999, "K": 999, " ": 0 }
+const MVVLVA = { ["p".charCodeAt()]: 100, ["P".charCodeAt()]: 100, ["n".charCodeAt()]: 300, ["N".charCodeAt()]: 300, ["b".charCodeAt()]: 300, ["B".charCodeAt()]: 300, ["r".charCodeAt()]: 500, ["R".charCodeAt()]: 500, ["q".charCodeAt()]: 900, ["Q".charCodeAt()]: 900, ["k".charCodeAt()]: 999, ["K".charCodeAt()]: 999, [" ".charCodeAt()]: 0, [".".charCodeAt()]: 0}
 
 class TableEntry {
     constructor(hash, bestmove) {
@@ -616,6 +609,7 @@ function swap(list, a, b){
 }
 
 function alphabeta(board, depth, alpha = -10000, beta = 10000) {
+
     let hash = board.getHash()
 
     let bestScore = -9999
@@ -634,17 +628,20 @@ function alphabeta(board, depth, alpha = -10000, beta = 10000) {
     }
 
 
+
     let bestmove = null
     let moves = board.generateLegalMoves()
 
     let heuristic = new Array(moves.length).fill(0)
     for (let i in moves) {
         heuristic[i] = Math.max(1000 * MVVLVA[board.squares[moves[i].end]] - MVVLVA[board.squares[moves[i].start]], 0)
-        if (moves[i].equals(tableMove)) heuristic[i] = 10000000
+        if (moves[i].equals(tableMove) && depth > 0) heuristic[i] = 10000000
     }
 
+    
+
     for (let i=0;i<moves.length;i++){
-        let bestIndex = -1;
+        let bestIndex = i;
         let bestHeuristic = -100000;
         for(let j=i;j<moves.length;j++){
             if (bestHeuristic < heuristic[j]) {
@@ -653,12 +650,17 @@ function alphabeta(board, depth, alpha = -10000, beta = 10000) {
             }
         }
 
+
+
+
         let move = moves[bestIndex]
         swap(moves, i, bestIndex)
         swap(heuristic, i, bestIndex)
         
-        if (depth <= 0 && board.squares[move.end] == " ") continue
+        if (depth <= 0 && board.squares[move.end] == " ".charCodeAt()) continue
+        
         let nextboard = board.apply(move)
+        
 
         if (nextboard == null) continue
         nodes++
@@ -680,13 +682,20 @@ function alphabeta(board, depth, alpha = -10000, beta = 10000) {
 
 function iterativeDeepening(board) {
     nodes = 0
-    for (let depth = 1; depth < 128; depth++) {
+
+    let lastscore = 0
+    let chosemove
+
+    for (let depth = 1; depth <= 100; depth++) {
         let start = new Date()
-        let score = alphabeta(board, depth)
+        lastscore = alphabeta(board, depth)
+        chosenmove = globalTT.get(board.getHash()).bestmove.str()
         let end = new Date()
-        console.log(depth, score, globalTT.get(board.getHash()).bestmove.str(), nodes, end - start)
+        console.log(`info depth ${depth} score cp ${lastscore} nodes ${nodes} time ${end-start} pv ${chosenmove}`)
+        
         if (end - start > 1000) break
     }
+    console.log(`bestmove ${chosenmove}`)
 }
 
 function getWordsAfter(base, word) {
@@ -698,8 +707,8 @@ function getWordsAfter(base, word) {
 var uciBoard = new Board()
 
 function parseUCI(ucistr){
-    command = ucistr.replace("startpos", "fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").split(" ")[0]
-    switch(command){
+    ucistr = ucistr.replace("startpos", "fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+    switch(ucistr.split(" ")[0]){
         case "uci":
             console.log("id name Tabby")
             console.log("id author ffloof")
@@ -743,13 +752,11 @@ function parseUCI(ucistr){
     }
 }
 
-parseUCI("position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -")
-//parseUCI("go")
+parseUCI("position startpos")
+//parseUCI("perft 4")
 
-parseUCI("perft 5")
+parseUCI("go")
 
 function tester(){
-    
     parseUCI("perft 4")
-    
 }
