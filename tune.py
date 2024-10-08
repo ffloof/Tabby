@@ -23,7 +23,9 @@ outcomescore = {
 }
 
 sign = [-1,1]
-phase_level = [0,0,2,2,3,8,0] # sum 44
+phase_level = [0,1,0,0,0,0,0] 
+
+max_phase = phase_level[1] * 16 + phase_level[2] * 4 + phase_level[3] * 4 + phase_level[4] * 4 + phase_level[5] * 2 + phase_level[6] * 2
 
 inputs = []
 outputs = []
@@ -185,11 +187,11 @@ for line in tqdm(lines):
 
 
     
-    if phase > 44:
-        phase = 44
+    if phase > max_phase:
+        phase = max_phase
     
-    start_weight = phase / 44
-    end_weight = (44 - phase) / 44
+    start_weight = phase / max_phase
+    end_weight = (max_phase - phase) / max_phase
 
     values = [material, psqt[1,:], domesticmobilities, foreignmobilities, restrictedmobilities, kingopen, sidetomove]
     if first:

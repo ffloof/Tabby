@@ -18,12 +18,11 @@ random.shuffle(lines)
 
 outcomescore = {
     "1-0":1,
-    "0-1":0,
-    "1/2-1/2":0.5,
+    "0-1":-1,
+    "1/2-1/2":0,
 }
 
 sign = [-1,1]
-phase_level = [0,0,2,2,3,8,0] # sum 44
 
 inputs = []
 outputs = []
@@ -44,44 +43,45 @@ mailbox = [
     91, 92, 93, 94, 95, 96, 97, 98
 ]
 
+inverse = [
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    -1, 0, 1, 2, 3, 4, 5, 6, 7,-1,
+    -1, 8, 9,10,11,12,13,14,15,-1,
+    -1,16,17,18,19,20,21,22,23,-1,
+    -1,24,25,26,27,28,29,30,31,-1,
+    -1,32,33,34,35,36,37,38,39,-1,
+    -1,40,41,42,43,44,45,46,47,-1,
+    -1,48,49,50,51,52,53,54,55,-1,
+    -1,56,57,58,59,60,61,62,63,-1,
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+]
+
 sizes = []
+net_size = 0
+linear_start = 0
+linear_size = 0
 first = True
 
 rays = [ False, False, False, True, True, True, False]
 patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E,S+W,S+E], [N,S,E,W], [N,S,E,W,N+W,N+E,S+W,S+E], [N,S,E,W,N+W,N+E,S+W,S+E]]
 
-def pawncheck(virtualboard, indexes, pawntype):
-    for i in indexes:
-        if virtualboard[i] == pawntype:
-            return True
-    return False
-
-def pawnray(virtualboard, start, direction, pawntype):
-    while virtualboard[start] != 1:
-        if virtualboard[start] == pawntype:
-            return True
-        start += direction
-    return False
-
-def pawnrays(virtualboard, starts, direction, pawntype):
-    for start in starts:
-        if pawnray(virtualboard, start, direction, pawntype):
-            return True
-    return False
+def pawncheck(virtualboard, index, pawntype):
+    if pawntype == 3:
+        return virtualboard[index + S + W] == pawntype or virtualboard[index + S + E] == pawntype
+    if pawntype == 2:
+        return virtualboard[index + N + W] == pawntype or virtualboard[index + N + E] == pawntype
 
 for line in tqdm(lines):
-    if len(outputs) > 400_000:
+    if len(outputs) > 1_000_000:
         break
 
     packed = line.split("c9")
     fen = packed[0].strip()
     outcome = outcomescore[packed[1].strip().replace(";", "").replace("\"", "")]
-    board = chess.Board(fen)
-    
-    phase = 0
-    material = np.zeros(7)
-    psqt = np.zeros((7, 64))
 
+    turn = fen.split(" ")[1].lower().strip() == "w"
     virtualboard = [
         1,1,1,1,1,1,1,1,1,1,
         1,1,1,1,1,1,1,1,1,1,
@@ -97,66 +97,93 @@ for line in tqdm(lines):
         1,1,1,1,1,1,1,1,1,1,
     ]
 
-    kings = [-1, -1]
+    try:
+        i = 0
+        c = 0
+        while i < 64:
+            char = fen[c]
+            c += 1
+            if char in "pPnNbBrRqQkK":
+                virtualboard[mailbox[i]] = "pPnNbBrRqQkK".index(char) + 2
+            elif char == "/":
+                continue
+            elif char in "12345678":
+                i += int(char) - 1
+            else:
+                break
+            i += 1
+    except Exception as err:
+        print("Error:", err)
 
-
-
-    for i in range(64):
-        piece = board.piece_at(i)
-        if piece == None:
-            continue
-
-        virtualboard[mailbox[i]] = (piece.piece_type * 2) + piece.color
-
-        phase += phase_level[piece.piece_type]
-        material[piece.piece_type] += sign[piece.color]
-
-        j = i
-        if piece.color:
-            j = i ^ 56
-
-        psqt[piece.piece_type][j] += sign[piece.color]
-
-        if piece.piece_type == 6:
-            kings[piece.color] = mailbox[i]
-
-      
-
-
-
-    #print(kings)
-    #print(fen)
-    #sys.exit()
-
-
-    kingopen = np.zeros(1)
-
-    for side in range(2):
-        start = kings[side]
-        hit = 0
-        for direction in patterns[6]:
-            i = start + direction
-            while virtualboard[i] == 0:
-                i += direction
-                hit += 1
-        kingopen[0] += sign[side] * hit
-
-
-    #attackers = np.zeros((14,14)) # TODO: add another table of attackers with tempo
-    domesticmobilities = np.zeros(7)
-    foreignmobilities = np.zeros(7)
+    material = np.zeros((2, 7))
+    psqt = np.zeros((7, 64))
+    mobilities = np.zeros(7)
     restrictedmobilities = np.zeros(7)
-    attacks = np.zeros((14,14))
 
     attacks_pawn = np.zeros(7)
     attacks_other = np.zeros(7)
 
-    defends_pawn = np.zeros(7)
-    defends_other = np.zeros(7)
-
     backwardsc = np.zeros(8)
     backwardso = np.zeros(8)
     passers = np.zeros(8)
+
+    kingopen = np.zeros(2)
+    sidetomove = np.zeros(1)
+
+    npawns = np.zeros(2)
+
+    kings = [-1, -1]
+
+
+    for i in range(64):
+        piece = virtualboard[mailbox[i]]
+        piecetype = piece // 2
+
+        if piecetype == 0:
+            continue
+
+        piececolor = piece & 1
+
+        material[piececolor, piecetype] += 1
+
+        j = i
+        if piececolor != 1:
+            j = i ^ 56
+
+        psqt[piecetype][j] += sign[piececolor]
+
+        if piecetype == 6:
+            kings[piececolor] = mailbox[i]
+
+        if piecetype == 1:
+            npawns[piece & 1] += 1
+
+    
+    wshield = []
+    if kings[1] % 10 < 5:
+        wshield = [33,32,31]
+    else:
+        wshield = [36,37,38]
+
+    bshield = []
+    if kings[0] % 10 < 5:
+        bshield = [83,82,81]
+    else:
+        bshield = [86,87,88]
+    
+    pawnshield = np.zeros((2,3))
+
+    for i in range(len(bshield)):
+        if virtualboard[bshield[i]] != 2 and virtualboard[bshield[i] + N] != 2:
+            pawnshield[0,i] += 1
+
+    for i in range(len(wshield)):
+        if virtualboard[wshield[i]] != 3 and virtualboard[wshield[i] + S] != 3:
+            pawnshield[1,i] += 1
+
+    inCheck = np.zeros(2)
+    inCheck[0] = int(pawncheck(virtualboard, kings[0], 3))
+    inCheck[1] = int(pawncheck(virtualboard, kings[0], 2))
 
     for sq in range(len(virtualboard)):
         piece = virtualboard[sq]
@@ -164,200 +191,196 @@ for line in tqdm(lines):
         isray = rays[piecetype]
         pattern = patterns[piecetype]
 
-        if piece == 2:
-            #pattern = [S+W,S+E]
-            if not pawncheck(virtualboard, [sq+W,sq+E,sq+W+S,sq+E+S], 2):
-                if                               pawnray(virtualboard, sq, N, 3):
-                    backwardsc[(sq%10) - 1] -= 1
-                else:
-                    backwardso[(sq%10) - 1] -= 1
-            if not pawnrays(virtualboard, [sq+W+N,sq+N,sq+E+N], N, 3):
-                passers[(sq%10) - 1] -= 1   
-        elif piece == 3:
-            #pattern = [N+W,N+E]
-            if not pawncheck(virtualboard, [sq+W,sq+E,sq+W+N,sq+E+N], 3):
-                if pawnray(virtualboard, sq, S, 2):
-                    backwardsc[(sq%10) - 1] += 1
-                else:
-                    backwardso[(sq%10) - 1] += 1
-            if not pawnrays(virtualboard, [sq+W+S,sq+S,sq+E+S], S, 2):
-                passers[(sq%10) - 1] += 1
-
-            
+        if piecetype == 1:
+            continue
         
-        domesticmobility = 0
-        foreignmobility = 0
+        mobility = 0
         restrictedmobility = 0
+        attackspawn = 0
+        attacksother = 0
 
         for direction in pattern:
             current = sq
             for i in range(1,8):
                 current += direction
 
-                if virtualboard[current] != 0:
-                    if virtualboard[current] == 1:
-                        break
-                    elif (piece & 1) == (virtualboard[current] & 1):
-                        if virtualboard[current] <= 3:
-                            defends_pawn[piecetype] += sign[piece & 1]
-                        else:
-                            defends_other[piecetype] += sign[piece & 1]
-                        break
+                if virtualboard[current] == 1:
+                    break
+
+                if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
+                    #mobility += 1
+                    j = inverse[current]
+                    
+                    if piece & 1 == 0:
+                        j ^= 56
+                    
+                    # is restricted?
+
+                    isRestricted = False
+                    if piece & 1 == 1:
+                        isRestricted = pawncheck(virtualboard, current, 2)
                     else:
-                        if virtualboard[current] <= 3:
-                            attacks_pawn[piecetype] += sign[piece & 1]
-                        else:
-                            attacks_other[piecetype] += sign[piece & 1]
+                        isRestricted = pawncheck(virtualboard, current, 3)
 
-                domestic = (current >= 60)
-                if piece & 1 == 1:
-                    domestic = not domestic
-                    if virtualboard[current + S + W] == 2 or virtualboard[current + S + E] == 2:
-                        restrictedmobility += 1
-                else:
-                    if virtualboard[current + N + W] == 3 or virtualboard[current + N + E] == 3:
+                    mobility += 1                    
+                    if isRestricted:
                         restrictedmobility += 1
 
-                if domestic:
-                    domesticmobility += 1
-                else:
-                    foreignmobility += 1
 
-                if (not isray) or virtualboard[current] != 0:
+                    # piece attacks
+                    if virtualboard[current] > 3:
+                        attacksother += 1
+                        if virtualboard[current] >= 12:
+                            inCheck[piece & 1] = 1
+                    elif virtualboard[current] > 1:
+                        attackspawn += 1
+
+
+                if virtualboard[current] != 0 or (not isray):
                     break
         
         #if virtualboard[sq] > 1:
             #print("  pPnNbBrRqQkK"[virtualboard[sq]] , domesticmobility * sign[piece & 1], foreignmobility * sign[piece & 1])
-        domesticmobilities[piecetype] += domesticmobility * sign[piece & 1]
-        foreignmobilities[piecetype] += foreignmobility * sign[piece & 1]
-        restrictedmobilities[piecetype] += restrictedmobility * sign[piece & 1]
-        
-    sidetomove = np.zeros(1)
-    sidetomove[0] = sign[board.turn]
+        mobilities[piecetype] += sign[piece & 1] * mobility
+        restrictedmobilities[piecetype] += sign[piece & 1] * restrictedmobility
+        attacks_pawn[piecetype] += sign[piece & 1] * attackspawn
+        attacks_other[piecetype] += sign[piece & 1] * attacksother
 
+    for side in range(2):
+        if inCheck[side] == 1:
+            continue
+        start = kings[side]
+        hit = 0
+        for direction in patterns[6]:
+            i = start + direction
+            while virtualboard[i] == 0:
+                i += direction
+                hit += 1
+        kingopen[int(side)] += hit
 
-    
-    if phase > 44:
-        phase = 44
-    
-    start_weight = phase / 44
-    end_weight = (44 - phase) / 44
+    sidetomove[0] = sign[turn]
 
-    #values = [material, domesticmobilities, foreignmobilities, restrictedmobilities, sidetomove]
-    values = [material, psqt[1,:], domesticmobilities+foreignmobilities, foreignmobilities, restrictedmobilities, backwardsc, backwardso, passers, kingopen, sidetomove, attacks_pawn, attacks_other, defends_pawn, defends_other]
+    manualterms = [material[0, :], material[1, :]]
+    linearterms = [material[1, :] - material[0, :], psqt[1, :], sidetomove, mobilities]
+
     if first:
-        for item in values:
+        for item in linearterms:
             sizes.append(item.shape[0])
-        first = False
 
-        print(fen)
+        print("\nfen " + fen)
         print(material)
-        print("domestic",domesticmobilities)
-        print("foreign",foreignmobilities)
-        print("restricted",restrictedmobilities)
-        print("kingvmob", kingopen)
-        print("backwardsc", backwardsc)
-        print("backwardso", backwardso)
-        print("passers", passers)
-        print("attacks pawn", attacks_pawn)
-        print("attacks other", attacks_other)
-        print("defends pawn", defends_pawn)
-        print("defends other", defends_other)
+        #print(mobilities)
+        print(inCheck)
+        #print("domestic",domesticmobilities)
+        #print("foreign",foreignmobilities)
+        #print("restricted",restrictedmobilities)
+        #print("kingvmob", kingopen)
+        #print("backwardsc", backwardsc)
+        #print("backwardso", backwardso)
+        #print("passers", passers)
+        #print("attacks pawn", attacks_pawn)
+        #print("attacks other", attacks_other)
+        #print("defends pawn", defends_pawn)
+        #print("print other", defends_other)
+        #print(kingopen)
+        print("npawns", npawns)
+        #sys.exit()
 
-    values = np.concatenate(values)    
+    manualterms = np.concatenate(manualterms)
+    linearterms = np.concatenate(linearterms)
+
+    if first:
+        linear_start = manualterms.shape[0]
+        linear_size = linearterms.shape[0]
+        print(linear_start, linear_size)
+
+    values = np.concatenate([manualterms, linearterms])
 
     inputs.append(values)
     outputs.append(outcome)
+    first = False
+
+import torch
+from torch.utils.data import DataLoader, TensorDataset
+
+class HCE(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.terms = torch.nn.Parameter(torch.randn(linear_size))
+        self.pawnscale = torch.nn.Parameter(torch.randn(1))
+
+    def forward(self, x):
+        pawnsw = x[:,1+7]
+        pawnsb = x[:,1]
+
+        knights = x[:,2] + x[:,2+7]
+        bishops = x[:,3] + x[:,3+7]
+        rooks = x[:,4] + x[:,4+7]
+        queens = x[:,5] + x[:,5+7]
+
+        score = torch.matmul(x[:,linear_start:], self.terms)
+
+        return torch.tanh(score)
+
+    def printfinal(self, finalEpoch=False):
+        m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
+        print ("m=",m)
+        offset = 0
+        for size in sizes:
+            #if size == 64:
+            #    if finalEpoch:
+            #        plt.imshow((self.midgame[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
+            #        plt.show()
+            #        plt.imshow((self.endgame[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
+            #        plt.show()
+            print((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32))
+            offset += size
+
+        print("===")
 
 
-from sklearn.neural_network import MLPRegressor
+x = torch.FloatTensor(np.array(inputs))
+y = torch.FloatTensor(outputs)
+size = len(outputs)
 
-mlp_regressor = MLPRegressor(hidden_layer_sizes=(1,), activation='logistic', verbose=True)
+# Create a TensorDataset and DataLoader
+dataset = TensorDataset(x, y)
+batch_size = 32  # You can adjust the batch size
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-# Fit the MLPRegressor to your data
-mlp_regressor.fit(inputs, outputs)
+model = HCE()
 
-# Accessing the coefficients and intercept of the single-layer perceptron model
-weights = mlp_regressor.coefs_[0]
-bias = mlp_regressor.intercepts_[0]
+criterion = torch.nn.MSELoss(reduction='sum')
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
 
+epochs = 12
 
-def printcomma(idx,shift=0, multip=128):
-    n1 = weights[idx][0] + shift
-    #print("{:.3f}".format(n), end=",")
-    print(str(int(multip * n1)), end=",")
+# Training loop
+for epoch in range(epochs):  # Adjust the number of epochs
+    total = 0
+    for batch_x, batch_y in dataloader:
+        # Forward pass
+        y_pred = model(batch_x)
 
-def printflat(start,end):
-    for y in range(start,end):
-        printcomma(y)
-    print("")
+        # Compute loss
+        loss = criterion(y_pred, batch_y)
+        total += loss.item()
+        
+        # Backward pass and optimization
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-def printpsqt(start,end,size=8,shift=0): # m allows for adjusting psqt by material
-    x = weights[start:end]
-    i = 0
-    for y in range(start,end):
-        printcomma(y, shift)
-        if i % size == size-1:
-            print("")
-        i += 1
-    print("")
-    return
-    for y in range(start,end):
-        printcomma(start+((y-start)^56), shift, multip=-128)
-        if i % size == size-1:
-            print("")
-        i += 1
+    print(epoch, total/size)
+    model.printfinal(epoch == epochs - 1)
 
 
-def plotpsqt(axs, start, label=""):
-    x = (weights[start:start+64] * 128).reshape((8,8))
+# no tapering
+# material + pawns + tempo + mobilities = 0.2706
 
-    axs.set_title(label)
-    axs.imshow(x, vmin=-100, vmax=100)
-
-
-
-print("Bias:", bias)
-print("Weights:", weights)
-y_pred = mlp_regressor.predict(inputs)
-residuals = outputs - y_pred
-index_largest_residual = np.argmax(np.abs(residuals))
-print("Largest residual:", outputs[index_largest_residual], y_pred[index_largest_residual], residuals[index_largest_residual], lines[index_largest_residual])
-print("farout", np.sum(y_pred[y_pred < -0.1]) + np.sum(y_pred[y_pred > 1.1]))
-print("r^2", mlp_regressor.score(inputs, outputs))
-
-offset = 0
-for size in sizes:
-    #print(offset, size)
-    if size == 64 * 7:
-        fig, axs = plt.subplots(1,6)
-        print("Pawns")
-        plotpsqt(axs[0],offset+64, "Pawns")
-        printpsqt(offset+64*1, offset+64*2, shift=weights[1][0])
-        print("Knights")
-        plotpsqt(axs[1],offset+64*2, "Knights")
-        printpsqt(offset+64*2, offset+64*3, shift=weights[2][0])
-        print("Bishops")
-        plotpsqt(axs[2],offset+64*3, "Bishops")
-        printpsqt(offset+64*3, offset+64*4, shift=weights[3][0])
-        print("Rooks")
-        plotpsqt(axs[3],offset+64*4, "Rooks")
-        printpsqt(offset+64*4, offset+64*5, shift=weights[4][0])
-        print("Queens")
-        plotpsqt(axs[4],offset+64*5, "Queens")
-        printpsqt(offset+64*5, offset+64*6, shift=weights[5][0])
-        print("Kings")
-        plotpsqt(axs[5],offset+64*6, "Kings")
-        printpsqt(offset+64*6, offset+64*7, shift=weights[6][0])
-        plt.show()
-    elif size == 64:
-        print("\npsqt pawns")
-        printpsqt(offset, offset+size)
-    elif size == 14 * 7:
-        print(np.round(weights[offset:offset+size].reshape(7,14)*128))
-    elif size == 14 * 14:
-        print(np.round(weights[offset:offset+size].reshape(14,14)*128))
-    else:
-        printflat(offset, offset+size)
-    offset += size
-
+# lots of tapering
+# material + pawns + tempo = 0.2671
+# + mobilities = 0.2608
+# + double taper = 0.2587
+# + kingopen + incheck = 0.2562
