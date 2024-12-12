@@ -3,8 +3,11 @@ package main
 import (
 	"fmt"
 	"strings"
+	"strconv"
 	"bufio"
 	"os"
+	"time"
+	"math/rand"
 )
 
 const N, S, E, W = -16, 16, 1, -1
@@ -16,23 +19,55 @@ const RANK = "87654321"
 const FILE = "abcdefgh"
 var ADVANCES = [...]int{S,N}
 
+var mobChart = [...]int{0,0,6,3,3,0,-1}
+var shieldChart = [10]int{0,15,40,5,0,0,5,40,15,0}
+var pawnChart = [2][128]int{
+	{
+  0,  0,  0,  0,  0,  0,  0,  0,  0,0,0,0,0,0,0,0,
+ 10,  0,  0, 10, 10,-10,-10,  0,  0,0,0,0,0,0,0,0,
+ 10,  0,  0,  0,  0, 10,  0,  0,  0,0,0,0,0,0,0,0,
+ 10,  0,-10,-20,-20,  0,  0,  0,  0,0,0,0,0,0,0,0,
+  0,-10,-10,-30,-30,-20,  0,  0,  0,0,0,0,0,0,0,0,
+-50,-50,-40,-40,-40,-50,-30,-30,  0,0,0,0,0,0,0,0,
+-90,-90,-90,-70,-70,-80,-80,-80,  0,0,0,0,0,0,0,0,
+  0,  0,  0,  0,  0,  0,  0,  0,  0,0,0,0,0,0,0,0,
+
+
+	},
+	{
+  0,  0,  0,  0,  0,  0,  0,  0,  0,0,0,0,0,0,0,0,
+ 90, 90, 90, 70, 70, 80, 80, 80,  0,0,0,0,0,0,0,0,
+ 50, 50, 40, 40, 40, 50, 30, 30,  0,0,0,0,0,0,0,0,
+  0, 10, 10, 30, 30, 20,  0,  0,  0,0,0,0,0,0,0,0,
+-10,  0, 10, 20, 20,  0,  0,  0,  0,0,0,0,0,0,0,0,
+-10,  0,  0,  0,  0,-10,  0,  0,  0,0,0,0,0,0,0,0,
+-10,  0,  0,-10,-10, 10, 10,  0,  0,0,0,0,0,0,0,0,
+  0,  0,  0,  0,  0,  0,  0,  0,  0,0,0,0,0,0,0,0,
+	},
+}
+
+var Zobrist [16][128]uint64
+
+var nodes int = 0
+
+
 type Board struct {
 	squares    [128]int8
 	kings      [2]int
 	enpassant  int
 	sidetomove int8
+	zobrist    uint64
+	mobilities [2]int
 }
 
 type Move struct {
 	start int8
 	end   int8
 }
+var nullmove Move = Move{0,0}
 
 func (move Move) stringify() string {
 	return string(FILE[move.start&7]) + string(RANK[move.start>>4]) + string(FILE[move.end&7]) + string(RANK[move.end>>4])
-}
-
-type Entry struct {
 }
 
 func Parse(sqstr string) int {
@@ -86,7 +121,10 @@ func FromFen(fen string) Board {
 }
 
 func (board *Board) Edit(index int, newpiece int8) {
+	oldpiece := board.squares[index]
 	board.squares[index] = newpiece
+	board.zobrist ^= Zobrist[oldpiece][index]
+	board.zobrist ^= Zobrist[newpiece][index]
 }
 
 var rays = [7]bool{false, false, false, true, true, true, false}
@@ -114,6 +152,8 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 	var ourPawn int8 = 2 + board.sidetomove
 	advance := ADVANCES[board.sidetomove]
 
+	mobility := 0
+
 	for i, piece := range board.squares {
 		if piece < 2 || piece & 1 != board.sidetomove {
 			continue
@@ -139,6 +179,7 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 		} else {
 			ray := rays[piecetype]
 			pattern := patterns[piecetype]
+			mobValue := mobChart[piecetype]
 
 
 			for _, dir := range pattern {
@@ -148,9 +189,13 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 					if victim != 0 {
 						if victim&1 != piece&1 {
 							moves = append(moves, Move{int8(i), int8(end)})
+							mobility += mobValue
 						}
-					} else if !capturesOnly {
-						moves = append(moves, Move{int8(i), int8(end)})
+					} else {
+						mobility += mobValue
+						if !capturesOnly {
+							moves = append(moves, Move{int8(i), int8(end)})
+						}
 					}
 
 					if victim != 0 || !ray {
@@ -169,6 +214,8 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 		}
 	}
 
+
+
 	kingIndex := board.kings[board.sidetomove]
 	if !capturesOnly && (kingIndex == E8 || kingIndex == E1) && !board.attacked(kingIndex, 1-board.sidetomove) {
 		if board.squares[kingIndex+E+E+E+CASTLE] == 1 && board.squares[kingIndex+E+E] == 0 && board.squares[kingIndex+E] == 0 {
@@ -178,6 +225,8 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 			moves = append(moves, Move{int8(kingIndex), int8(kingIndex+W+W)})
 		}
 	}
+
+	board.mobilities[board.sidetomove] = mobility
 
 	return moves
 }
@@ -208,8 +257,6 @@ func (board *Board) attacked(start int, attacker int8) bool {
 			}
 		}
 	}
-
-
 
 	for i, dir := range []int{N,S,E,W,N+W,N+E,S+E,S+W, N + N + W, N + N + E, S + S + W, S + S + E, E + E + N, E + E + S, W + W + N, W + W + S} {
 		if ((start + dir) & 0x88) != 0 {
@@ -315,6 +362,11 @@ func (board *Board) print(){
 			fmt.Println("")
 		}
 	}
+	fmt.Println(board.zobrist)
+}
+
+func (board *Board) Hash() uint64 {
+	return board.zobrist ^ Zobrist[15][board.enpassant] ^ Zobrist[15][120+board.sidetomove]
 }
 
 func perft(perftboard *Board, depth int, maxdepth int) int {
@@ -346,7 +398,263 @@ func findAfter(word string, strlist []string) []string {
 	return []string{}
 }
 
+func eval(board *Board) int {
+	values := []int{ 0,0,-100,100,-300,300,-330,330,-500,500,-900,900,0,0}
+
+	score := board.mobilities[1] - board.mobilities[0]
+
+	whiterear := [10]int{0,0,0,0,0,0,0,0,0,0,}
+	blackrear := [10]int{7,7,7,7,7,7,7,7,7,7,}
+
+	for sq, piece := range board.squares {
+		score += values[piece]
+		if piece / 2 == 1 {
+			score += pawnChart[piece & 1][sq]
+
+			pawnfile := (sq & 7) + 1
+			pawnrank := sq >> 4
+
+			if (piece & 1) == 1 {
+				whiterear[pawnfile] = max(whiterear[pawnfile], pawnrank)
+			} else {
+				blackrear[pawnfile] = min(blackrear[pawnfile], pawnrank)
+			}
+		}
+	}
+
+	wkingfile := (board.kings[1]&7) + 1
+	wkingrank := board.kings[1] >> 4
+	bkingfile := (board.kings[0]&7) + 1
+	bkingrank := board.kings[0] >> 4
+
+	for i := -1; i <= 1; i++ {
+		if whiterear[wkingfile + i] > bkingrank {
+			score += shieldChart[wkingfile + i]
+		}
+		if blackrear[bkingfile + i] < wkingrank {
+			score -= shieldChart[bkingfile + i]
+		}
+	}
+
+	for sq, piece := range board.squares {
+		if piece / 2 == 1 {
+			pfile := (sq & 7) + 1
+			prank := sq >> 4
+
+			if piece & 1 == 1 {
+				if whiterear[pfile-1] == 0 && whiterear[pfile+1] == 0 {
+					score -= 20
+				}
+				if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
+					score += 30
+
+				}
+
+			} else {
+				if blackrear[pfile-1] == 7 && blackrear[pfile+1] == 7 {
+					score += 20
+				}
+				if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
+					score -= 30
+				}
+			}
+		}
+	}
+
+	/*
+	if piece & 1 == 0:
+                if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
+                    passers[0][pfile] += 1
+                if rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
+                    backwards[0][pfile] += 1
+                if rearpawns[0][pfile-1] == 12 and rearpawns[0][pfile+1] == 12:
+                    isolated[0][pfile] += 1
+            else:
+                if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
+                    passers[1][pfile] += 1
+                if rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
+                    backwards[1][pfile] += 1
+                if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
+                    isolated[1][pfile] += 1
+*/
+
+
+	if board.sidetomove == 0 {
+		return -score + 20
+	}
+
+	return score + 20
+}
+
+
+type entry struct {
+	key uint64
+	move Move
+	depth int
+	score int
+	bound int8
+}
+
+const hashsize = 16777216
+var table [hashsize]entry
+
+var history [14][128]int
+
+func alphabeta(board *Board, alpha, beta, depth, ply int) int {
+	nodes += 1
+	bestScore := -9999 + ply
+
+	// standpat
+	if (depth <= 0) {
+		bestScore = eval(board)
+		if bestScore > alpha {
+			alpha = bestScore
+		}
+		if bestScore >= beta {
+			return bestScore
+		}
+	}
+
+	moves := board.GenerateLegalMoves(depth <= 0)
+	priorities := make([]int, len(moves), len(moves))
+
+	hash := board.Hash()
+
+	if ply != 0 {
+		for _, rep := range repetition {
+			if rep == hash {
+				return 0
+			}
+		}
+	}
+
+
+	tt := table[hash % hashsize]
+
+	if tt.key == hash && ply != 0 {
+		if tt.depth >= depth || 0 >= depth {
+			if (tt.bound == 1 && tt.score <= alpha) {return tt.score}
+			if (tt.bound == -1 && tt.score >= beta) {return tt.score}
+			if (tt.bound == 0) {return tt.score}
+		}
+	}
+
+
+	// Prunings should only happen above this
+	repetition = append(repetition, hash)
+
+	for i, move := range moves {
+		if board.squares[move.end] != 0 {
+			priorities[i] = (int(board.squares[move.end]) * 20) - int(board.squares[move.start]) + 10000
+		} else {
+			priorities[i] = history[board.squares[move.start]][move.end]
+		}
+		if tt.move.end == move.end && tt.move.start == move.start {
+			priorities[i] = 100000
+		}
+	}
+
+	legals := 0
+	var bestMove Move
+	var boundtype int8 = -1
+
+	for i := range moves {
+		// Selection sort
+		besti := i
+		for j:=i;j<len(moves);j++ {
+			if priorities[besti] < priorities[j] {
+				besti = j
+			}
+		}
+
+		nextMove := moves[besti]
+
+		priorities[i], priorities[besti] = priorities[besti], priorities[i]
+		moves[i], moves[besti] = moves[besti], moves[i]
+
+
+
+		nextBoard := board.Apply(nextMove)
+		if nextBoard == nil {
+			continue
+		}
+
+		legals += 1
+
+		reduction := legals / 12
+		if board.squares[nextMove.end] != 0 {
+			reduction = 0
+		}
+
+		score := -alphabeta(nextBoard, -beta, -alpha, depth - 1 - reduction, ply + 1)
+
+		if score > bestScore {
+			bestScore = score
+			bestMove = nextMove
+		}
+
+		if score > alpha {
+			boundtype = 0
+			alpha = score
+		}
+
+		if score >= beta {
+			boundtype = 1
+
+			if (board.squares[nextMove.end] != 0) {
+				hh := &history[board.squares[nextMove.start]][nextMove.end]
+
+				bonus := depth * depth
+
+				*hh += bonus - bonus * (*hh / 512)
+
+				for m:=0;m<i;m++ {
+					hhm := &history[board.squares[moves[i].start]][moves[i].end]
+					*hhm -= bonus + bonus * (*hhm / 512)
+				}
+			}
+
+			break
+		}
+
+	}
+
+	repetition = repetition[:len(repetition)-1]
+
+	if legals == 0 && depth > 0 {
+		// TODO: stalemate
+		return -9999
+	}
+
+	if bestMove.start != bestMove.end {
+		table[hash % hashsize] = entry{hash, bestMove, depth, bestScore, boundtype}
+	}
+
+	return bestScore
+}
+
 var uciBoard Board
+var repetition []uint64 = []uint64{}
+
+func printpv() string {
+	pvstr := ""
+	board := &uciBoard
+	for range 20 {
+		if board == nil {
+			break
+		}
+		m := table[board.Hash() % hashsize].move
+		if board.Hash() != table[board.Hash() % hashsize].key {
+			break
+		}
+
+		pvstr += m.stringify() + " "
+
+		//fmt.Println(m.stringify(), table[board.Hash() % hashsize].depth)
+		board = board.Apply(m)
+	}
+	return strings.TrimSpace(pvstr)
+}
 
 func parseuci(line string) {
 	args := strings.Fields(line)
@@ -359,33 +667,69 @@ func parseuci(line string) {
 	case "isready":
 		fmt.Println("readyok")
 	case "print":
+
 		uciBoard.print()
-	case "go":
-		for depth := range 100 {
-			fmt.Println("info string depth", depth)
-		}
 	case "perft":
+		start := time.Now().UnixMilli()
 		fmt.Println("total", perft(&uciBoard, 5, 5))
+		fmt.Println("time", time.Now().UnixMilli() - start)
+
 	case "position":
 		uciBoard = FromFen(strings.Join(findAfter("fen", args)[0:4], " "))
 		for _, movestr := range findAfter("moves", args) {
+			repetition = append(repetition, (uciBoard.Hash()))
 			uciBoard = *(uciBoard.Apply(Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))}))
 			// TODO: add underpromotion condition?
 		}
 	case "go":
+		timeAlloc := 1000
+		if len(findAfter("movetime", args)) != 0 {
+			timeAlloc, _ = strconv.Atoi(findAfter("movetime", args)[0])
+		}
+
+		if len(findAfter("wtime", args)) != 0 && uciBoard.sidetomove == 1 {
+			timeAlloc, _ = strconv.Atoi(findAfter("wtime", args)[0])
+			timeAlloc /= 60
+		}
+
+		if len(findAfter("btime", args)) != 0 && uciBoard.sidetomove == 0 {
+			timeAlloc, _ = strconv.Atoi(findAfter("btime", args)[0])
+			timeAlloc /= 30
+		}
+
+		nodes = 0
+		start := time.Now().UnixMilli()
+		for depth := 1; depth <= 100; depth++ {
+			fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, 0), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv())
+
+			if int(time.Now().UnixMilli() - start) > timeAlloc {
+
+
+				break
+			}
+
+		}
+		fmt.Println("bestmove", table[uciBoard.Hash() % hashsize].move.stringify())
 	case "quit":
 		return
 	}
 }
 
 func main() {
+	for i := range 15 {
+		for j := range 128 {
+			Zobrist[i+1][j] = rand.Uint64()
+		}
+	}
+
 	uciBoard = FromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 	reader := bufio.NewReader(os.Stdin)
 
-	parseuci("position fen rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
+	//parseuci("position fen rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
 
 	for {
 		line, _ := reader.ReadString('\n')
+		line = strings.Replace(line, "startpos", "fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 1)
 		parseuci(line)
 	}
 }
@@ -393,17 +737,27 @@ func main() {
 // Eval centered around
 // 1. Material
 //     - static count
+//     - perhaps after a threshold is hit we can change to meme eval
 // 2. King Safety
 //     - pawn shield
 //     - king vmob?
+//     - scale by material imbalance
+//     - scale by n queens
 // 3. Activity
 //     - mobility
 //     - attacks?
-//     - weighted mobility?
+//     - scale by material imbalance?
 // 4. Pawn Structure / Endgames
 //     - drawishness?
 //     - backwards pawns?
-//     
+//     - isolated pawns
+//     - passed pawns
+//     - passed pawn scaling?
+//     - opposite king passer bonus?
+
+// Some thoughts give an extra bonus to the furthest passed pawn based on how far it is, could simplify pawn races, also really rewards positions where there may only be one passer but its really punching above its weight as opposed to being useless
+// Perhaps scale this by king distance ^?
+//
 
 // Ben finegolds middle name is philip
 // Should make a stream where people vote on best move

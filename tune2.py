@@ -67,11 +67,6 @@ first = True
 rays = [ False, False, False, True, True, True, False]
 patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E,S+W,S+E], [N,S,E,W], [N,S,E,W,N+W,N+E,S+W,S+E], [N,S,E,W,N+W,N+E,S+W,S+E]]
 
-def pawncheck(virtualboard, index, pawntype):
-    if pawntype == 3:
-        return virtualboard[index + S + W] == pawntype or virtualboard[index + S + E] == pawntype
-    if pawntype == 2:
-        return virtualboard[index + N + W] == pawntype or virtualboard[index + N + E] == pawntype
 
 for line in tqdm(lines):
     if len(outputs) > 1_000_000:
@@ -116,23 +111,36 @@ for line in tqdm(lines):
         print("Error:", err)
 
     material = np.zeros((2, 7))
-    psqt = np.zeros((7, 64))
-    mobilities = np.zeros(7)
-    restrictedmobilities = np.zeros(7)
+    mobilities = np.zeros((2,7))
 
-    attacks_pawn = np.zeros(7)
-    attacks_other = np.zeros(7)
+    attackspawn = np.zeros((7))
+    attackspiece = np.zeros((7))
 
-    backwardsc = np.zeros(8)
-    backwardso = np.zeros(8)
-    passers = np.zeros(8)
-
-    kingopen = np.zeros(2)
     sidetomove = np.zeros(1)
 
-    npawns = np.zeros(2)
+    backwards = np.zeros((2,10))
+    passers = np.zeros((2,10))
+    isolated = np.zeros((2,10))
+
+
+    psqt = np.zeros(64)
+    shield = np.zeros((2,10))
+    shield2 = np.zeros((2,10))
+    shield3 = np.zeros((2,10))
+
+    race = np.zeros(8)
+
+
 
     kings = [-1, -1]
+    queens = [0, 0]
+    rearpawns = [
+        [12,12,12,12,12,12,12,12,12,12],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]
+
+    frontpasswhite = 12
+    frontpasssblack = 0
 
 
     for i in range(64):
@@ -146,44 +154,28 @@ for line in tqdm(lines):
 
         material[piececolor, piecetype] += 1
 
-        j = i
-        if piececolor != 1:
-            j = i ^ 56
+        if piecetype == 1:
+            pfile = mailbox[i] % 10
+            prank = mailbox[i] // 10
+            if piececolor == 0:
+                rearpawns[piececolor][pfile] = min(rearpawns[piececolor][pfile], prank)
+            else:
+                rearpawns[piececolor][pfile] = max(rearpawns[piececolor][pfile], prank)
 
-        psqt[piecetype][j] += sign[piececolor]
+            # pawn psqt
+            j = i
+            if piececolor != 1:
+                j = i ^ 56
 
-        if piecetype == 6:
+            # Base case for psqt, e3 pawn
+            if j != 44:
+                psqt[j] += sign[piececolor]
+
+        elif piecetype == 6:
             kings[piececolor] = mailbox[i]
 
-        if piecetype == 1:
-            npawns[piece & 1] += 1
-
-    
-    wshield = []
-    if kings[1] % 10 < 5:
-        wshield = [33,32,31]
-    else:
-        wshield = [36,37,38]
-
-    bshield = []
-    if kings[0] % 10 < 5:
-        bshield = [83,82,81]
-    else:
-        bshield = [86,87,88]
-    
-    pawnshield = np.zeros((2,3))
-
-    for i in range(len(bshield)):
-        if virtualboard[bshield[i]] != 2 and virtualboard[bshield[i] + N] != 2:
-            pawnshield[0,i] += 1
-
-    for i in range(len(wshield)):
-        if virtualboard[wshield[i]] != 3 and virtualboard[wshield[i] + S] != 3:
-            pawnshield[1,i] += 1
-
-    inCheck = np.zeros(2)
-    inCheck[0] = int(pawncheck(virtualboard, kings[0], 3))
-    inCheck[1] = int(pawncheck(virtualboard, kings[0], 2))
+        elif piecetype == 5:
+            queens[piececolor] += 1
 
     for sq in range(len(virtualboard)):
         piece = virtualboard[sq]
@@ -192,12 +184,33 @@ for line in tqdm(lines):
         pattern = patterns[piecetype]
 
         if piecetype == 1:
+            pfile = sq % 10
+            prank = sq // 10
+
+
+
+
+
+            if piece & 1 == 0:
+                if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
+                    passers[0][pfile] += 1
+                    frontpasssblack = max(frontpasssblack, prank)
+                if rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
+                    backwards[0][pfile] += 1
+                if rearpawns[0][pfile-1] == 12 and rearpawns[0][pfile+1] == 12:
+                    isolated[0][pfile] += 1
+            else:
+                if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
+                    passers[1][pfile] += 1
+                    frontpasswhite = min(frontpasswhite, prank)
+                if rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
+                    backwards[1][pfile] += 1
+                if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
+                    isolated[1][pfile] += 1
+
             continue
         
         mobility = 0
-        restrictedmobility = 0
-        attackspawn = 0
-        attacksother = 0
 
         for direction in pattern:
             current = sq
@@ -208,82 +221,97 @@ for line in tqdm(lines):
                     break
 
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
-                    #mobility += 1
+                    mobility += 1
                     j = inverse[current]
                     
                     if piece & 1 == 0:
                         j ^= 56
-                    
-                    # is restricted?
-
-                    isRestricted = False
-                    if piece & 1 == 1:
-                        isRestricted = pawncheck(virtualboard, current, 2)
-                    else:
-                        isRestricted = pawncheck(virtualboard, current, 3)
-
-                    mobility += 1                    
-                    if isRestricted:
-                        restrictedmobility += 1
 
 
                     # piece attacks
                     if virtualboard[current] > 3:
-                        attacksother += 1
-                        if virtualboard[current] >= 12:
-                            inCheck[piece & 1] = 1
+                        attackspiece[piecetype] += sign[piece&1]
                     elif virtualboard[current] > 1:
-                        attackspawn += 1
-
+                        attackspawn[piecetype] += sign[piece&1]
 
                 if virtualboard[current] != 0 or (not isray):
                     break
-        
-        #if virtualboard[sq] > 1:
-            #print("  pPnNbBrRqQkK"[virtualboard[sq]] , domesticmobility * sign[piece & 1], foreignmobility * sign[piece & 1])
-        mobilities[piecetype] += sign[piece & 1] * mobility
-        restrictedmobilities[piecetype] += sign[piece & 1] * restrictedmobility
-        attacks_pawn[piecetype] += sign[piece & 1] * attackspawn
-        attacks_other[piecetype] += sign[piece & 1] * attacksother
 
-    for side in range(2):
-        if inCheck[side] == 1:
-            continue
-        start = kings[side]
-        hit = 0
-        for direction in patterns[6]:
-            i = start + direction
-            while virtualboard[i] == 0:
-                i += direction
-                hit += 1
-        kingopen[int(side)] += hit
+
+        mobilities[piece & 1][piecetype] += mobility
+
+    wkingfile = kings[1] % 10
+    wkingrank = kings[1] // 10
+    bkingfile = kings[0] % 10
+    bkingrank = kings[0] // 10
+    # TODO: maybe only make shield count if its in front of the king
+
+    for x in [-1,0,1]:
+        wspawn = rearpawns[1][wkingfile + x]
+        if wspawn > 0:
+            shield[1][wkingfile + x] = 1
+        if wspawn == 8:
+            shield2[1][wkingfile + x] = 1
+        if wspawn > 0 and wspawn < wkingrank:
+            shield3[1][wkingfile + x] = 1
+
+        bspawn = rearpawns[0][bkingfile + x]
+        if bspawn < 10:
+            shield[0][bkingfile + x] = 1
+        if bspawn == 3:
+            shield2[0][bkingfile + x] = 1
+        if bspawn < 10 and bspawn > bkingrank:
+            shield3[0][bkingfile + x] = 1
+
+    # Clipping passers
+    passers = np.clip(passers, 0, 1) # We dont count doubled pawns as multiple passers
+
+
+    if bkingfile < 5:
+        isolated[0] = isolated[0,::-1]
+        passers[1] = passers[1,::-1]
+
+    if wkingfile < 5:
+        passers[0] = passers[0,::-1]
+        isolated[1] = isolated[1,::-1]
 
     sidetomove[0] = sign[turn]
 
-    manualterms = [material[0, :], material[1, :]]
-    linearterms = [material[1, :] - material[0, :], psqt[1, :], sidetomove, mobilities]
+    shieldD = shield[1] - shield[0]
+    shieldQ = (shield[1] * queens[0]) - (shield[0] * queens[1])
+    # shield 2 underperforms
+    shield2D = shield2[1] - shield2[0]
+    shield2Q = (shield2[1] * queens[0]) - (shield2[0] * queens[1])
+    shield3D = shield3[1] - shield3[0]
+    shield3Q = (shield3[1] * queens[0]) - (shield3[0] * queens[1])
+    # TODO: as described above try more shield implementations
+
+    if 11-frontpasswhite-3 >= 0:
+        race[11-frontpasswhite-3] += 1
+
+    if frontpasssblack-3 >= 0:
+        race[frontpasssblack-3] -= 1
+
+
+    manualterms = [material[0, :], material[1, :], np.sum(passers, axis=1)]
+    linearterms = [material[1, :] - material[0, :], psqt, mobilities[1] - mobilities[0], isolated[1] - isolated[0], passers[1] - passers[0], sidetomove, shieldQ, shieldD, race, attackspiece, attackspawn]#, shieldD, shield2Q]
+
+
+
 
     if first:
         for item in linearterms:
             sizes.append(item.shape[0])
 
         print("\nfen " + fen)
-        print(material)
-        #print(mobilities)
-        print(inCheck)
-        #print("domestic",domesticmobilities)
-        #print("foreign",foreignmobilities)
-        #print("restricted",restrictedmobilities)
-        #print("kingvmob", kingopen)
-        #print("backwardsc", backwardsc)
-        #print("backwardso", backwardso)
-        #print("passers", passers)
-        #print("attacks pawn", attacks_pawn)
-        #print("attacks other", attacks_other)
-        #print("defends pawn", defends_pawn)
-        #print("print other", defends_other)
-        #print(kingopen)
-        print("npawns", npawns)
+        #print(passers)
+        #print(manualterms)
+        #print(shield)
+        #print(shield2)
+        #print(shield3)
+        #print(race)
+        #print(attackspiece)
+        #print(attackspawn)
         #sys.exit()
 
     manualterms = np.concatenate(manualterms)
@@ -292,7 +320,7 @@ for line in tqdm(lines):
     if first:
         linear_start = manualterms.shape[0]
         linear_size = linearterms.shape[0]
-        print(linear_start, linear_size)
+    #    print(linear_start, linear_size)
 
     values = np.concatenate([manualterms, linearterms])
 
@@ -308,18 +336,28 @@ class HCE(torch.nn.Module):
         super().__init__()
 
         self.terms = torch.nn.Parameter(torch.randn(linear_size))
-        self.pawnscale = torch.nn.Parameter(torch.randn(1))
+        self.taperterms = torch.nn.Parameter(torch.randn(linear_size))
+
+        self.scalemult = torch.nn.Parameter(torch.randn(2))
 
     def forward(self, x):
         pawnsw = x[:,1+7]
         pawnsb = x[:,1]
 
-        knights = x[:,2] + x[:,2+7]
-        bishops = x[:,3] + x[:,3+7]
-        rooks = x[:,4] + x[:,4+7]
+        passersw = x[:,14]
+        passersb = x[:,14+1]
+
+        npassers = passersw + passersb
+        npawns = pawnsw + pawnsb
+
         queens = x[:,5] + x[:,5+7]
 
         score = torch.matmul(x[:,linear_start:], self.terms)
+
+        #score = (torch.matmul(x[:,linear_start:], self.terms) * (npawns/16)) + (torch.matmul(x[:,linear_start:], self.taperterms)* (16-npawns)/16)
+
+
+
 
         return torch.tanh(score)
 
@@ -328,13 +366,15 @@ class HCE(torch.nn.Module):
         print ("m=",m)
         offset = 0
         for size in sizes:
-            #if size == 64:
-            #    if finalEpoch:
-            #        plt.imshow((self.midgame[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
-            #        plt.show()
-            #        plt.imshow((self.endgame[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
-            #        plt.show()
+            if size == 64:
+                if finalEpoch:
+                    plt.imshow((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
+                    plt.show()
+                    #plt.imshow((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
+                    #plt.show()
+
             print((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32))
+            #print((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32))
             offset += size
 
         print("===")
@@ -378,9 +418,14 @@ for epoch in range(epochs):  # Adjust the number of epochs
 
 # no tapering
 # material + pawns + tempo + mobilities = 0.2706
+# + isolated + backwards + passers = 0.2647
+# + shield * queens = 0.2641
+# isolated and passer inversion = .2639
+
+# shieldD got me 0.26599 lololol
 
 # lots of tapering
 # material + pawns + tempo = 0.2671
 # + mobilities = 0.2608
 # + double taper = 0.2587
-# + kingopen + incheck = 0.2562
+# - double taper + shield * queens = 0.2539
