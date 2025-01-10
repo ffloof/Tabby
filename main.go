@@ -19,8 +19,14 @@ const RANK = "87654321"
 const FILE = "abcdefgh"
 var ADVANCES = [...]int{S,N}
 
-var mobChart = [...]int{0,0,6,3,3,0,-1}
-var shieldChart = [10]int{0,15,40,5,0,0,5,40,15,0}
+
+//[  0  77 257 292 427 933   0]
+var matvalues = [...]int{ 0,0,-77,77,-257,257,-292,292,-427,427,-933,933,0,0}
+
+var pieceHit = [7]int{  0,  0,  17,  14,  12,  -3, -11}
+var pawnHit = [7]int{ 0,  0, -3,   0,   -1,   0,  29 }
+var mobChart = [...]int{0,0,5,2,3,0,0}
+var shieldChart = [10]int{ 0, 20, 24, 3, 4, 0, 12, 35, 24, 0}
 var pawnChart = [2][128]int{
 	{
   0,  0,  0,  0,  0,  0,  0,  0,  0,0,0,0,0,0,0,0,
@@ -64,7 +70,7 @@ type Move struct {
 	start int8
 	end   int8
 }
-var nullmove Move = Move{0,0}
+var nullmove Move = Move{9,9}
 
 func (move Move) stringify() string {
 	return string(FILE[move.start&7]) + string(RANK[move.start>>4]) + string(FILE[move.end&7]) + string(RANK[move.end>>4])
@@ -190,6 +196,11 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 						if victim&1 != piece&1 {
 							moves = append(moves, Move{int8(i), int8(end)})
 							mobility += mobValue
+							if victim / 2 == 1 {
+								mobility += pawnHit[piecetype]
+							} else {
+								mobility += pieceHit[piecetype]
+							}
 						}
 					} else {
 						mobility += mobValue
@@ -399,15 +410,13 @@ func findAfter(word string, strlist []string) []string {
 }
 
 func eval(board *Board) int {
-	values := []int{ 0,0,-100,100,-300,300,-330,330,-500,500,-900,900,0,0}
-
 	score := board.mobilities[1] - board.mobilities[0]
 
 	whiterear := [10]int{0,0,0,0,0,0,0,0,0,0,}
 	blackrear := [10]int{7,7,7,7,7,7,7,7,7,7,}
 
 	for sq, piece := range board.squares {
-		score += values[piece]
+		score += matvalues[piece]
 		if piece / 2 == 1 {
 			score += pawnChart[piece & 1][sq]
 
@@ -428,10 +437,10 @@ func eval(board *Board) int {
 	bkingrank := board.kings[0] >> 4
 
 	for i := -1; i <= 1; i++ {
-		if whiterear[wkingfile + i] > bkingrank {
+		if whiterear[wkingfile + i] != 0 && whiterear[wkingfile + i] < wkingrank {
 			score += shieldChart[wkingfile + i]
 		}
-		if blackrear[bkingfile + i] < wkingrank {
+		if blackrear[bkingfile + i] != 7 && blackrear[bkingfile + i] > bkingrank {
 			score -= shieldChart[bkingfile + i]
 		}
 	}
@@ -500,13 +509,14 @@ var table [hashsize]entry
 
 var history [14][128]int
 
-func alphabeta(board *Board, alpha, beta, depth, ply int) int {
+func alphabeta(board *Board, alpha, beta, depth, ply int, nullallowed bool) int {
 	nodes += 1
 	bestScore := -9999 + ply
 
 	// standpat
+	staticEval := eval(board)
 	if (depth <= 0) {
-		bestScore = eval(board)
+		bestScore = staticEval
 		if bestScore > alpha {
 			alpha = bestScore
 		}
@@ -531,13 +541,36 @@ func alphabeta(board *Board, alpha, beta, depth, ply int) int {
 
 	tt := table[hash % hashsize]
 
-	if tt.key == hash && ply != 0 {
-		if tt.depth >= depth || 0 >= depth {
-			if (tt.bound == 1 && tt.score <= alpha) {return tt.score}
-			if (tt.bound == -1 && tt.score >= beta) {return tt.score}
-			if (tt.bound == 0) {return tt.score}
+	if ply != 0 {
+		if tt.key == hash {
+			if tt.depth >= depth || 0 >= depth {
+				if (tt.bound == 1 && tt.score <= alpha) {return tt.score}
+				if (tt.bound == -1 && tt.score >= beta) {return tt.score}
+				if (tt.bound == 0) {return tt.score}
+			}
+		} else {
+			depth -= 1
 		}
 	}
+
+	pv := beta - alpha != 1
+	if ply != 0 && depth > 0 && !pv {
+		// Null move pruning NMP
+		if staticEval >= beta && nullallowed && depth > 3 {
+			nmBoard := board.Apply(nullmove)
+			if nmBoard != nil {
+				nmScore := alphabeta(nmBoard, -beta, -beta+1, 3+depth/6, ply+1, false)
+				if nmScore >= beta {
+					return beta
+				}
+			}
+		}
+
+		// Reverse futility pruning
+		if (depth < 4 && staticEval - depth * 75 > beta) { return staticEval }
+	}
+
+
 
 
 	// Prunings should only happen above this
@@ -581,12 +614,29 @@ func alphabeta(board *Board, alpha, beta, depth, ply int) int {
 
 		legals += 1
 
-		reduction := legals / 12
-		if board.squares[nextMove.end] != 0 {
-			reduction = 0
+		reduction := 0
+		if legals > 4 {
+			reduction = legals/16 + depth / 8
 		}
 
-		score := -alphabeta(nextBoard, -beta, -alpha, depth - 1 - reduction, ply + 1)
+		if !pv {
+			reduction += 1
+		}
+
+		
+		var score int
+
+		if ((legals == 1 || depth <= 0)){
+			score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, ply + 1, true)
+		} else {
+			score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1 - reduction, ply + 1, true)
+			if score > alpha {
+				score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1, ply + 1, true)
+				if score > alpha {
+					score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, ply+1, true)
+				}
+			}
+		}
 
 		if score > bestScore {
 			bestScore = score
@@ -601,16 +651,16 @@ func alphabeta(board *Board, alpha, beta, depth, ply int) int {
 		if score >= beta {
 			boundtype = 1
 
-			if (board.squares[nextMove.end] != 0) {
+			if (board.squares[nextMove.end] == 0) {
 				hh := &history[board.squares[nextMove.start]][nextMove.end]
 
-				bonus := depth * depth
-
-				*hh += bonus - bonus * (*hh / 512)
+				*hh += depth * depth
 
 				for m:=0;m<i;m++ {
-					hhm := &history[board.squares[moves[i].start]][moves[i].end]
-					*hhm -= bonus + bonus * (*hhm / 512)
+					if moves[i].end == 0 {
+						hhm := &history[board.squares[moves[i].start]][moves[i].end]
+						*hhm -= depth * depth
+					}
 				}
 			}
 
@@ -689,7 +739,7 @@ func parseuci(line string) {
 
 		if len(findAfter("wtime", args)) != 0 && uciBoard.sidetomove == 1 {
 			timeAlloc, _ = strconv.Atoi(findAfter("wtime", args)[0])
-			timeAlloc /= 60
+			timeAlloc /= 30
 		}
 
 		if len(findAfter("btime", args)) != 0 && uciBoard.sidetomove == 0 {
@@ -700,11 +750,15 @@ func parseuci(line string) {
 		nodes = 0
 		start := time.Now().UnixMilli()
 		for depth := 1; depth <= 100; depth++ {
-			fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, 0), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv())
+			fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, 0, true), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv())
+
+			for i := range 14 {
+				for j := range 128 {
+					history[i][j] /= 8
+				}
+			}
 
 			if int(time.Now().UnixMilli() - start) > timeAlloc {
-
-
 				break
 			}
 
@@ -716,6 +770,7 @@ func parseuci(line string) {
 }
 
 func main() {
+	fmt.Println("info string Started")
 	for i := range 15 {
 		for j := range 128 {
 			Zobrist[i+1][j] = rand.Uint64()
@@ -740,13 +795,13 @@ func main() {
 //     - perhaps after a threshold is hit we can change to meme eval
 // 2. King Safety
 //     - pawn shield
-//     - king vmob?
 //     - scale by material imbalance
 //     - scale by n queens
 // 3. Activity
 //     - mobility
 //     - attacks?
 //     - scale by material imbalance?
+//	   - could classify mobility based on if its behind our/opponent pawns
 // 4. Pawn Structure / Endgames
 //     - drawishness?
 //     - backwards pawns?

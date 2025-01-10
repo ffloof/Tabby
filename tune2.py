@@ -124,6 +124,9 @@ for line in tqdm(lines):
 
 
     psqt = np.zeros(64)
+
+    rearpsqt = np.zeros(64)
+
     shield = np.zeros((2,10))
     shield2 = np.zeros((2,10))
     shield3 = np.zeros((2,10))
@@ -244,7 +247,6 @@ for line in tqdm(lines):
     wkingrank = kings[1] // 10
     bkingfile = kings[0] % 10
     bkingrank = kings[0] // 10
-    # TODO: maybe only make shield count if its in front of the king
 
     for x in [-1,0,1]:
         wspawn = rearpawns[1][wkingfile + x]
@@ -266,14 +268,33 @@ for line in tqdm(lines):
     # Clipping passers
     passers = np.clip(passers, 0, 1) # We dont count doubled pawns as multiple passers
 
+    for i in range(1,9):
+        j = i
+        k = i
+        if wkingfile <= 4:
+            j = 9 - i
+        if bkingfile <= 4:
+            k = 9 - i
+
+        rearb = rearpawns[0][i]-2
+        if rearb != 10:
+            rearpsqt[rearb * 8 + (k-1)] -= 1
+
+        rearw = 9-rearpawns[1][i]
+        if rearw != 9:
+            rearpsqt[rearw * 8 + (j-1)] += 1
+
+        #print(9-rearpawns[1][i])
 
     if bkingfile < 5:
         isolated[0] = isolated[0,::-1]
+        backwards[0] = backwards[0,::-1]
         passers[1] = passers[1,::-1]
 
     if wkingfile < 5:
         passers[0] = passers[0,::-1]
         isolated[1] = isolated[1,::-1]
+        backwards[1] = backwards[1,::-1]
 
     sidetomove[0] = sign[turn]
 
@@ -294,7 +315,7 @@ for line in tqdm(lines):
 
 
     manualterms = [material[0, :], material[1, :], np.sum(passers, axis=1)]
-    linearterms = [material[1, :] - material[0, :], psqt, mobilities[1] - mobilities[0], isolated[1] - isolated[0], passers[1] - passers[0], sidetomove, shieldQ, shieldD, race, attackspiece, attackspawn]#, shieldD, shield2Q]
+    linearterms = [material[1, :] - material[0, :], rearpsqt, mobilities[1] - mobilities[0], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], race,  sidetomove, attackspiece, attackspawn, shieldD]
 
 
 
@@ -312,6 +333,8 @@ for line in tqdm(lines):
         #print(race)
         #print(attackspiece)
         #print(attackspawn)
+        #print(backwards)
+        #print(nopawns)
         #sys.exit()
 
     manualterms = np.concatenate(manualterms)
@@ -337,27 +360,21 @@ class HCE(torch.nn.Module):
 
         self.terms = torch.nn.Parameter(torch.randn(linear_size))
         self.taperterms = torch.nn.Parameter(torch.randn(linear_size))
-
-        self.scalemult = torch.nn.Parameter(torch.randn(2))
+        
+        self.phaser = torch.nn.Parameter(torch.randn(4))
 
     def forward(self, x):
-        pawnsw = x[:,1+7]
-        pawnsb = x[:,1]
+        npawns = x[:,1+7] + x[:,1]
 
-        passersw = x[:,14]
-        passersb = x[:,14+1]
+        matcount = x[:,2:6] + x[:,9:13]
 
-        npassers = passersw + passersb
-        npawns = pawnsw + pawnsb
-
-        queens = x[:,5] + x[:,5+7]
-
-        score = torch.matmul(x[:,linear_start:], self.terms)
-
-        #score = (torch.matmul(x[:,linear_start:], self.terms) * (npawns/16)) + (torch.matmul(x[:,linear_start:], self.taperterms)* (16-npawns)/16)
+        #phase = torch.matmul(matcount, self.phaser) / torch.dot(torch.tensor([4,4,4,2], dtype=torch.float), self.phaser)
+        #score = (torch.matmul(x[:,linear_start:], self.terms) * phase) + (torch.matmul(x[:,linear_start:], self.taperterms) * (1-phase))
 
 
 
+
+        score = (torch.matmul(x[:,linear_start:], self.terms) * (npawns/16)) + (torch.matmul(x[:,linear_start:], self.taperterms)* (16-npawns)/16)
 
         return torch.tanh(score)
 
@@ -370,13 +387,15 @@ class HCE(torch.nn.Module):
                 if finalEpoch:
                     plt.imshow((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
                     plt.show()
-                    #plt.imshow((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
-                    #plt.show()
+                    plt.imshow((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
+                    plt.show()
 
             print((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32))
-            #print((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32))
+            print((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32))
+            print("")
             offset += size
 
+        print(self.phaser)
         print("===")
 
 
@@ -421,8 +440,8 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # + isolated + backwards + passers = 0.2647
 # + shield * queens = 0.2641
 # isolated and passer inversion = .2639
+# + backwards and race = 0.259
 
-# shieldD got me 0.26599 lololol
 
 # lots of tapering
 # material + pawns + tempo = 0.2671
