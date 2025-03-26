@@ -180,6 +180,32 @@ for line in tqdm(lines):
         elif piecetype == 5:
             queens[piececolor] += 1
 
+    wkingfile = kings[1] % 10
+    wkingrank = kings[1] // 10
+    bkingfile = kings[0] % 10
+    bkingrank = kings[0] // 10
+
+    blackKingZone = np.zeros(120, dtype=np.bool)
+    whiteKingZone = np.zeros(120, dtype=np.bool)
+    for i in [N,S,E,W,N+W,N+E,S+W,S+E]:
+        blackKingZone[kings[0] + i] = True
+        whiteKingZone[kings[1] + i] = True
+
+    blackKingZone = blackKingZone.reshape((12,10))
+    whiteKingZone = whiteKingZone.reshape((12,10))
+    insideAttacks = np.zeros(7)
+
+    #for i in [-1,0,1]:
+    #    wstart = rearpawns[1][wkingfile+i]
+    #    bstart = rearpawns[0][bkingfile+i]
+
+    #    for a in range(wstart,12,1):
+    #        whiteKingZone[a][wkingfile+i] = True
+
+    #    for b in range(min(11,bstart),0,-1):
+    #        blackKingZone[b][bkingfile+i] = True
+    
+
     for sq in range(len(virtualboard)):
         piece = virtualboard[sq]
         piecetype = piece // 2
@@ -189,10 +215,6 @@ for line in tqdm(lines):
         if piecetype == 1:
             pfile = sq % 10
             prank = sq // 10
-
-
-
-
 
             if piece & 1 == 0:
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
@@ -225,11 +247,11 @@ for line in tqdm(lines):
 
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
                     mobility += 1
-                    j = inverse[current]
-                    
-                    if piece & 1 == 0:
-                        j ^= 56
 
+                    if piece&1 == 1 and blackKingZone[current//10][current%10]:
+                        insideAttacks[piecetype] += 1
+                    elif piece&1 == 0 and whiteKingZone[current//10][current%10]:
+                        insideAttacks[piecetype] -= 1
 
                     # piece attacks
                     if virtualboard[current] > 3:
@@ -242,11 +264,6 @@ for line in tqdm(lines):
 
 
         mobilities[piece & 1][piecetype] += mobility
-
-    wkingfile = kings[1] % 10
-    wkingrank = kings[1] // 10
-    bkingfile = kings[0] % 10
-    bkingrank = kings[0] // 10
 
     for x in [-1,0,1]:
         wspawn = rearpawns[1][wkingfile + x]
@@ -315,7 +332,7 @@ for line in tqdm(lines):
 
 
     manualterms = [material[0, :], material[1, :], np.sum(passers, axis=1)]
-    linearterms = [material[1, :] - material[0, :], rearpsqt, mobilities[1] - mobilities[0], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], race,  sidetomove, attackspiece, attackspawn, shieldD]
+    linearterms = [material[1, :] - material[0, :], psqt, mobilities[1] - mobilities[0], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0],  sidetomove, attackspiece, attackspawn, shield3D] #,insideAttacks]
 
 
 
@@ -325,6 +342,9 @@ for line in tqdm(lines):
             sizes.append(item.shape[0])
 
         print("\nfen " + fen)
+        print(insideAttacks)
+        print("w",whiteKingZone,"w")
+        print("b",blackKingZone,"b")
         #print(passers)
         #print(manualterms)
         #print(shield)
@@ -360,23 +380,16 @@ class HCE(torch.nn.Module):
 
         self.terms = torch.nn.Parameter(torch.randn(linear_size))
         self.taperterms = torch.nn.Parameter(torch.randn(linear_size))
-        
-        self.phaser = torch.nn.Parameter(torch.randn(4))
 
     def forward(self, x):
-        npawns = x[:,1+7] + x[:,1]
 
-        matcount = x[:,2:6] + x[:,9:13]
-
-        #phase = torch.matmul(matcount, self.phaser) / torch.dot(torch.tensor([4,4,4,2], dtype=torch.float), self.phaser)
-        #score = (torch.matmul(x[:,linear_start:], self.terms) * phase) + (torch.matmul(x[:,linear_start:], self.taperterms) * (1-phase))
+        phase = (x[:,2]+x[:,2+7] +x[:,3]+x[:,3+7] +((x[:,4]+x[:,4+7])*2) +((x[:,5]+x[:,5+7])*4))/24
 
 
+        score = torch.matmul(x[:,linear_start:], self.terms)
+        score2 = torch.matmul(x[:,linear_start:], self.taperterms)
 
-
-        score = (torch.matmul(x[:,linear_start:], self.terms) * (npawns/16)) + (torch.matmul(x[:,linear_start:], self.taperterms)* (16-npawns)/16)
-
-        return torch.tanh(score)
+        return torch.tanh((score * phase) + (score2 * (1-phase)))
 
     def printfinal(self, finalEpoch=False):
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
@@ -387,15 +400,12 @@ class HCE(torch.nn.Module):
                 if finalEpoch:
                     plt.imshow((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
                     plt.show()
-                    plt.imshow((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
-                    plt.show()
 
             print((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32))
             print((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32))
             print("")
             offset += size
 
-        print(self.phaser)
         print("===")
 
 

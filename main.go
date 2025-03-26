@@ -794,26 +794,19 @@ func main() {
 //     - static count
 //     - perhaps after a threshold is hit we can change to meme eval
 // 2. King Safety
-//     - pawn shield
-//     - scale by material imbalance
-//     - scale by n queens
+//     - pawn shield (figure out based on endgames if we should penalize it for king being in front of it)
+//     - should implement a scaling "risk" system, that rewards checkmates/kingside attack terms when losing
 // 3. Activity
-//     - mobility
-//     - attacks?
-//     - scale by material imbalance?
+//     - mobility/attacks
 //	   - could classify mobility based on if its behind our/opponent pawns
+//          - this could be really good for king safety if we just add a kingside condition
 // 4. Pawn Structure / Endgames
-//     - drawishness?
 //     - backwards pawns?
 //     - isolated pawns
 //     - passed pawns
-//     - passed pawn scaling?
 //     - opposite king passer bonus?
-
-// Some thoughts give an extra bonus to the furthest passed pawn based on how far it is, could simplify pawn races, also really rewards positions where there may only be one passer but its really punching above its weight as opposed to being useless
-// Perhaps scale this by king distance ^?
 //
+//     - encourage trades in completely winning positions (perhaps implement 50 move and slowly taper eval to 0)
 
 // Ben finegolds middle name is philip
 // Should make a stream where people vote on best move
-// TODO: should we make king capture engine? or just regular?
