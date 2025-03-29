@@ -795,17 +795,16 @@ func main() {
 //     - perhaps after a threshold is hit we can change to meme eval
 // 2. King Safety
 //     - pawn shield (figure out based on endgames if we should penalize it for king being in front of it)
-//     - should implement a scaling "risk" system, that rewards checkmates/kingside attack terms when losing
+//     - attacks behind pawns/around king
+//     - scale this so that it has to a hit a threshold before it starts applying i.e. max(0,x)
+//         - if a side is significantly behind materially add a bonus to the intercept to encourage attacking compensation and building kingside attack
 // 3. Activity
 //     - mobility/attacks
-//	   - could classify mobility based on if its behind our/opponent pawns
-//          - this could be really good for king safety if we just add a kingside condition
 // 4. Pawn Structure / Endgames
 //     - backwards pawns?
 //     - isolated pawns
 //     - passed pawns
 //     - opposite king passer bonus?
-//
 //     - encourage trades in completely winning positions (perhaps implement 50 move and slowly taper eval to 0)
 
 // Ben finegolds middle name is philip

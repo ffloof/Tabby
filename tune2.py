@@ -193,7 +193,7 @@ for line in tqdm(lines):
 
     blackKingZone = blackKingZone.reshape((12,10))
     whiteKingZone = whiteKingZone.reshape((12,10))
-    insideAttacks = np.zeros(7)
+    insideAttacks = np.zeros((2,7))
 
     #for i in [-1,0,1]:
     #    wstart = rearpawns[1][wkingfile+i]
@@ -249,9 +249,9 @@ for line in tqdm(lines):
                     mobility += 1
 
                     if piece&1 == 1 and blackKingZone[current//10][current%10]:
-                        insideAttacks[piecetype] += 1
+                        insideAttacks[0][piecetype] += 1
                     elif piece&1 == 0 and whiteKingZone[current//10][current%10]:
-                        insideAttacks[piecetype] -= 1
+                        insideAttacks[1][piecetype] += 1
 
                     # piece attacks
                     if virtualboard[current] > 3:
@@ -315,13 +315,10 @@ for line in tqdm(lines):
 
     sidetomove[0] = sign[turn]
 
-    shieldD = shield[1] - shield[0]
-    shieldQ = (shield[1] * queens[0]) - (shield[0] * queens[1])
+    #shieldD = shield[1] - shield[0]
     # shield 2 underperforms
-    shield2D = shield2[1] - shield2[0]
-    shield2Q = (shield2[1] * queens[0]) - (shield2[0] * queens[1])
-    shield3D = shield3[1] - shield3[0]
-    shield3Q = (shield3[1] * queens[0]) - (shield3[0] * queens[1])
+    #shield2D = shield2[1] - shield2[0]
+    #shield3D = shield3[1] - shield3[0]
     # TODO: as described above try more shield implementations
 
     if 11-frontpasswhite-3 >= 0:
@@ -331,8 +328,8 @@ for line in tqdm(lines):
         race[frontpasssblack-3] -= 1
 
 
-    manualterms = [material[0, :], material[1, :], np.sum(passers, axis=1)]
-    linearterms = [material[1, :] - material[0, :], psqt, mobilities[1] - mobilities[0], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0],  sidetomove, attackspiece, attackspawn, shield3D] #,insideAttacks]
+    manualterms = [material[0, :] + material[0], np.array([1,]), insideAttacks[0], shield[0], shield2[0], np.array([1,]), insideAttacks[1], shield[1], shield2[1]]
+    linearterms = [material[1, :] - material[0, :], psqt, mobilities[1] - mobilities[0], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0],  sidetomove, attackspiece, attackspawn] #,insideAttacks]
 
 
 
@@ -381,15 +378,26 @@ class HCE(torch.nn.Module):
         self.terms = torch.nn.Parameter(torch.randn(linear_size))
         self.taperterms = torch.nn.Parameter(torch.randn(linear_size))
 
+        self.danger = torch.nn.Parameter(torch.randn((linear_start-7) // 2))
+        self.taperdanger = torch.nn.Parameter(torch.randn((linear_start-7) // 2))
+
     def forward(self, x):
+        phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
-        phase = (x[:,2]+x[:,2+7] +x[:,3]+x[:,3+7] +((x[:,4]+x[:,4+7])*2) +((x[:,5]+x[:,5+7])*4))/24
+        splitpoint = ((linear_start - 7) // 2) + 7
 
+        bsafety = torch.matmul(x[:,7:splitpoint],self.danger)
+        bsafety2 = torch.matmul(x[:,7:splitpoint],self.taperdanger)
+        wsafety = torch.matmul(x[:,splitpoint:linear_start],self.danger)
+        wsafety2 = torch.matmul(x[:,splitpoint:linear_start],self.taperdanger)
 
         score = torch.matmul(x[:,linear_start:], self.terms)
         score2 = torch.matmul(x[:,linear_start:], self.taperterms)
 
-        return torch.tanh((score * phase) + (score2 * (1-phase)))
+        wFinal = torch.clamp((wsafety * phase) + ((wsafety2) * (1-phase)), min=0)
+        bFinal = torch.clamp((bsafety * phase) + ((bsafety2) * (1-phase)), min=0)
+
+        return torch.tanh(((score) * phase) + ((score2) * (1-phase)) + wFinal - bFinal)
 
     def printfinal(self, finalEpoch=False):
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
