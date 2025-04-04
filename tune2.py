@@ -59,7 +59,6 @@ inverse = [
 ]
 
 sizes = []
-net_size = 0
 linear_start = 0
 linear_size = 0
 first = True
@@ -125,26 +124,15 @@ for line in tqdm(lines):
 
     psqt = np.zeros(64)
 
-    rearpsqt = np.zeros(64)
-
     shield = np.zeros((2,10))
     shield2 = np.zeros((2,10))
     shield3 = np.zeros((2,10))
 
-    race = np.zeros(8)
-
-
-
     kings = [-1, -1]
-    queens = [0, 0]
     rearpawns = [
         [12,12,12,12,12,12,12,12,12,12],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]
-
-    frontpasswhite = 12
-    frontpasssblack = 0
-
 
     for i in range(64):
         piece = virtualboard[mailbox[i]]
@@ -177,33 +165,10 @@ for line in tqdm(lines):
         elif piecetype == 6:
             kings[piececolor] = mailbox[i]
 
-        elif piecetype == 5:
-            queens[piececolor] += 1
-
     wkingfile = kings[1] % 10
     wkingrank = kings[1] // 10
     bkingfile = kings[0] % 10
     bkingrank = kings[0] // 10
-
-    blackKingZone = np.zeros(120, dtype=np.bool)
-    whiteKingZone = np.zeros(120, dtype=np.bool)
-    for i in [N,S,E,W,N+W,N+E,S+W,S+E]:
-        blackKingZone[kings[0] + i] = True
-        whiteKingZone[kings[1] + i] = True
-
-    blackKingZone = blackKingZone.reshape((12,10))
-    whiteKingZone = whiteKingZone.reshape((12,10))
-    insideAttacks = np.zeros((2,7))
-
-    #for i in [-1,0,1]:
-    #    wstart = rearpawns[1][wkingfile+i]
-    #    bstart = rearpawns[0][bkingfile+i]
-
-    #    for a in range(wstart,12,1):
-    #        whiteKingZone[a][wkingfile+i] = True
-
-    #    for b in range(min(11,bstart),0,-1):
-    #        blackKingZone[b][bkingfile+i] = True
     
 
     for sq in range(len(virtualboard)):
@@ -219,7 +184,6 @@ for line in tqdm(lines):
             if piece & 1 == 0:
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
                     passers[0][pfile] += 1
-                    frontpasssblack = max(frontpasssblack, prank)
                 if rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
                     backwards[0][pfile] += 1
                 if rearpawns[0][pfile-1] == 12 and rearpawns[0][pfile+1] == 12:
@@ -227,7 +191,6 @@ for line in tqdm(lines):
             else:
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
                     passers[1][pfile] += 1
-                    frontpasswhite = min(frontpasswhite, prank)
                 if rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
                     backwards[1][pfile] += 1
                 if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
@@ -247,11 +210,6 @@ for line in tqdm(lines):
 
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
                     mobility += 1
-
-                    if piece&1 == 1 and blackKingZone[current//10][current%10]:
-                        insideAttacks[0][piecetype] += 1
-                    elif piece&1 == 0 and whiteKingZone[current//10][current%10]:
-                        insideAttacks[1][piecetype] += 1
 
                     # piece attacks
                     if virtualboard[current] > 3:
@@ -282,26 +240,13 @@ for line in tqdm(lines):
         if bspawn < 10 and bspawn > bkingrank:
             shield3[0][bkingfile + x] = 1
 
+    shield = 1-shield
+    shield2 = 1-shield2
+    shield3 = 1-shield3
+
     # Clipping passers
     passers = np.clip(passers, 0, 1) # We dont count doubled pawns as multiple passers
 
-    for i in range(1,9):
-        j = i
-        k = i
-        if wkingfile <= 4:
-            j = 9 - i
-        if bkingfile <= 4:
-            k = 9 - i
-
-        rearb = rearpawns[0][i]-2
-        if rearb != 10:
-            rearpsqt[rearb * 8 + (k-1)] -= 1
-
-        rearw = 9-rearpawns[1][i]
-        if rearw != 9:
-            rearpsqt[rearw * 8 + (j-1)] += 1
-
-        #print(9-rearpawns[1][i])
 
     if bkingfile < 5:
         isolated[0] = isolated[0,::-1]
@@ -315,21 +260,8 @@ for line in tqdm(lines):
 
     sidetomove[0] = sign[turn]
 
-    #shieldD = shield[1] - shield[0]
-    # shield 2 underperforms
-    #shield2D = shield2[1] - shield2[0]
-    #shield3D = shield3[1] - shield3[0]
-    # TODO: as described above try more shield implementations
-
-    if 11-frontpasswhite-3 >= 0:
-        race[11-frontpasswhite-3] += 1
-
-    if frontpasssblack-3 >= 0:
-        race[frontpasssblack-3] -= 1
-
-
-    manualterms = [material[0, :] + material[0], np.array([1,]), insideAttacks[0], shield[0], shield2[0], np.array([1,]), insideAttacks[1], shield[1], shield2[1]]
-    linearterms = [material[1, :] - material[0, :], psqt, mobilities[1] - mobilities[0], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0],  sidetomove, attackspiece, attackspawn] #,insideAttacks]
+    manualterms = [material[0, :] + material[1, :],]
+    linearterms = [material[1, :] - material[0, :], psqt, mobilities[1] - mobilities[0], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0] ,sidetomove, attackspiece, attackspawn]
 
 
 
@@ -339,19 +271,6 @@ for line in tqdm(lines):
             sizes.append(item.shape[0])
 
         print("\nfen " + fen)
-        print(insideAttacks)
-        print("w",whiteKingZone,"w")
-        print("b",blackKingZone,"b")
-        #print(passers)
-        #print(manualterms)
-        #print(shield)
-        #print(shield2)
-        #print(shield3)
-        #print(race)
-        #print(attackspiece)
-        #print(attackspawn)
-        #print(backwards)
-        #print(nopawns)
         #sys.exit()
 
     manualterms = np.concatenate(manualterms)
@@ -378,26 +297,13 @@ class HCE(torch.nn.Module):
         self.terms = torch.nn.Parameter(torch.randn(linear_size))
         self.taperterms = torch.nn.Parameter(torch.randn(linear_size))
 
-        self.danger = torch.nn.Parameter(torch.randn((linear_start-7) // 2))
-        self.taperdanger = torch.nn.Parameter(torch.randn((linear_start-7) // 2))
-
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
-
-        splitpoint = ((linear_start - 7) // 2) + 7
-
-        bsafety = torch.matmul(x[:,7:splitpoint],self.danger)
-        bsafety2 = torch.matmul(x[:,7:splitpoint],self.taperdanger)
-        wsafety = torch.matmul(x[:,splitpoint:linear_start],self.danger)
-        wsafety2 = torch.matmul(x[:,splitpoint:linear_start],self.taperdanger)
 
         score = torch.matmul(x[:,linear_start:], self.terms)
         score2 = torch.matmul(x[:,linear_start:], self.taperterms)
 
-        wFinal = torch.clamp((wsafety * phase) + ((wsafety2) * (1-phase)), min=0)
-        bFinal = torch.clamp((bsafety * phase) + ((bsafety2) * (1-phase)), min=0)
-
-        return torch.tanh(((score) * phase) + ((score2) * (1-phase)) + wFinal - bFinal)
+        return torch.tanh(((score) * phase) + ((score2) * (1-phase)))
 
     def printfinal(self, finalEpoch=False):
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
@@ -408,12 +314,14 @@ class HCE(torch.nn.Module):
                 if finalEpoch:
                     plt.imshow((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
                     plt.show()
+                    plt.imshow((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
+                    plt.show()
 
             print((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32))
             print((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32))
+
             print("")
             offset += size
-
         print("===")
 
 
@@ -431,7 +339,7 @@ model = HCE()
 criterion = torch.nn.MSELoss(reduction='sum')
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
 
-epochs = 12
+epochs = 20
 
 # Training loop
 for epoch in range(epochs):  # Adjust the number of epochs
@@ -464,5 +372,6 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # lots of tapering
 # material + pawns + tempo = 0.2671
 # + mobilities = 0.2608
-# + double taper = 0.2587
-# - double taper + shield * queens = 0.2539
+# + shield * queens = 0.2539
+
+# current 0.2533

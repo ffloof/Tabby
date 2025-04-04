@@ -792,20 +792,31 @@ func main() {
 // Eval centered around
 // 1. Material
 //     - static count
-//     - perhaps after a threshold is hit we can change to meme eval
-// 2. King Safety
+//          - perhaps after a threshold is hit we can change to meme eval
+// 2. Activity
+//     - mobility control map
+//          - mobility
+//              - penalize squares with enemy pawn guard
+//              - scale infront of backwards pawns?
+//          - attacks
+//              - bonus on backwards and isolated pawns?
+// 3. King Safety
+//     - tbh king safety is not that big a deal for engines
+//     - ???
+//         - king ring attacks? 
+//         - scale by king pawn shield quality?
+//         - scale by material behind bonus
+// 4. Pawn Structure
 //     - pawn shield (figure out based on endgames if we should penalize it for king being in front of it)
-//     - attacks behind pawns/around king
-//     - scale this so that it has to a hit a threshold before it starts applying i.e. max(0,x)
-//         - if a side is significantly behind materially add a bonus to the intercept to encourage attacking compensation and building kingside attack
-// 3. Activity
-//     - mobility/attacks
-// 4. Pawn Structure / Endgames
 //     - backwards pawns?
 //     - isolated pawns
 //     - passed pawns
-//     - opposite king passer bonus?
-//     - encourage trades in completely winning positions (perhaps implement 50 move and slowly taper eval to 0)
+//         - opposite king passer bonus?
+//     - encourage trades in completely winning positions? (perhaps implement 50 move and slowly taper eval to 0)
+
+// Still need to figure out how to reward the queen moreso than other pieces for attacking king ring
+
+
 
 // Ben finegolds middle name is philip
 // Should make a stream where people vote on best move
