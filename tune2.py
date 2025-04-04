@@ -119,6 +119,10 @@ for line in tqdm(lines):
 
     backwards = np.zeros((2,10))
     passers = np.zeros((2,10))
+    passerRank = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [11,11,11,11,11,11,11,11,11,11],
+    ])
     isolated = np.zeros((2,10))
 
 
@@ -127,6 +131,8 @@ for line in tqdm(lines):
     shield = np.zeros((2,10))
     shield2 = np.zeros((2,10))
     shield3 = np.zeros((2,10))
+
+    mobtable = np.zeros((2,7,64))
 
     kings = [-1, -1]
     rearpawns = [
@@ -177,6 +183,13 @@ for line in tqdm(lines):
         isray = rays[piecetype]
         pattern = patterns[piecetype]
 
+        if piece == 2:
+            isray = False
+            pattern = [S+W,S+E]
+        elif piece == 3:
+            isray = False
+            pattern = [N+W, N+E]
+
         if piecetype == 1:
             pfile = sq % 10
             prank = sq // 10
@@ -184,6 +197,7 @@ for line in tqdm(lines):
             if piece & 1 == 0:
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
                     passers[0][pfile] += 1
+                    passerRank[0][pfile] = max(prank, passerRank[0][pfile])
                 if rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
                     backwards[0][pfile] += 1
                 if rearpawns[0][pfile-1] == 12 and rearpawns[0][pfile+1] == 12:
@@ -191,12 +205,13 @@ for line in tqdm(lines):
             else:
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
                     passers[1][pfile] += 1
+                    passerRank[1][pfile] = min(prank, passerRank[1][pfile])
                 if rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
                     backwards[1][pfile] += 1
                 if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
                     isolated[1][pfile] += 1
 
-            continue
+            #continue
         
         mobility = 0
 
@@ -210,6 +225,12 @@ for line in tqdm(lines):
 
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
                     mobility += 1
+
+                    idx = inverse[current]
+                    if piece&1 == 0:
+                        idx = idx ^ 56
+
+                    mobtable[piece&1][piecetype][idx] += 1
 
                     # piece attacks
                     if virtualboard[current] > 3:
@@ -246,6 +267,19 @@ for line in tqdm(lines):
 
     # Clipping passers
     passers = np.clip(passers, 0, 1) # We dont count doubled pawns as multiple passers
+    pushers = np.zeros(10)
+
+
+    for i in range(10):
+        wPass = 11 - passerRank[1][i]
+        bPass = passerRank[0][i]
+        wPass -= 3
+        bPass -= 3
+
+        if wPass >= 0:
+            pushers[wPass] += 1
+        if bPass >= 0:
+            pushers[bPass] -= 1
 
 
     if bkingfile < 5:
@@ -260,8 +294,8 @@ for line in tqdm(lines):
 
     sidetomove[0] = sign[turn]
 
-    manualterms = [material[0, :] + material[1, :],]
-    linearterms = [material[1, :] - material[0, :], psqt, mobilities[1] - mobilities[0], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0] ,sidetomove, attackspiece, attackspawn]
+    manualterms = [material[0, :] + material[1, :], mobtable.flatten()]
+    linearterms = [material[1, :] - material[0, :], psqt, isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0] ,sidetomove, attackspiece, attackspawn, pushers]
 
 
 
@@ -271,6 +305,12 @@ for line in tqdm(lines):
             sizes.append(item.shape[0])
 
         print("\nfen " + fen)
+        #print(pushers)
+        for a in range(2):
+            for b in range(1,7):
+                #plt.imshow(mobtable[a][b].reshape((8,8)))
+                #plt.show()
+                ...
         #sys.exit()
 
     manualterms = np.concatenate(manualterms)
@@ -297,17 +337,34 @@ class HCE(torch.nn.Module):
         self.terms = torch.nn.Parameter(torch.randn(linear_size))
         self.taperterms = torch.nn.Parameter(torch.randn(linear_size))
 
+        self.mobilitytable = torch.nn.Parameter(torch.randn(1,64))
+        self.tapermobilitytable = torch.nn.Parameter(torch.randn(1,64))
+
+        self.piecemobility = torch.nn.Parameter(torch.randn(7,1))
+        self.taperpiecemobility = torch.nn.Parameter(torch.randn(7,1))
+
+        print("postmul",torch.mul(self.mobilitytable, self.piecemobility).shape)
+
+
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
+
+        mob = x[:,7:linear_start]
+
+        bmob = torch.matmul(mob[:,:mob.shape[1]//2], torch.mul(self.mobilitytable, self.piecemobility).flatten())
+        wmob = torch.matmul(mob[:,mob.shape[1]//2:], torch.mul(self.mobilitytable, self.piecemobility).flatten())
+
+        bmob2 = torch.matmul(mob[:,:mob.shape[1]//2], torch.mul(self.tapermobilitytable, self.taperpiecemobility).flatten())
+        wmob2 = torch.matmul(mob[:,mob.shape[1]//2:], torch.mul(self.tapermobilitytable, self.taperpiecemobility).flatten())
 
         score = torch.matmul(x[:,linear_start:], self.terms)
         score2 = torch.matmul(x[:,linear_start:], self.taperterms)
 
-        return torch.tanh(((score) * phase) + ((score2) * (1-phase)))
+        return torch.tanh(((score+wmob-bmob) * phase) + ((score2+wmob2-bmob2) * (1-phase)))
 
     def printfinal(self, finalEpoch=False):
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
-        print ("m=",m)
+        #print ("m=",m)
         offset = 0
         for size in sizes:
             if size == 64:
@@ -322,6 +379,25 @@ class HCE(torch.nn.Module):
 
             print("")
             offset += size
+
+        print("mobility")
+
+        knight = (m * self.mobilitytable * self.piecemobility[2]).detach().numpy()
+        print(knight)
+        print(self.piecemobility / self.piecemobility[2])
+
+        taperknight = (m * self.tapermobilitytable * self.taperpiecemobility[2]).detach().numpy()
+        print(taperknight)
+        print(self.taperpiecemobility / self.taperpiecemobility[2])
+
+
+        if finalEpoch:
+            plt.imshow(knight.astype(np.int32).reshape((8,8)))
+            plt.show()
+            plt.imshow(taperknight.astype(np.int32).reshape((8,8)))
+            plt.show()
+
+
         print("===")
 
 
@@ -375,3 +451,5 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # + shield * queens = 0.2539
 
 # current 0.2533
+# current 0.2497
+# current 0.2480    
