@@ -184,10 +184,8 @@ for line in tqdm(lines):
         pattern = patterns[piecetype]
 
         if piece == 2:
-            isray = False
             pattern = [S+W,S+E]
         elif piece == 3:
-            isray = False
             pattern = [N+W, N+E]
 
         if piecetype == 1:
@@ -227,7 +225,7 @@ for line in tqdm(lines):
                     mobility += 1
 
                     idx = inverse[current]
-                    if piece&1 == 0:
+                    if piece&1 == 1:
                         idx = idx ^ 56
 
                     mobtable[piece&1][piecetype][idx] += 1
@@ -295,7 +293,7 @@ for line in tqdm(lines):
     sidetomove[0] = sign[turn]
 
     manualterms = [material[0, :] + material[1, :], mobtable.flatten()]
-    linearterms = [material[1, :] - material[0, :], psqt, isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0] ,sidetomove, attackspiece, attackspawn, pushers]
+    linearterms = [material[1, :] - material[0, :], psqt, isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, attackspiece, attackspawn, pushers]
 
 
 
@@ -341,7 +339,6 @@ class HCE(torch.nn.Module):
         self.tapermobilitytable = torch.nn.Parameter(torch.randn(1,64))
 
         self.piecemobility = torch.nn.Parameter(torch.randn(7,1))
-        self.taperpiecemobility = torch.nn.Parameter(torch.randn(7,1))
 
         print("postmul",torch.mul(self.mobilitytable, self.piecemobility).shape)
 
@@ -349,13 +346,14 @@ class HCE(torch.nn.Module):
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
-        mob = x[:,7:linear_start]
+        mob = x[:,7:7+(14*64)]
+        stand = x[:,7+(14*64):7+(28*64)]
 
         bmob = torch.matmul(mob[:,:mob.shape[1]//2], torch.mul(self.mobilitytable, self.piecemobility).flatten())
         wmob = torch.matmul(mob[:,mob.shape[1]//2:], torch.mul(self.mobilitytable, self.piecemobility).flatten())
 
-        bmob2 = torch.matmul(mob[:,:mob.shape[1]//2], torch.mul(self.tapermobilitytable, self.taperpiecemobility).flatten())
-        wmob2 = torch.matmul(mob[:,mob.shape[1]//2:], torch.mul(self.tapermobilitytable, self.taperpiecemobility).flatten())
+        bmob2 = torch.matmul(mob[:,:mob.shape[1]//2], torch.mul(self.tapermobilitytable, self.piecemobility).flatten())
+        wmob2 = torch.matmul(mob[:,mob.shape[1]//2:], torch.mul(self.tapermobilitytable, self.piecemobility).flatten())
 
         score = torch.matmul(x[:,linear_start:], self.terms)
         score2 = torch.matmul(x[:,linear_start:], self.taperterms)
@@ -384,13 +382,11 @@ class HCE(torch.nn.Module):
 
         knight = (m * self.mobilitytable * self.piecemobility[2]).detach().numpy()
         print(knight)
-        print(self.piecemobility / self.piecemobility[2])
 
-        taperknight = (m * self.tapermobilitytable * self.taperpiecemobility[2]).detach().numpy()
+        taperknight = (m * self.tapermobilitytable * self.piecemobility[2]).detach().numpy()
         print(taperknight)
-        print(self.taperpiecemobility / self.taperpiecemobility[2])
 
-
+        print(self.piecemobility / self.piecemobility[2])
         if finalEpoch:
             plt.imshow(knight.astype(np.int32).reshape((8,8)))
             plt.show()
@@ -452,4 +448,4 @@ for epoch in range(epochs):  # Adjust the number of epochs
 
 # current 0.2533
 # current 0.2497
-# current 0.2480    
+# current 0.2491
