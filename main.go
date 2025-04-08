@@ -801,9 +801,10 @@ func main() {
 //          - attacks
 //              - bonus on backwards and isolated pawns?
 // 3. King Safety
-//     - tbh king safety is not that big a deal for engines
+//     - tbh king safety is not that big a deal for engines, but it leads to more fun attacking games
 //     - intercept
 //     - king ring attacks? 
+//     - enemy semi/open files towards our king
 //     - king pawn shield quality
 //     - scale by material behind bonus
 // 4. Pawn Structure

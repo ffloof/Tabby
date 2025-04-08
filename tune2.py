@@ -58,9 +58,8 @@ inverse = [
     -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
 ]
 
+starts = []
 sizes = []
-linear_start = 0
-linear_size = 0
 first = True
 
 rays = [ False, False, False, True, True, True, False]
@@ -68,7 +67,7 @@ patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E
 
 
 for line in tqdm(lines):
-    if len(outputs) > 1_000_000:
+    if len(outputs) > 1_000:
         break
 
     packed = line.split("c9")
@@ -133,7 +132,7 @@ for line in tqdm(lines):
     shield3 = np.zeros((2,10))
 
     mobtable = np.zeros((2,7,64))
-    kingattacks = np.zeros((2,7))
+    kingattacked = np.zeros((2,7))
 
     kings = [-1, -1]
     kingring = np.zeros((2,120))
@@ -173,7 +172,7 @@ for line in tqdm(lines):
         elif piecetype == 6:
             kings[piececolor] = mailbox[i]
             for off in [N,S,E,W,N+W,N+E,S+W,S+E]:
-                kingring[mailbox[i] + off] = 1
+                kingring[piececolor][mailbox[i] + off] = 1
 
     wkingfile = kings[1] % 10
     wkingrank = kings[1] // 10
@@ -228,7 +227,7 @@ for line in tqdm(lines):
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
                     mobility += 1
                     if kingring[1-(piece & 1)][current] == 1:
-                        kingattacks[piece&1][piecetype] += 1
+                        kingattacked[1-(piece&1)][piecetype] += 1
 
                     idx = inverse[current]
                     if piece&1 == 1:
@@ -298,18 +297,34 @@ for line in tqdm(lines):
 
     sidetomove[0] = sign[turn]
 
-    manualterms = [material[0, :] + material[1, :], mobtable.flatten(), shield[0], shield[1]]
-    linearterms = [material[1, :] - material[0, :], psqt, isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, attackspiece, attackspawn, pushers]
+    imbalance = np.dot(material[1]-material[0], np.array([0,1,3,3,5,9,0]))
 
+    downmaterial = [max(0,imbalance), max(0,-imbalance)]
 
-
+    terms = [
+        [material[0, :] + material[1, :]],
+        [material[1, :] - material[0, :], psqt, isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, attackspiece, attackspawn, pushers],
+        [mobtable.flatten(),],
+        [np.array([1,]), [downmaterial[1],], shield[0], kingattacked[0], np.array([1,]), [downmaterial[0],], shield[1], kingattacked[1]],
+    ]
 
     if first:
-        for item in linearterms:
-            sizes.append(item.shape[0])
+        names = ["phase", "mobility", "kingsafety", "linear"]
+
+        startCount = 0
+        for group in terms:
+            lengths = []
+            starts.append(startCount)
+            for item in group:
+                startCount += len(item)
+                lengths.append(len(item))
+            sizes.append(lengths)
+
+        print(starts, sizes)
 
         print("\nfen " + fen)
         #print(pushers)
+        #print(imbalance, downmaterial)
         for a in range(2):
             for b in range(1,7):
                 #plt.imshow(mobtable[a][b].reshape((8,8)))
@@ -317,15 +332,10 @@ for line in tqdm(lines):
                 ...
         #sys.exit()
 
-    manualterms = np.concatenate(manualterms)
-    linearterms = np.concatenate(linearterms)
+    for iterm in range(len(terms)):
+        terms[iterm] = np.concatenate(terms[iterm])
 
-    if first:
-        linear_start = manualterms.shape[0]
-        linear_size = linearterms.shape[0]
-    #    print(linear_start, linear_size)
-
-    values = np.concatenate([manualterms, linearterms])
+    values = np.concatenate(terms)
 
     inputs.append(values)
     outputs.append(outcome)
@@ -338,8 +348,8 @@ class HCE(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.terms = torch.nn.Parameter(torch.randn(linear_size))
-        self.taperterms = torch.nn.Parameter(torch.randn(linear_size))
+        self.terms = torch.nn.Parameter(torch.randn(starts[2]-starts[1]))
+        self.taperterms = torch.nn.Parameter(torch.randn(starts[2]-starts[1]))
 
         self.mobilitytable = torch.nn.Parameter(torch.randn(1,64))
         self.tapermobilitytable = torch.nn.Parameter(torch.randn(1,64))
@@ -347,13 +357,29 @@ class HCE(torch.nn.Module):
         self.piecemobility = torch.nn.Parameter(torch.randn(7,1))
         self.taperpiecemobility = torch.nn.Parameter(torch.randn(7,1))
 
+        self.danger = torch.nn.Parameter(torch.randn(19))
+        self.taperdanger = torch.nn.Parameter(torch.randn(19))
+
         print("postmul",torch.mul(self.mobilitytable, self.piecemobility).shape)
 
 
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
-        mob = x[:,7:7+(14*64)]
+        mob = x[:,starts[2]:starts[3]]
+
+        kinghalfs = x[:,starts[3]:]
+
+        bkinghalf = kinghalfs[:,:kinghalfs.shape[1]//2]
+        wkinghalf = kinghalfs[:,kinghalfs.shape[1]//2:]
+
+        torch.matmul(bkinghalf, self.danger)
+        
+        wdanger = (torch.matmul(wkinghalf, self.danger) * phase) + (torch.matmul(wkinghalf, self.taperdanger) * (1-phase))
+        bdanger = (torch.matmul(wkinghalf, self.danger) * phase) +  (torch.matmul(wkinghalf, self.taperdanger) * (1-phase))
+
+        wdanger = torch.clamp(wdanger, min=0)
+        bdanger = torch.clamp(bdanger, min=0)
 
         bmob = torch.matmul(mob[:,:mob.shape[1]//2], torch.mul(self.mobilitytable, self.piecemobility).flatten())
         wmob = torch.matmul(mob[:,mob.shape[1]//2:], torch.mul(self.mobilitytable, self.piecemobility).flatten())
@@ -361,22 +387,31 @@ class HCE(torch.nn.Module):
         bmob2 = torch.matmul(mob[:,:mob.shape[1]//2], torch.mul(self.tapermobilitytable, self.taperpiecemobility).flatten())
         wmob2 = torch.matmul(mob[:,mob.shape[1]//2:], torch.mul(self.tapermobilitytable, self.taperpiecemobility).flatten())
 
-        score = torch.matmul(x[:,linear_start:], self.terms)
-        score2 = torch.matmul(x[:,linear_start:], self.taperterms)
+        score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
+        score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
-        return torch.tanh(((score+wmob-bmob) * phase) + ((score2+wmob2-bmob2) * (1-phase)))
+        return torch.tanh(((score+wmob-bmob) * phase) + ((score2+wmob2-bmob2) * (1-phase))) + bdanger - wdanger
 
     def printfinal(self, finalEpoch=False):
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
-        #print ("m=",m)
+        '''
         offset = 0
-        for size in sizes:
+        for i in range len(starts):
+            print("\n", names[i])
+
+            offset = 0
+            for size in sizes[i]:
+
+
+
             if size == 64:
                 if finalEpoch:
                     plt.imshow((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
                     plt.show()
                     plt.imshow((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
                     plt.show()
+
+                offset += size
 
             print((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32))
             print((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32))
@@ -398,7 +433,7 @@ class HCE(torch.nn.Module):
             plt.imshow(knight.astype(np.int32).reshape((8,8)))
             plt.show()
             plt.imshow(taperknight.astype(np.int32).reshape((8,8)))
-            plt.show()
+            plt.show() '''
 
 
         print("===")
