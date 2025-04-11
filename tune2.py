@@ -58,7 +58,7 @@ inverse = [
     -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
 ]
 
-starts = []
+starts = [0,]
 sizes = []
 first = True
 
@@ -137,7 +137,7 @@ for line in tqdm(lines):
     kings = [-1, -1]
     kingring = np.zeros((2,120))
     rearpawns = [
-        [12,12,12,12,12,12,12,12,12,12],
+        [11,11,11,11,11,11,11,11,11,11],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]
 
@@ -148,9 +148,7 @@ for line in tqdm(lines):
     passerPushMap = np.zeros((2,64))
     
     pawnAttacksMap = np.zeros((2,64))
-
     standers = np.zeros((2,7,64))
-    victims = np.zeros((2,7,64))
     
     for i in range(64):
         piece = virtualboard[mailbox[i]]
@@ -207,8 +205,6 @@ for line in tqdm(lines):
             prank = sq // 10
 
             j = inverse[sq]
-            if piece & 1 == 0:
-                j = j ^ 56
 
             if piece & 1 == 0:
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
@@ -219,7 +215,7 @@ for line in tqdm(lines):
                     backwards[0][pfile] += 1
                     backwardsMap[0][j] = 1
                     backwardsPushMap[0][j-8] = 1
-                if rearpawns[0][pfile-1] == 12 and rearpawns[0][pfile+1] == 12:
+                if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
                     isolated[0][pfile] += 1
                     isolatedMap[0][j] = 1
 
@@ -247,20 +243,16 @@ for line in tqdm(lines):
 
                 if virtualboard[current] == 1:
                     break
-
-                idx = inverse[current]
-                if piece&1 == 0:
-                    idx = idx ^ 56
                 
                 if piecetype == 1:
-                    pawnAttacksMap[piece & 1][idx] += 1 # TODO: do we need to make these opposite indicies?
+                    pawnAttacksMap[piece & 1][inverse[current]] += 1
 
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
                     mobility += 1
                     if kingring[1-(piece & 1)][current] == 1:
                         kingattacked[1-(piece&1)][piecetype] += 1
 
-                    mobtable[piece&1][piecetype][idx] += 1
+                    mobtable[piece&1][piecetype][inverse[current]] += 1
 
                     # piece attacks
                     if virtualboard[current] > 3:
@@ -331,9 +323,10 @@ for line in tqdm(lines):
     terms = [
         [material[0, :] + material[1, :]],
         [material[1, :] - material[0, :], psqt, isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, attackspiece, attackspawn, pushers],
-        [mobtable.flatten(),],
-        [],
-        [],
+        [mobtable[0].flatten(),],
+        [mobtable[1].flatten(),],
+        [isolatedMap[1], backwardsMap[1], backwardsPushMap[1], passerPushMap[1], pawnAttacksMap[1]],
+        [isolatedMap[0], backwardsMap[0], backwardsPushMap[0], passerPushMap[0], pawnAttacksMap[0]],
     ]
 
     if first:
@@ -342,10 +335,10 @@ for line in tqdm(lines):
         startCount = 0
         for group in terms:
             lengths = []
-            starts.append(startCount)
             for item in group:
                 startCount += len(item)
                 lengths.append(len(item))
+            starts.append(startCount)
             sizes.append(lengths)
 
         print(starts, sizes)
@@ -359,16 +352,16 @@ for line in tqdm(lines):
                 #plt.show()
                 ...
 
-        for a in range(2):
-            plt.imshow(pawnAttacksMap[a].reshape((8,8)))
-            plt.show()
+        #plt.imshow((mobtable[0][4] + pawnAttacksMap[1]).reshape((8,8)))
+        #plt.show()
 
-        sys.exit()
+        #sys.exit()
 
+    finalterms = []
     for iterm in range(len(terms)):
-        terms[iterm] = np.concatenate(terms[iterm])
+        finalterms = finalterms + terms[iterm]
 
-    values = np.concatenate(terms)
+    values = np.concatenate(finalterms)
 
     inputs.append(values)
     outputs.append(outcome)
@@ -390,8 +383,10 @@ class HCE(torch.nn.Module):
         self.piecemobility = torch.nn.Parameter(torch.randn(7,1))
         self.taperpiecemobility = torch.nn.Parameter(torch.randn(7,1))
 
-        self.danger = torch.nn.Parameter(torch.randn(19))
-        self.taperdanger = torch.nn.Parameter(torch.randn(19))
+        self.nsquares = (starts[5]-starts[4])//64
+
+        self.gridweights = torch.nn.Parameter(torch.randn(self.nsquares))
+        self.tapergridweights = torch.nn.Parameter(torch.randn(self.nsquares))
 
         print("postmul",torch.mul(self.mobilitytable, self.piecemobility).shape)
 
@@ -401,11 +396,41 @@ class HCE(torch.nn.Module):
 
         mob = x[:,starts[2]:starts[3]]
 
-        bmob = torch.matmul(mob[:,:mob.shape[1]//2], torch.mul(self.mobilitytable, self.piecemobility).flatten())
-        wmob = torch.matmul(mob[:,mob.shape[1]//2:], torch.mul(self.mobilitytable, self.piecemobility).flatten())
+        #material = torch.matmul(x[:,starts[1]:starts[1]+7], (self.terms[0:7] * phase) + (self.taperterms * (1-phase)))
+        #wup = torch.clamp(material, min=0)
+        #bup = torch.clamp(-material, min=0)
 
-        bmob2 = torch.matmul(mob[:,:mob.shape[1]//2], torch.mul(self.tapermobilitytable, self.taperpiecemobility).flatten())
-        wmob2 = torch.matmul(mob[:,mob.shape[1]//2:], torch.mul(self.tapermobilitytable, self.taperpiecemobility).flatten())
+        normal = self.mobilitytable.reshape((1,8,8))
+        normalTaper = self.tapermobilitytable.reshape((1,8,8))
+
+        inverse = torch.flip(normal, [1,])
+        inverseTaper = torch.flip(normalTaper, [1,])
+
+        normal = normal.reshape((1,64))
+        normalTaper = normalTaper.reshape((1,64))
+
+        inverse = inverse.reshape((1,64))
+        inverseTaper = inverseTaper.reshape((1,64))
+
+        samples = x.shape[0]
+        bgrids = x[:,starts[4]:starts[5]].reshape(samples, self.nsquares, 64)
+        wgrids = x[:,starts[5]:starts[6]].reshape(samples, self.nsquares, 64)
+
+        torch.matmul(wgrids,self.gridweights)
+
+        #print("N")
+        #print(normal)
+
+        #print("I")
+        #print(inverse)
+
+        #print(starts[2], starts[3], starts[4])
+
+        bmob = torch.matmul(x[:,starts[2]:starts[3]], torch.mul(normal, self.piecemobility).flatten())
+        wmob = torch.matmul(x[:,starts[3]:starts[4]], torch.mul(inverse, self.piecemobility).flatten())
+
+        bmob2 = torch.matmul(x[:,starts[2]:starts[3]], torch.mul(normalTaper, self.taperpiecemobility).flatten())
+        wmob2 = torch.matmul(x[:,starts[3]:starts[4]], torch.mul(inverseTaper, self.taperpiecemobility).flatten())
 
         score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
