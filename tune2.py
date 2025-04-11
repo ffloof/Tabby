@@ -141,6 +141,17 @@ for line in tqdm(lines):
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]
 
+
+    isolatedMap = np.zeros((2,64))
+    backwardsMap = np.zeros((2,64))
+    backwardsPushMap = np.zeros((2,64))
+    passerPushMap = np.zeros((2,64))
+    
+    pawnAttacksMap = np.zeros((2,64))
+
+    standers = np.zeros((2,7,64))
+    victims = np.zeros((2,7,64))
+    
     for i in range(64):
         piece = virtualboard[mailbox[i]]
         piecetype = piece // 2
@@ -195,22 +206,35 @@ for line in tqdm(lines):
             pfile = sq % 10
             prank = sq // 10
 
+            j = inverse[sq]
+            if piece & 1 == 0:
+                j = j ^ 56
+
             if piece & 1 == 0:
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
                     passers[0][pfile] += 1
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
+                    passerPushMap[1][j-8] = 1
                 if rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
                     backwards[0][pfile] += 1
+                    backwardsMap[0][j] = 1
+                    backwardsPushMap[0][j-8] = 1
                 if rearpawns[0][pfile-1] == 12 and rearpawns[0][pfile+1] == 12:
                     isolated[0][pfile] += 1
+                    isolatedMap[0][j] = 1
+
             else:
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
                     passers[1][pfile] += 1
                     passerRank[1][pfile] = min(prank, passerRank[1][pfile])
+                    passerPushMap[1][j-8] = 1
                 if rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
                     backwards[1][pfile] += 1
+                    backwardsMap[1][j] = 1
+                    backwardsPushMap[1][j-8] = 1
                 if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
                     isolated[1][pfile] += 1
+                    isolatedMap[1][j] = 1
 
             #continue
         
@@ -224,14 +248,17 @@ for line in tqdm(lines):
                 if virtualboard[current] == 1:
                     break
 
+                idx = inverse[current]
+                if piece&1 == 0:
+                    idx = idx ^ 56
+                
+                if piecetype == 1:
+                    pawnAttacksMap[piece & 1][idx] += 1 # TODO: do we need to make these opposite indicies?
+
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
                     mobility += 1
                     if kingring[1-(piece & 1)][current] == 1:
                         kingattacked[1-(piece&1)][piecetype] += 1
-
-                    idx = inverse[current]
-                    if piece&1 == 1:
-                        idx = idx ^ 56
 
                     mobtable[piece&1][piecetype][idx] += 1
 
@@ -305,7 +332,8 @@ for line in tqdm(lines):
         [material[0, :] + material[1, :]],
         [material[1, :] - material[0, :], psqt, isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, attackspiece, attackspawn, pushers],
         [mobtable.flatten(),],
-        [np.array([1,]), [downmaterial[1],], shield[0], kingattacked[0], np.array([1,]), [downmaterial[0],], shield[1], kingattacked[1]],
+        [],
+        [],
     ]
 
     if first:
@@ -330,7 +358,12 @@ for line in tqdm(lines):
                 #plt.imshow(mobtable[a][b].reshape((8,8)))
                 #plt.show()
                 ...
-        #sys.exit()
+
+        for a in range(2):
+            plt.imshow(pawnAttacksMap[a].reshape((8,8)))
+            plt.show()
+
+        sys.exit()
 
     for iterm in range(len(terms)):
         terms[iterm] = np.concatenate(terms[iterm])
@@ -368,19 +401,6 @@ class HCE(torch.nn.Module):
 
         mob = x[:,starts[2]:starts[3]]
 
-        kinghalfs = x[:,starts[3]:]
-
-        bkinghalf = kinghalfs[:,:kinghalfs.shape[1]//2]
-        wkinghalf = kinghalfs[:,kinghalfs.shape[1]//2:]
-
-        torch.matmul(bkinghalf, self.danger)
-        
-        wdanger = (torch.matmul(wkinghalf, self.danger) * phase) + (torch.matmul(wkinghalf, self.taperdanger) * (1-phase))
-        bdanger = (torch.matmul(wkinghalf, self.danger) * phase) +  (torch.matmul(wkinghalf, self.taperdanger) * (1-phase))
-
-        wdanger = torch.clamp(wdanger, min=0)
-        bdanger = torch.clamp(bdanger, min=0)
-
         bmob = torch.matmul(mob[:,:mob.shape[1]//2], torch.mul(self.mobilitytable, self.piecemobility).flatten())
         wmob = torch.matmul(mob[:,mob.shape[1]//2:], torch.mul(self.mobilitytable, self.piecemobility).flatten())
 
@@ -390,7 +410,7 @@ class HCE(torch.nn.Module):
         score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
-        return torch.tanh(((score+wmob-bmob) * phase) + ((score2+wmob2-bmob2) * (1-phase))) + bdanger - wdanger
+        return torch.tanh(((score+wmob-bmob) * phase) + ((score2+wmob2-bmob2) * (1-phase)))
 
     def printfinal(self, finalEpoch=False):
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance

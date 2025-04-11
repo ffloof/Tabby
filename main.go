@@ -800,6 +800,7 @@ func main() {
 //              - scale infront of backwards pawns?
 //          - attacks
 //              - bonus on backwards and isolated pawns?
+//          - we can also dual purpose this map for move ordering, no need to do seperate mvvlva?
 // 3. King Safety
 //     - tbh king safety is not that big a deal for engines, but it leads to more fun attacking games
 //     - intercept
