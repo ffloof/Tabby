@@ -67,7 +67,7 @@ patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E
 
 
 for line in tqdm(lines):
-    if len(outputs) > 1_000:
+    if len(outputs) > 1_000_000:
         break
 
     packed = line.split("c9")
@@ -380,15 +380,13 @@ class HCE(torch.nn.Module):
         self.mobilitytable = torch.nn.Parameter(torch.randn(1,64))
         self.tapermobilitytable = torch.nn.Parameter(torch.randn(1,64))
 
-        self.piecemobility = torch.nn.Parameter(torch.randn(7,1))
-        self.taperpiecemobility = torch.nn.Parameter(torch.randn(7,1))
+        self.piecemobility = torch.nn.Parameter(torch.randn(7))
+        self.taperpiecemobility = torch.nn.Parameter(torch.randn(7))
 
         self.nsquares = (starts[5]-starts[4])//64
 
         self.gridweights = torch.nn.Parameter(torch.randn(self.nsquares))
         self.tapergridweights = torch.nn.Parameter(torch.randn(self.nsquares))
-
-        print("postmul",torch.mul(self.mobilitytable, self.piecemobility).shape)
 
 
     def forward(self, x):
@@ -412,11 +410,16 @@ class HCE(torch.nn.Module):
         inverse = inverse.reshape((1,64))
         inverseTaper = inverseTaper.reshape((1,64))
 
-        samples = x.shape[0]
-        bgrids = x[:,starts[4]:starts[5]].reshape(samples, self.nsquares, 64)
-        wgrids = x[:,starts[5]:starts[6]].reshape(samples, self.nsquares, 64)
+        bgrids = x[:,starts[4]:starts[5]].reshape(x.shape[0], self.nsquares, 64).movedim(1,2)
+        wgrids = x[:,starts[5]:starts[6]].reshape(x.shape[0], self.nsquares, 64).movedim(1,2)
 
-        torch.matmul(wgrids,self.gridweights)
+
+        wpost = torch.matmul(wgrids,self.gridweights) + normal
+        bpost = torch.matmul(bgrids,self.gridweights) + inverse
+        wtaperpost = torch.matmul(wgrids,self.tapergridweights) + normalTaper
+        btaperpost = torch.matmul(bgrids,self.tapergridweights) + inverseTaper
+        #print(torch.mul(wpost, self.piecemobility.reshape(7,1)).shape)
+
 
         #print("N")
         #print(normal)
@@ -426,16 +429,18 @@ class HCE(torch.nn.Module):
 
         #print(starts[2], starts[3], starts[4])
 
-        bmob = torch.matmul(x[:,starts[2]:starts[3]], torch.mul(normal, self.piecemobility).flatten())
-        wmob = torch.matmul(x[:,starts[3]:starts[4]], torch.mul(inverse, self.piecemobility).flatten())
+        blackmob = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],7,64).movedim(1,2), self.piecemobility)
+        whitemob = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],7,64).movedim(1,2), self.piecemobility)
+        blackmobtaper = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],7,64).movedim(1,2), self.taperpiecemobility)
+        whitemobtaper = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],7,64).movedim(1,2), self.taperpiecemobility)
 
-        bmob2 = torch.matmul(x[:,starts[2]:starts[3]], torch.mul(normalTaper, self.taperpiecemobility).flatten())
-        wmob2 = torch.matmul(x[:,starts[3]:starts[4]], torch.mul(inverseTaper, self.taperpiecemobility).flatten())
+        netmob = (whitemob * wpost).sum(dim=1) - (blackmob * bpost).sum(dim=1)
+        netmob2 = (whitemobtaper * wtaperpost).sum(dim=1) - (blackmobtaper * btaperpost).sum(dim=1)
 
         score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
-        return torch.tanh(((score+wmob-bmob) * phase) + ((score2+wmob2-bmob2) * (1-phase)))
+        return torch.tanh(((score + netmob) * phase) + ((score2 + netmob2) * (1-phase)))
 
     def printfinal(self, finalEpoch=False):
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
@@ -536,3 +541,4 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # current 0.2533
 # current 0.2497
 # current 0.2491 / 0.2487
+# current 0.2468
