@@ -210,11 +210,11 @@ for line in tqdm(lines):
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
                     passers[0][pfile] += 1
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
-                    passerPushMap[1][j-8] = 1
+                    passerPushMap[0][j+8] = 1
                 if rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
                     backwards[0][pfile] += 1
                     backwardsMap[0][j] = 1
-                    backwardsPushMap[0][j-8] = 1
+                    backwardsPushMap[0][j+8] = 1
                 if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
                     isolated[0][pfile] += 1
                     isolatedMap[0][j] = 1
@@ -347,10 +347,9 @@ for line in tqdm(lines):
         #print(pushers)
         #print(imbalance, downmaterial)
         for a in range(2):
-            for b in range(1,7):
-                #plt.imshow(mobtable[a][b].reshape((8,8)))
-                #plt.show()
-                ...
+            #plt.imshow(passerPushMap[a].reshape((8,8)))
+            #plt.show()
+            ...
 
         #plt.imshow((mobtable[0][4] + pawnAttacksMap[1]).reshape((8,8)))
         #plt.show()
