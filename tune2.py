@@ -67,7 +67,7 @@ patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E
 
 
 for line in tqdm(lines):
-    if len(outputs) > 1_000_000:
+    if len(outputs) > 1_000:
         break
 
     packed = line.split("c9")
@@ -109,10 +109,6 @@ for line in tqdm(lines):
         print("Error:", err)
 
     material = np.zeros((2, 7))
-    mobilities = np.zeros((2,7))
-
-    attackspawn = np.zeros((7))
-    attackspiece = np.zeros((7))
 
     sidetomove = np.zeros(1)
 
@@ -132,10 +128,8 @@ for line in tqdm(lines):
     shield3 = np.zeros((2,10))
 
     mobtable = np.zeros((2,7,64))
-    kingattacked = np.zeros((2,7))
 
     kings = [-1, -1]
-    kingring = np.zeros((2,120))
     rearpawns = [
         [11,11,11,11,11,11,11,11,11,11],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -148,6 +142,7 @@ for line in tqdm(lines):
     passerPushMap = np.zeros((2,64))
     
     pawnAttacksMap = np.zeros((2,64))
+    kingRingMap = np.zeros((2,64))
     standers = np.zeros((2,7,64))
     
     for i in range(64):
@@ -160,6 +155,9 @@ for line in tqdm(lines):
         piececolor = piece & 1
 
         material[piececolor, piecetype] += 1
+
+        if piecetype > 0:
+            standers[piece&1][piecetype][i] = 1
 
         if piecetype == 1:
             pfile = mailbox[i] % 10
@@ -177,11 +175,12 @@ for line in tqdm(lines):
             # Base case for psqt, e3 pawn
             if j != 44:
                 psqt[j] += sign[piececolor]
-
         elif piecetype == 6:
             kings[piececolor] = mailbox[i]
             for off in [N,S,E,W,N+W,N+E,S+W,S+E]:
-                kingring[piececolor][mailbox[i] + off] = 1
+                spot = inverse[mailbox[i] + off]
+                if spot != -1:
+                    kingRingMap[piececolor][spot] = 1
 
     wkingfile = kings[1] % 10
     wkingrank = kings[1] // 10
@@ -234,7 +233,6 @@ for line in tqdm(lines):
 
             #continue
         
-        mobility = 0
 
         for direction in pattern:
             current = sq
@@ -248,23 +246,10 @@ for line in tqdm(lines):
                     pawnAttacksMap[piece & 1][inverse[current]] += 1
 
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
-                    mobility += 1
-                    if kingring[1-(piece & 1)][current] == 1:
-                        kingattacked[1-(piece&1)][piecetype] += 1
-
                     mobtable[piece&1][piecetype][inverse[current]] += 1
-
-                    # piece attacks
-                    if virtualboard[current] > 3:
-                        attackspiece[piecetype] += sign[piece&1]
-                    elif virtualboard[current] > 1:
-                        attackspawn[piecetype] += sign[piece&1]
 
                 if virtualboard[current] != 0 or (not isray):
                     break
-
-
-        mobilities[piece & 1][piecetype] += mobility
 
     for x in [-1,0,1]:
         wspawn = rearpawns[1][wkingfile + x]
@@ -322,11 +307,11 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], psqt, isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, attackspiece, attackspawn, pushers],
+        [material[1, :] - material[0, :], psqt, isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, pushers],
         [mobtable[0].flatten(),],
         [mobtable[1].flatten(),],
-        [isolatedMap[1], backwardsMap[1], backwardsPushMap[1], passerPushMap[1], pawnAttacksMap[1]],
-        [isolatedMap[0], backwardsMap[0], backwardsPushMap[0], passerPushMap[0], pawnAttacksMap[0]],
+        [isolatedMap[1], backwardsMap[1], backwardsPushMap[1], passerPushMap[1], pawnAttacksMap[1], standers[1].flatten(), kingRingMap[1]],
+        [isolatedMap[0], backwardsMap[0], backwardsPushMap[0], passerPushMap[0], pawnAttacksMap[0], standers[0].flatten(), kingRingMap[0]],
     ]
 
     if first:
@@ -347,8 +332,8 @@ for line in tqdm(lines):
         #print(pushers)
         #print(imbalance, downmaterial)
         for a in range(2):
-            #plt.imshow(passerPushMap[a].reshape((8,8)))
-            #plt.show()
+            plt.imshow(kingRingMap[a].reshape((8,8)))
+            plt.show()
             ...
 
         #plt.imshow((mobtable[0][4] + pawnAttacksMap[1]).reshape((8,8)))
@@ -379,8 +364,9 @@ class HCE(torch.nn.Module):
         self.mobilitytable = torch.nn.Parameter(torch.randn(1,64))
         self.tapermobilitytable = torch.nn.Parameter(torch.randn(1,64))
 
-        self.piecemobility = torch.nn.Parameter(torch.randn(7))
-        self.taperpiecemobility = torch.nn.Parameter(torch.randn(7))
+        n = (starts[3] - starts[2]) // 64
+        self.piecemobility = torch.nn.Parameter(torch.randn(n))
+        self.taperpiecemobility = torch.nn.Parameter(torch.randn(n))
 
         self.nsquares = (starts[5]-starts[4])//64
 
@@ -397,6 +383,7 @@ class HCE(torch.nn.Module):
         #wup = torch.clamp(material, min=0)
         #bup = torch.clamp(-material, min=0)
 
+        # TODO: reduce this to two lines of code
         normal = self.mobilitytable.reshape((1,8,8))
         normalTaper = self.tapermobilitytable.reshape((1,8,8))
 
@@ -541,3 +528,7 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # current 0.2497
 # current 0.2491 / 0.2487
 # current 0.2468
+
+# TODO: benchmark latest
+# TODO: benchmark latest with standers
+# TODO: benchmark above with variations of pawn friendly attacks

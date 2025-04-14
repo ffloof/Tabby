@@ -798,16 +798,17 @@ func main() {
 //          - mobility
 //              - penalize squares with enemy pawn guard
 //              - scale infront of backwards pawns?
+//              - king ring
 //          - attacks
 //              - bonus on backwards and isolated pawns?
 //          - we can also dual purpose this map for move ordering, no need to do seperate mvvlva?
 // 3. King Safety
 //     - tbh king safety is not that big a deal for engines, but it leads to more fun attacking games
 //     - intercept
-//     - king ring attacks? 
 //     - enemy semi/open files towards our king
 //     - king pawn shield quality
-//     - scale by material behind bonus
+//     - number of squares king can still move to?
+//     - queen tropism?
 // 4. Pawn Structure
 //     - pawn shield
 //     - backwards pawns?
@@ -815,6 +816,8 @@ func main() {
 //     - passed pawns
 //         - opposite king passer bonus?
 //     - encourage trades in completely winning positions? (perhaps implement 50 move and slowly taper eval to 0)
+
+//     - risk scaling, perhaps some combination of activity and/or king safety?
 
 // Still need to figure out how to reward the queen moreso than other pieces for attacking king ring
 
