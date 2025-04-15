@@ -67,7 +67,7 @@ patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E
 
 
 for line in tqdm(lines):
-    if len(outputs) > 1_000:
+    if len(outputs) > 1_000_000:
         break
 
     packed = line.split("c9")
@@ -108,26 +108,24 @@ for line in tqdm(lines):
     except Exception as err:
         print("Error:", err)
 
-    material = np.zeros((2, 7))
+    material = np.zeros((2, 7), dtype=np.int8)
 
-    sidetomove = np.zeros(1)
+    sidetomove = np.zeros(1, dtype=np.int8)
 
-    backwards = np.zeros((2,10))
-    passers = np.zeros((2,10))
+    backwards = np.zeros((2,10), dtype=np.int8)
+    passers = np.zeros((2,10), dtype=np.int8)
     passerRank = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [11,11,11,11,11,11,11,11,11,11],
-    ])
-    isolated = np.zeros((2,10))
+    ], dtype=np.int8)
 
+    isolated = np.zeros((2,10), dtype=np.int8)
 
-    psqt = np.zeros(64)
+    shield = np.zeros((2,10), dtype=np.int8)
+    shield2 = np.zeros((2,10), dtype=np.int8)
+    shield3 = np.zeros((2,10), dtype=np.int8)
 
-    shield = np.zeros((2,10))
-    shield2 = np.zeros((2,10))
-    shield3 = np.zeros((2,10))
-
-    mobtable = np.zeros((2,7,64))
+    mobtable = np.zeros((2,7,64), dtype=np.int8)
 
     kings = [-1, -1]
     rearpawns = [
@@ -136,14 +134,14 @@ for line in tqdm(lines):
     ]
 
 
-    isolatedMap = np.zeros((2,64))
-    backwardsMap = np.zeros((2,64))
-    backwardsPushMap = np.zeros((2,64))
-    passerPushMap = np.zeros((2,64))
+    isolatedMap = np.zeros((2,64), dtype=np.int8)
+    backwardsMap = np.zeros((2,64), dtype=np.int8)
+    backwardsPushMap = np.zeros((2,64), dtype=np.int8)
+    passerPushMap = np.zeros((2,64), dtype=np.int8)
     
-    pawnAttacksMap = np.zeros((2,64))
-    kingRingMap = np.zeros((2,64))
-    standers = np.zeros((2,7,64))
+    pawnAttacksMap = np.zeros((2,64), dtype=np.int8)
+    kingRingMap = np.zeros((2,64), dtype=np.int8)
+    standers = np.zeros((2,7,64), dtype=np.int8)
     
     for i in range(64):
         piece = virtualboard[mailbox[i]]
@@ -167,14 +165,6 @@ for line in tqdm(lines):
             else:
                 rearpawns[piececolor][pfile] = max(rearpawns[piececolor][pfile], prank)
 
-            # pawn psqt
-            j = i
-            if piececolor != 1:
-                j = i ^ 56
-
-            # Base case for psqt, e3 pawn
-            if j != 44:
-                psqt[j] += sign[piececolor]
         elif piecetype == 6:
             kings[piececolor] = mailbox[i]
             for off in [N,S,E,W,N+W,N+E,S+W,S+E]:
@@ -268,13 +258,9 @@ for line in tqdm(lines):
         if bspawn < 10 and bspawn > bkingrank:
             shield3[0][bkingfile + x] = 1
 
-    shield = 1-shield
-    shield2 = 1-shield2
-    shield3 = 1-shield3
-
     # Clipping passers
     passers = np.clip(passers, 0, 1) # We dont count doubled pawns as multiple passers
-    pushers = np.zeros(10)
+    pushers = np.zeros(10, dtype=np.int8)
 
 
     for i in range(10):
@@ -307,16 +293,14 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], psqt, isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, pushers],
-        [mobtable[0].flatten(),],
-        [mobtable[1].flatten(),],
+        [material[1, :] - material[0, :], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, pushers],
+        [mobtable[0].flatten(), standers[0].flatten()],
+        [mobtable[1].flatten(), standers[1].flatten()],
         [isolatedMap[1], backwardsMap[1], backwardsPushMap[1], passerPushMap[1], pawnAttacksMap[1], standers[1].flatten(), kingRingMap[1]],
         [isolatedMap[0], backwardsMap[0], backwardsPushMap[0], passerPushMap[0], pawnAttacksMap[0], standers[0].flatten(), kingRingMap[0]],
     ]
 
     if first:
-        names = ["phase", "mobility", "kingsafety", "linear"]
-
         startCount = 0
         for group in terms:
             lengths = []
@@ -331,10 +315,10 @@ for line in tqdm(lines):
         print("\nfen " + fen)
         #print(pushers)
         #print(imbalance, downmaterial)
-        for a in range(2):
-            plt.imshow(kingRingMap[a].reshape((8,8)))
-            plt.show()
-            ...
+        #for a in range(2):
+        #    plt.imshow(kingRingMap[a].reshape((8,8)))
+        #    plt.show()
+        #    ...
 
         #plt.imshow((mobtable[0][4] + pawnAttacksMap[1]).reshape((8,8)))
         #plt.show()
@@ -345,7 +329,7 @@ for line in tqdm(lines):
     for iterm in range(len(terms)):
         finalterms = finalterms + terms[iterm]
 
-    values = np.concatenate(finalterms)
+    values = np.concatenate(finalterms, dtype=np.int8) #casting="unsafe")
 
     inputs.append(values)
     outputs.append(outcome)
@@ -364,9 +348,9 @@ class HCE(torch.nn.Module):
         self.mobilitytable = torch.nn.Parameter(torch.randn(1,64))
         self.tapermobilitytable = torch.nn.Parameter(torch.randn(1,64))
 
-        n = (starts[3] - starts[2]) // 64
-        self.piecemobility = torch.nn.Parameter(torch.randn(n))
-        self.taperpiecemobility = torch.nn.Parameter(torch.randn(n))
+        self.npieces = (starts[3] - starts[2]) // 64
+        self.piecemobility = torch.nn.Parameter(torch.randn(self.npieces))
+        self.taperpiecemobility = torch.nn.Parameter(torch.randn(self.npieces))
 
         self.nsquares = (starts[5]-starts[4])//64
 
@@ -415,10 +399,10 @@ class HCE(torch.nn.Module):
 
         #print(starts[2], starts[3], starts[4])
 
-        blackmob = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],7,64).movedim(1,2), self.piecemobility)
-        whitemob = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],7,64).movedim(1,2), self.piecemobility)
-        blackmobtaper = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],7,64).movedim(1,2), self.taperpiecemobility)
-        whitemobtaper = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],7,64).movedim(1,2), self.taperpiecemobility)
+        blackmob = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.piecemobility)
+        whitemob = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.piecemobility)
+        blackmobtaper = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.taperpiecemobility)
+        whitemobtaper = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.taperpiecemobility)
 
         netmob = (whitemob * wpost).sum(dim=1) - (blackmob * bpost).sum(dim=1)
         netmob2 = (whitemobtaper * wtaperpost).sum(dim=1) - (blackmobtaper * btaperpost).sum(dim=1)
@@ -471,16 +455,23 @@ class HCE(torch.nn.Module):
             plt.imshow(taperknight.astype(np.int32).reshape((8,8)))
             plt.show() '''
 
+        print("Piece weights")
+        print(np.around(self.piecemobility.detach().numpy(), decimals=4))
+        print(np.around(self.taperpiecemobility.detach().numpy(), decimals=4))
+
+        print("Grid weights")
+        print(np.around(self.gridweights.detach().numpy(), decimals=4))
+        print(np.around(self.tapergridweights.detach().numpy(), decimals=4))
 
         print("===")
 
 
-x = torch.FloatTensor(np.array(inputs))
-y = torch.FloatTensor(outputs)
+inputs = torch.FloatTensor(np.array(inputs))
+outputs = torch.FloatTensor(outputs)
 size = len(outputs)
 
 # Create a TensorDataset and DataLoader
-dataset = TensorDataset(x, y)
+dataset = TensorDataset(inputs, outputs)
 batch_size = 32  # You can adjust the batch size
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
@@ -528,7 +519,6 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # current 0.2497
 # current 0.2491 / 0.2487
 # current 0.2468
+# current 0.2457
 
-# TODO: benchmark latest
-# TODO: benchmark latest with standers
 # TODO: benchmark above with variations of pawn friendly attacks
