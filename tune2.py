@@ -235,7 +235,7 @@ for line in tqdm(lines):
                 if piecetype == 1:
                     pawnAttacksMap[piece & 1][inverse[current]] += 1
 
-                if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
+                if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)) or piecetype == 1:
                     mobtable[piece&1][piecetype][inverse[current]] += 1
 
                 if virtualboard[current] != 0 or (not isray):
@@ -463,6 +463,13 @@ class HCE(torch.nn.Module):
         print(np.around(self.gridweights.detach().numpy(), decimals=4))
         print(np.around(self.tapergridweights.detach().numpy(), decimals=4))
 
+        if finalEpoch:
+            plt.imshow(self.mobilitytable.detach().numpy().reshape((8,8)))
+            plt.show()
+            plt.imshow(self.tapermobilitytable.detach().numpy().reshape((8,8)))
+            plt.show()
+
+
         print("===")
 
 
@@ -519,6 +526,6 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # current 0.2497
 # current 0.2491 / 0.2487
 # current 0.2468
-# current 0.2457
+# 0.2450
 
-# TODO: benchmark above with variations of pawn friendly attacks
+# TODO: see which grids actually matter

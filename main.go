@@ -802,16 +802,15 @@ func main() {
 //          - attacks
 //              - bonus on backwards and isolated pawns?
 //          - we can also dual purpose this map for move ordering, no need to do seperate mvvlva?
+//          - should we flip this based on king sides, perhaps create several distinct maps?
 // 3. King Safety
 //     - tbh king safety is not that big a deal for engines, but it leads to more fun attacking games
-//     - intercept
 //     - enemy semi/open files towards our king
 //     - king pawn shield quality
-//     - number of squares king can still move to?
 //     - queen tropism?
 // 4. Pawn Structure
 //     - pawn shield
-//     - backwards pawns?
+//     - backwards pawns
 //     - isolated pawns
 //     - passed pawns
 //         - opposite king passer bonus?
