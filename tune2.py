@@ -122,8 +122,6 @@ for line in tqdm(lines):
     isolated = np.zeros((2,10), dtype=np.int8)
 
     shield = np.zeros((2,10), dtype=np.int8)
-    shield2 = np.zeros((2,10), dtype=np.int8)
-    shield3 = np.zeros((2,10), dtype=np.int8)
 
     mobtable = np.zeros((2,7,64), dtype=np.int8)
 
@@ -245,18 +243,11 @@ for line in tqdm(lines):
         wspawn = rearpawns[1][wkingfile + x]
         if wspawn > 0:
             shield[1][wkingfile + x] = 1
-        if wspawn == 8:
-            shield2[1][wkingfile + x] = 1
-        if wspawn > 0 and wspawn < wkingrank:
-            shield3[1][wkingfile + x] = 1
 
         bspawn = rearpawns[0][bkingfile + x]
         if bspawn < 10:
             shield[0][bkingfile + x] = 1
-        if bspawn == 3:
-            shield2[0][bkingfile + x] = 1
-        if bspawn < 10 and bspawn > bkingrank:
-            shield3[0][bkingfile + x] = 1
+
 
     # Clipping passers
     passers = np.clip(passers, 0, 1) # We dont count doubled pawns as multiple passers
@@ -289,6 +280,8 @@ for line in tqdm(lines):
 
     imbalance = np.dot(material[1]-material[0], np.array([0,1,3,3,5,9,0]))
 
+
+    npawns = np.array([material[0][1], material[1][1]])
     downmaterial = [max(0,imbalance), max(0,-imbalance)]
 
     terms = [
