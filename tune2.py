@@ -270,6 +270,8 @@ for line in tqdm(lines):
         isolated[0] = isolated[0,::-1]
         backwards[0] = backwards[0,::-1]
         passers[1] = passers[1,::-1]
+   
+
 
     if wkingfile < 5:
         passers[0] = passers[0,::-1]
@@ -278,19 +280,19 @@ for line in tqdm(lines):
 
     sidetomove[0] = sign[turn]
 
-    imbalance = np.dot(material[1]-material[0], np.array([0,1,3,3,5,9,0]))
-
-
-    npawns = np.array([material[0][1], material[1][1]])
-    downmaterial = [max(0,imbalance), max(0,-imbalance)]
+    npawns = np.zeros((2,9), dtype=np.int8)
+    npawns[0][material[0][1]] = 1 
+    npawns[1][material[1][1]] = 1
 
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, pushers],
+        [material[1, :] - material[0, :], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, pushers, npawns[1]- npawns[0]],
         [mobtable[0].flatten(), standers[0].flatten()],
         [mobtable[1].flatten(), standers[1].flatten()],
         [isolatedMap[1], backwardsMap[1], backwardsPushMap[1], passerPushMap[1], pawnAttacksMap[1], standers[1].flatten(), kingRingMap[1]],
         [isolatedMap[0], backwardsMap[0], backwardsPushMap[0], passerPushMap[0], pawnAttacksMap[0], standers[0].flatten(), kingRingMap[0]],
+        [npawns[0], shield[0]],
+        [npawns[1], shield[1]],
     ]
 
     if first:
@@ -306,8 +308,6 @@ for line in tqdm(lines):
         print(starts, sizes)
 
         print("\nfen " + fen)
-        #print(pushers)
-        #print(imbalance, downmaterial)
         #for a in range(2):
         #    plt.imshow(kingRingMap[a].reshape((8,8)))
         #    plt.show()
@@ -356,41 +356,24 @@ class HCE(torch.nn.Module):
 
         mob = x[:,starts[2]:starts[3]]
 
-        #material = torch.matmul(x[:,starts[1]:starts[1]+7], (self.terms[0:7] * phase) + (self.taperterms * (1-phase)))
-        #wup = torch.clamp(material, min=0)
-        #bup = torch.clamp(-material, min=0)
+        material = torch.matmul(x[:,starts[1]:starts[1]+7], (self.terms[0:7] * phase) + (self.taperterms * (1-phase)))
+        wup = torch.clamp(material, min=0)
+        bup = torch.clamp(-material, min=0)
 
-        # TODO: reduce this to two lines of code
-        normal = self.mobilitytable.reshape((1,8,8))
-        normalTaper = self.tapermobilitytable.reshape((1,8,8))
 
-        inverse = torch.flip(normal, [1,])
-        inverseTaper = torch.flip(normalTaper, [1,])
+        normal = self.mobilitytable
+        normalTaper = self.tapermobilitytable
 
-        normal = normal.reshape((1,64))
-        normalTaper = normalTaper.reshape((1,64))
-
-        inverse = inverse.reshape((1,64))
-        inverseTaper = inverseTaper.reshape((1,64))
+        inverse = torch.flip(normal.reshape((1,8,8)), [1,]).reshape((1,64))
+        inverseTaper = torch.flip(normalTaper.reshape((1,8,8)), [1,]).reshape((1,64))
 
         bgrids = x[:,starts[4]:starts[5]].reshape(x.shape[0], self.nsquares, 64).movedim(1,2)
         wgrids = x[:,starts[5]:starts[6]].reshape(x.shape[0], self.nsquares, 64).movedim(1,2)
-
 
         wpost = torch.matmul(wgrids,self.gridweights) + normal
         bpost = torch.matmul(bgrids,self.gridweights) + inverse
         wtaperpost = torch.matmul(wgrids,self.tapergridweights) + normalTaper
         btaperpost = torch.matmul(bgrids,self.tapergridweights) + inverseTaper
-        #print(torch.mul(wpost, self.piecemobility.reshape(7,1)).shape)
-
-
-        #print("N")
-        #print(normal)
-
-        #print("I")
-        #print(inverse)
-
-        #print(starts[2], starts[3], starts[4])
 
         blackmob = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.piecemobility)
         whitemob = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.piecemobility)
@@ -457,8 +440,10 @@ class HCE(torch.nn.Module):
         print(np.around(self.tapergridweights.detach().numpy(), decimals=4))
 
         if finalEpoch:
+            plt.title("Middlegame")
             plt.imshow(self.mobilitytable.detach().numpy().reshape((8,8)))
             plt.show()
+            plt.title("Endgame")
             plt.imshow(self.tapermobilitytable.detach().numpy().reshape((8,8)))
             plt.show()
 

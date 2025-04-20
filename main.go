@@ -805,7 +805,6 @@ func main() {
 //          - should we flip this based on king sides, perhaps create several distinct maps?
 // 3. King Safety
 //     - tbh king safety is not that big a deal for engines, but it leads to more fun attacking games
-//     - enemy semi/open files towards our king
 //     - king pawn shield quality
 //     - queen tropism?
 // 4. Pawn Structure
