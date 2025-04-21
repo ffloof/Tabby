@@ -289,7 +289,7 @@ for line in tqdm(lines):
             starts.append(startCount)
             sizes.append(lengths)
 
-        print(starts, sizes)
+        #print(starts, sizes)
 
         print("\nfen " + fen)
         #for a in range(2):
@@ -380,6 +380,15 @@ class HCE(torch.nn.Module):
         return torch.tanh(((score + netmob) * phase) + ((score2 + netmob2) * (1-phase)) + (scalew - scaleb)) 
 
     def printfinal(self, finalEpoch=False):
+        def printparams(regular, tapered, shape, multiplier=1.0):
+            offset = 0
+            for size in shape:
+                if size >= 64:
+                    size = size//64
+                print(np.around(regular[offset:offset+size].detach().numpy() * multiplier, decimals=3))
+                print(np.around(tapered[offset:offset+size].detach().numpy() * multiplier, decimals=3))
+                offset += size
+        
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
         '''
         offset = 0
@@ -422,17 +431,17 @@ class HCE(torch.nn.Module):
             plt.imshow(taperknight.astype(np.int32).reshape((8,8)))
             plt.show() '''
 
+        print("Linear terms")
+        printparams(self.terms, self.taperterms, sizes[1], m)
+
         print("Piece weights")
-        print(np.around(self.piecemobility.detach().numpy(), decimals=4))
-        print(np.around(self.taperpiecemobility.detach().numpy(), decimals=4))
+        printparams(self.piecemobility, self.taperpiecemobility, sizes[2])
 
         print("Grid weights")
-        print(np.around(self.gridweights.detach().numpy(), decimals=4))
-        print(np.around(self.tapergridweights.detach().numpy(), decimals=4))
+        printparams(self.gridweights, self.tapergridweights, sizes[4])
 
         print("Risk weights")
-        print(np.around(self.risk.detach().numpy(), decimals=4))
-        print(np.around(self.taperrisk.detach().numpy(), decimals=4))
+        printparams(self.risk, self.taperrisk, sizes[6])
 
         if finalEpoch:
             plt.title("Middlegame")
