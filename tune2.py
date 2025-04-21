@@ -130,12 +130,6 @@ for line in tqdm(lines):
         [11,11,11,11,11,11,11,11,11,11],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]
-
-
-    isolatedMap = np.zeros((2,64), dtype=np.int8)
-    backwardsMap = np.zeros((2,64), dtype=np.int8)
-    backwardsPushMap = np.zeros((2,64), dtype=np.int8)
-    passerPushMap = np.zeros((2,64), dtype=np.int8)
     
     pawnAttacksMap = np.zeros((2,64), dtype=np.int8)
     kingRingMap = np.zeros((2,64), dtype=np.int8)
@@ -197,27 +191,19 @@ for line in tqdm(lines):
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
                     passers[0][pfile] += 1
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
-                    passerPushMap[0][j+8] = 1
                 if rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
                     backwards[0][pfile] += 1
-                    backwardsMap[0][j] = 1
-                    backwardsPushMap[0][j+8] = 1
                 if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
                     isolated[0][pfile] += 1
-                    isolatedMap[0][j] = 1
 
             else:
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
                     passers[1][pfile] += 1
                     passerRank[1][pfile] = min(prank, passerRank[1][pfile])
-                    passerPushMap[1][j-8] = 1
                 if rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
                     backwards[1][pfile] += 1
-                    backwardsMap[1][j] = 1
-                    backwardsPushMap[1][j-8] = 1
                 if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
                     isolated[1][pfile] += 1
-                    isolatedMap[1][j] = 1
 
             #continue
         
@@ -271,8 +257,6 @@ for line in tqdm(lines):
         backwards[0] = backwards[0,::-1]
         passers[1] = passers[1,::-1]
    
-
-
     if wkingfile < 5:
         passers[0] = passers[0,::-1]
         isolated[1] = isolated[1,::-1]
@@ -286,13 +270,13 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, pushers, npawns[1]- npawns[0]],
+        [material[1, :] - material[0, :], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, pushers, ],
         [mobtable[0].flatten(), standers[0].flatten()],
         [mobtable[1].flatten(), standers[1].flatten()],
-        [isolatedMap[1], backwardsMap[1], backwardsPushMap[1], passerPushMap[1], pawnAttacksMap[1], standers[1].flatten(), kingRingMap[1]],
-        [isolatedMap[0], backwardsMap[0], backwardsPushMap[0], passerPushMap[0], pawnAttacksMap[0], standers[0].flatten(), kingRingMap[0]],
-        [npawns[0], shield[0]],
-        [npawns[1], shield[1]],
+        [pawnAttacksMap[1], standers[1].flatten(), kingRingMap[1]],
+        [pawnAttacksMap[0], standers[0].flatten(), kingRingMap[0]],
+        [npawns[0]],
+        [npawns[1]],
     ]
 
     if first:
@@ -350,19 +334,26 @@ class HCE(torch.nn.Module):
         self.gridweights = torch.nn.Parameter(torch.randn(self.nsquares))
         self.tapergridweights = torch.nn.Parameter(torch.randn(self.nsquares))
 
+        self.risk = torch.nn.Parameter(torch.randn(starts[7]-starts[6]))
+        self.taperrisk = torch.nn.Parameter(torch.randn(starts[7]-starts[6]))
+
 
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
         mob = x[:,starts[2]:starts[3]]
 
-        material = torch.matmul(x[:,starts[1]:starts[1]+7], (self.terms[0:7] * phase) + (self.taperterms * (1-phase)))
+        material = (torch.matmul(x[:,starts[1]:starts[1]+7], self.terms[0:7])* phase) + (torch.matmul(x[:,starts[1]:starts[1]+7], self.taperterms[0:7])* (1-phase))
+
         wup = torch.clamp(material, min=0)
         bup = torch.clamp(-material, min=0)
 
 
         normal = self.mobilitytable
         normalTaper = self.tapermobilitytable
+
+        scaleb = bup * ((torch.matmul(x[:,starts[6]:starts[7]], self.risk)*phase) + (torch.matmul(x[:,starts[6]:starts[7]], self.taperrisk)*(1-phase)))
+        scalew = wup * ((torch.matmul(x[:,starts[7]:starts[8]], self.risk)*phase) + (torch.matmul(x[:,starts[7]:starts[8]], self.taperrisk)*(1-phase)))
 
         inverse = torch.flip(normal.reshape((1,8,8)), [1,]).reshape((1,64))
         inverseTaper = torch.flip(normalTaper.reshape((1,8,8)), [1,]).reshape((1,64))
@@ -386,7 +377,7 @@ class HCE(torch.nn.Module):
         score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
-        return torch.tanh(((score + netmob) * phase) + ((score2 + netmob2) * (1-phase)))
+        return torch.tanh(((score + netmob) * phase) + ((score2 + netmob2) * (1-phase)) + (scalew - scaleb)) 
 
     def printfinal(self, finalEpoch=False):
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
@@ -438,6 +429,10 @@ class HCE(torch.nn.Module):
         print("Grid weights")
         print(np.around(self.gridweights.detach().numpy(), decimals=4))
         print(np.around(self.tapergridweights.detach().numpy(), decimals=4))
+
+        print("Risk weights")
+        print(np.around(self.risk.detach().numpy(), decimals=4))
+        print(np.around(self.taperrisk.detach().numpy(), decimals=4))
 
         if finalEpoch:
             plt.title("Middlegame")
@@ -505,5 +500,4 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # current 0.2491 / 0.2487
 # current 0.2468
 # 0.2450
-
-# TODO: see which grids actually matter
+# 0.2398
