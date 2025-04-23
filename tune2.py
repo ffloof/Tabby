@@ -112,14 +112,17 @@ for line in tqdm(lines):
 
     sidetomove = np.zeros(1, dtype=np.int8)
 
-    backwards = np.zeros((2,10), dtype=np.int8)
+    backwardsClosed = np.zeros((2,10), dtype=np.int8)
+    backwardsOpen = np.zeros((2,10), dtype=np.int8)
     passers = np.zeros((2,10), dtype=np.int8)
     passerRank = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [11,11,11,11,11,11,11,11,11,11],
     ], dtype=np.int8)
 
-    isolated = np.zeros((2,10), dtype=np.int8)
+    isolatedClosed = np.zeros((2,10), dtype=np.int8)
+    isolatedOpen = np.zeros((2,10), dtype=np.int8)
+
 
     shield = np.zeros((2,10), dtype=np.int8)
 
@@ -191,19 +194,34 @@ for line in tqdm(lines):
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
                     passers[0][pfile] += 1
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
-                if rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
-                    backwards[0][pfile] += 1
+                
                 if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
-                    isolated[0][pfile] += 1
+                    if rearpawns[1][pfile] == 0:
+                        isolatedOpen[0][pfile] += 1
+                    else:
+                        isolatedClosed[0][pfile] += 1
+                elif rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
+                    if rearpawns[1][pfile] == 0:
+                        backwardsOpen[0][pfile] += 1
+                    else:
+                        backwardsClosed[0][pfile] += 1
 
             else:
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
                     passers[1][pfile] += 1
                     passerRank[1][pfile] = min(prank, passerRank[1][pfile])
-                if rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
-                    backwards[1][pfile] += 1
+                
+                    
                 if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
-                    isolated[1][pfile] += 1
+                    if rearpawns[0][pfile] == 11:
+                        isolatedOpen[1][pfile] += 1
+                    else:
+                        isolatedClosed[1][pfile] += 1
+                elif rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
+                    if rearpawns[0][pfile] == 11:
+                        backwardsOpen[1][pfile] += 1
+                    else:
+                        backwardsClosed[1][pfile] += 1
 
             #continue
         
@@ -253,14 +271,19 @@ for line in tqdm(lines):
 
 
     if bkingfile < 5:
-        isolated[0] = isolated[0,::-1]
-        backwards[0] = backwards[0,::-1]
+        isolatedClosed[0] = isolatedClosed[0,::-1]
+        isolatedOpen[0] = isolatedOpen[0,::-1]
+        backwardsClosed[0] = backwardsClosed[0,::-1]
+        backwardsOpen[0] = backwardsOpen[0,::-1]
         passers[1] = passers[1,::-1]
    
     if wkingfile < 5:
+        isolatedClosed[1] = isolatedClosed[1,::-1]
+        isolatedOpen[1] = isolatedOpen[1,::-1]
+        backwardsClosed[1] = backwardsClosed[1,::-1]
+        backwardsOpen[1] = backwardsOpen[1,::-1]
         passers[0] = passers[0,::-1]
-        isolated[1] = isolated[1,::-1]
-        backwards[1] = backwards[1,::-1]
+        
 
     sidetomove[0] = sign[turn]
 
@@ -270,7 +293,7 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], isolated[1] - isolated[0], passers[1] - passers[0], backwards[1] - backwards[0], shield[1] - shield[0], sidetomove, pushers, ],
+        [material[1, :] - material[0, :], passers[1] - passers[0], shield[1] - shield[0], sidetomove, pushers, isolatedClosed[1] - isolatedClosed[0], isolatedOpen[1] - isolatedOpen[0], backwardsClosed[1] - backwardsClosed[0], backwardsOpen[1] - backwardsOpen[0],],
         [mobtable[0].flatten(), standers[0].flatten()],
         [mobtable[1].flatten(), standers[1].flatten()],
         [pawnAttacksMap[1], standers[1].flatten(), kingRingMap[1]],
@@ -341,8 +364,6 @@ class HCE(torch.nn.Module):
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
-        mob = x[:,starts[2]:starts[3]]
-
         material = (torch.matmul(x[:,starts[1]:starts[1]+7], self.terms[0:7])* phase) + (torch.matmul(x[:,starts[1]:starts[1]+7], self.taperterms[0:7])* (1-phase))
 
         wup = torch.clamp(material, min=0)
@@ -377,72 +398,49 @@ class HCE(torch.nn.Module):
         score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
-        return torch.tanh(((score + netmob) * phase) + ((score2 + netmob2) * (1-phase)) + (scalew - scaleb)) 
+        finalscore = ((score + netmob) * phase) + ((score2 + netmob2) * (1-phase))
+
+        return torch.tanh( + (scalew - scaleb)) 
 
     def printfinal(self, finalEpoch=False):
-        def printparams(regular, tapered, shape, multiplier=1.0):
+        def printparams(regular, tapered, shape, multiplier=1.0, forgrid=True):
             offset = 0
             for size in shape:
-                if size >= 64:
+                if size >= 64 and forgrid:
                     size = size//64
-                print(np.around(regular[offset:offset+size].detach().numpy() * multiplier, decimals=3))
-                print(np.around(tapered[offset:offset+size].detach().numpy() * multiplier, decimals=3))
+                a = np.around(regular[offset:offset+size].detach().numpy() * multiplier, decimals=3)
+                b = np.around(tapered[offset:offset+size].detach().numpy() * multiplier, decimals=3)
+                if not finalEpoch:
+                    print(a)
+                    print(b)
+                else:
+                    finalstr = "["
+                    for i in range(len(a)):
+                        finalstr += "T(" + str(a[i]) + "," + str(b[i]) + "), "
+                    finalstr += "]"
+                    print(finalstr)
                 offset += size
         
+
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
-        '''
-        offset = 0
-        for i in range len(starts):
-            print("\n", names[i])
 
-            offset = 0
-            for size in sizes[i]:
-
-
-
-            if size == 64:
-                if finalEpoch:
-                    plt.imshow((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
-                    plt.show()
-                    plt.imshow((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32).reshape((8,8)))
-                    plt.show()
-
-                offset += size
-
-            print((self.terms[offset:offset+size].detach().numpy() * m).astype(np.int32))
-            print((self.taperterms[offset:offset+size].detach().numpy() * m).astype(np.int32))
-
-            print("")
-            offset += size
-
-        print("mobility")
-
-        knight = (m * self.mobilitytable * self.piecemobility[2]).detach().numpy()
-        print(knight)
-
-        taperknight = (m * self.tapermobilitytable * self.piecemobility[2]).detach().numpy()
-        print(taperknight)
-
-        print(self.piecemobility / self.piecemobility[2])
-        print(self.taperpiecemobility / self.piecemobility[2])
-        if finalEpoch:
-            plt.imshow(knight.astype(np.int32).reshape((8,8)))
-            plt.show()
-            plt.imshow(taperknight.astype(np.int32).reshape((8,8)))
-            plt.show() '''
-
-        print("Linear terms")
+        print("\nLinear terms")
         printparams(self.terms, self.taperterms, sizes[1], m)
 
-        print("Piece weights")
+        print("\nPiece weights")
         printparams(self.piecemobility, self.taperpiecemobility, sizes[2])
 
-        print("Grid weights")
-        printparams(self.gridweights, self.tapergridweights, sizes[4])
+        print("\nGrid weights")
+        printparams(self.gridweights, self.tapergridweights, sizes[4], m)
 
-        print("Risk weights")
+        print("\nRisk weights")
         printparams(self.risk, self.taperrisk, sizes[6])
 
+        if finalEpoch:
+            print("\nBase Mob Weights")
+            printparams(self.mobilitytable[0], self.tapermobilitytable[0], [8,8,8,8,8,8,8,8], m, False)
+
+        print("===")
         if finalEpoch:
             plt.title("Middlegame")
             plt.imshow(self.mobilitytable.detach().numpy().reshape((8,8)))
@@ -452,7 +450,8 @@ class HCE(torch.nn.Module):
             plt.show()
 
 
-        print("===")
+
+
 
 
 inputs = torch.FloatTensor(np.array(inputs))
