@@ -112,16 +112,19 @@ for line in tqdm(lines):
 
     sidetomove = np.zeros(1, dtype=np.int8)
 
-    backwardsClosed = np.zeros((2,10), dtype=np.int8)
-    backwardsOpen = np.zeros((2,10), dtype=np.int8)
+    backwardsClosed = np.zeros((2,1), dtype=np.int8)
+    backwardsOpen = np.zeros((2,1), dtype=np.int8)
     passers = np.zeros((2,10), dtype=np.int8)
     passerRank = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [11,11,11,11,11,11,11,11,11,11],
     ], dtype=np.int8)
 
-    isolatedClosed = np.zeros((2,10), dtype=np.int8)
-    isolatedOpen = np.zeros((2,10), dtype=np.int8)
+    isolatedClosed = np.zeros((2,1), dtype=np.int8)
+    isolatedOpen = np.zeros((2,1), dtype=np.int8)
+
+    isolated = np.zeros((2,64), dtype=np.int8)
+    backwards = np.zeros((2,64), dtype=np.int8)
 
 
     shield = np.zeros((2,10), dtype=np.int8)
@@ -196,15 +199,17 @@ for line in tqdm(lines):
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
                 
                 if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
+                    isolated[0][j] = 1
                     if rearpawns[1][pfile] == 0:
-                        isolatedOpen[0][pfile] += 1
+                        isolatedOpen[0] += 1
                     else:
-                        isolatedClosed[0][pfile] += 1
+                        isolatedClosed[0] += 1
                 elif rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
+                    backwards[0][j] = 1
                     if rearpawns[1][pfile] == 0:
-                        backwardsOpen[0][pfile] += 1
+                        backwardsOpen[0] += 1
                     else:
-                        backwardsClosed[0][pfile] += 1
+                        backwardsClosed[0] += 1
 
             else:
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
@@ -213,15 +218,17 @@ for line in tqdm(lines):
                 
                     
                 if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
+                    isolated[1][j] = 1
                     if rearpawns[0][pfile] == 11:
-                        isolatedOpen[1][pfile] += 1
+                        isolatedOpen[1] += 1
                     else:
-                        isolatedClosed[1][pfile] += 1
+                        isolatedClosed[1] += 1
                 elif rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
+                    backwards[1][j] = 1
                     if rearpawns[0][pfile] == 11:
-                        backwardsOpen[1][pfile] += 1
+                        backwardsOpen[1] += 1
                     else:
-                        backwardsClosed[1][pfile] += 1
+                        backwardsClosed[1] += 1
 
             #continue
         
@@ -271,17 +278,9 @@ for line in tqdm(lines):
 
 
     if bkingfile < 5:
-        isolatedClosed[0] = isolatedClosed[0,::-1]
-        isolatedOpen[0] = isolatedOpen[0,::-1]
-        backwardsClosed[0] = backwardsClosed[0,::-1]
-        backwardsOpen[0] = backwardsOpen[0,::-1]
         passers[1] = passers[1,::-1]
    
     if wkingfile < 5:
-        isolatedClosed[1] = isolatedClosed[1,::-1]
-        isolatedOpen[1] = isolatedOpen[1,::-1]
-        backwardsClosed[1] = backwardsClosed[1,::-1]
-        backwardsOpen[1] = backwardsOpen[1,::-1]
         passers[0] = passers[0,::-1]
         
 
@@ -294,8 +293,8 @@ for line in tqdm(lines):
     terms = [
         [material[0, :] + material[1, :]],
         [material[1, :] - material[0, :], passers[1] - passers[0], shield[1] - shield[0], sidetomove, pushers, isolatedClosed[1] - isolatedClosed[0], isolatedOpen[1] - isolatedOpen[0], backwardsClosed[1] - backwardsClosed[0], backwardsOpen[1] - backwardsOpen[0],],
-        [mobtable[0].flatten(), standers[0].flatten()],
-        [mobtable[1].flatten(), standers[1].flatten()],
+        [mobtable[0].flatten(), standers[0].flatten(), backwards[0], isolated[0]],
+        [mobtable[1].flatten(), standers[1].flatten(), backwards[1], isolated[1]],
         [pawnAttacksMap[1], standers[1].flatten(), kingRingMap[1]],
         [pawnAttacksMap[0], standers[0].flatten(), kingRingMap[0]],
         [npawns[0]],
@@ -320,7 +319,7 @@ for line in tqdm(lines):
         #    plt.show()
         #    ...
 
-        #plt.imshow((mobtable[0][4] + pawnAttacksMap[1]).reshape((8,8)))
+        #plt.imshow((backwards[0]).reshape((8,8)))
         #plt.show()
 
         #sys.exit()
@@ -400,7 +399,7 @@ class HCE(torch.nn.Module):
 
         finalscore = ((score + netmob) * phase) + ((score2 + netmob2) * (1-phase))
 
-        return torch.tanh( + (scalew - scaleb)) 
+        return torch.tanh(finalscore + (scalew - scaleb)) 
 
     def printfinal(self, finalEpoch=False):
         def printparams(regular, tapered, shape, multiplier=1.0, forgrid=True):
