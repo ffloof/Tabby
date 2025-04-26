@@ -23,12 +23,12 @@ func T(a,b int) int{
 	return (a + (b * 0x10000))
 }
 
+var material = []int{ T(0,0), T(31,85), T(276,215), T(308,209), T(410,320), T(808,612), T(0,0), }
+var passerFile = []int{ T(0,0), T(52,-6), T(41,-15), T(48,-36), T(43,-44), T(55,-54), T(88,-62), T(86,-49), T(67,-51), T(0,0), }
+var shield = []int { T(0,0), T(22,2), T(36,6), T(-7,22), T(12,12), T(10,11), T(8,10), T(22,3), T(35,-7), T(0,0),}
+var tempo int = T(32,25) 
 /*
-Linear terms
-[T(-0.0,-0.0), T(31.765,85.539), T(276.636,215.796), T(308.322,209.715), T(410.856,320.308), T(808.134,612.641), T(-0.0,-0.0), ]
-[T(-0.0,-0.0), T(52.813,-6.81), T(41.458,-15.939), T(48.208,-36.364), T(43.781,-44.961), T(55.022,-54.235), T(88.307,-62.447), T(86.376,-49.436), T(67.922,-51.17), T(-0.0,-0.0), ]
-[T(0.0,-0.0), T(22.103,2.927), T(36.362,6.315), T(-7.407,22.629), T(12.348,12.828), T(10.207,11.21), T(8.33,10.092), T(22.76,3.146), T(35.745,-7.005), T(0.0,0.0), ]
-[T(32.656,25.475), ]
+
 [T(-55.535,53.804), T(-53.307,50.922), T(-50.354,71.25), T(-47.704,91.68), T(-53.684,157.666), T(-14.853,230.961), T(0.0,-0.0), T(-0.0,-0.0), T(0.0,0.0), T(-0.0,-0.0), ]
 [T(-6.72,-15.267), ]
 [T(-7.191,-21.868), ]
@@ -166,16 +166,17 @@ func (board *Board) IsHomeRow(i int) bool {
 }
 
 func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
-	weights := [128]int{}
+	//weights := [128]int{}
 
+	/*
 	j := 0
 	if (board.sidetomove == 0) {
 		j = 120
 	}
 
 	for i := range 128 {
-		weights[i^120] = 
-	}
+		weights[i^j] = 
+	}*/
 
 
 	
@@ -220,7 +221,7 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 		} else {
 			ray := rays[piecetype]
 			pattern := patterns[piecetype]
-			mobValue := mobChart[piecetype]
+			//mobValue := mobChart[piecetype]
 
 
 			for _, dir := range pattern {
@@ -230,10 +231,10 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 					if victim != 0 {
 						if victim&1 != piece&1 {
 							moves = append(moves, Move{int8(i), int8(end)})
-							mobility += mobValue
+							//mobility += mobValue
 						}
 					} else {
-						mobility += mobValue
+						//mobility += mobValue
 						if !capturesOnly {
 							moves = append(moves, Move{int8(i), int8(end)})
 						}
@@ -446,10 +447,15 @@ func eval(board *Board) int {
 	blackrear := [10]int{7,7,7,7,7,7,7,7,7,7,}
 
 	for sq, piece := range board.squares {
-		score += matvalues[piece]
-		if piece / 2 == 1 {
-			score += pawnChart[piece & 1][sq]
+		
+		if piece & 1 == 1 {
+			score += material[piece / 2]
+		} else {
+			score -= material[piece / 2]
+		}
 
+
+		if piece / 2 == 1 {
 			pawnfile := (sq & 7) + 1
 			pawnrank := sq >> 4
 
@@ -461,6 +467,7 @@ func eval(board *Board) int {
 		}
 	}
 
+	/*
 	wkingfile := (board.kings[1]&7) + 1
 	wkingrank := board.kings[1] >> 4
 	bkingfile := (board.kings[0]&7) + 1
@@ -500,23 +507,12 @@ func eval(board *Board) int {
 		}
 	}
 
-	/*
-	if piece & 1 == 0:
-                if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
-                    passers[0][pfile] += 1
-                if rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
-                    backwards[0][pfile] += 1
-                if rearpawns[0][pfile-1] == 12 and rearpawns[0][pfile+1] == 12:
-                    isolated[0][pfile] += 1
-            else:
-                if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
-                    passers[1][pfile] += 1
-                if rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
-                    backwards[1][pfile] += 1
-                if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
-                    isolated[1][pfile] += 1
 */
 
+	eg := (score + 0x8000) >> 16;
+	mg := int(int16(score))
+
+	score = ((mg * board.phase) + (eg * (24-board.phase)))/24
 
 	if board.sidetomove == 0 {
 		return -score + 20
