@@ -23,42 +23,14 @@ func T(a,b int) int{
 	return (a + (b * 0x10000))
 }
 
+func decode(eval, phase int) int {
+	eg := (eval + 0x8000) >> 16;
+	mg := int(int16(eval))
+	return ((mg * phase) + (eg * (24-phase)))/24
+}
+
 var material = []int{ T(0,0), T(31,85), T(276,215), T(308,209), T(410,320), T(808,612), T(0,0), }
-var passerFile = []int{ T(0,0), T(52,-6), T(41,-15), T(48,-36), T(43,-44), T(55,-54), T(88,-62), T(86,-49), T(67,-51), T(0,0), }
-var shield = []int { T(0,0), T(22,2), T(36,6), T(-7,22), T(12,12), T(10,11), T(8,10), T(22,3), T(35,-7), T(0,0),}
-var tempo int = T(32,25) 
-/*
 
-[T(-55.535,53.804), T(-53.307,50.922), T(-50.354,71.25), T(-47.704,91.68), T(-53.684,157.666), T(-14.853,230.961), T(0.0,-0.0), T(-0.0,-0.0), T(0.0,0.0), T(-0.0,-0.0), ]
-[T(-6.72,-15.267), ]
-[T(-7.191,-21.868), ]
-[T(4.899,4.008), ]
-[T(-14.451,-3.918), ]
-
-Piece weights
-[T(-0.0,0.0), T(-0.092,-0.007), T(-0.088,0.048), T(-0.075,0.041), T(-0.079,0.036), T(-0.039,0.061), T(0.156,0.124), ]
-[T(0.0,0.0), T(-0.42,-0.602), T(-0.593,-0.727), T(-0.367,-0.426), T(0.057,0.431), T(0.053,0.845), T(-0.132,0.108), ]
-[T(0.114,-0.01), ]
-[T(0.218,0.107), ]
-
-Grid weights
-[T(74.03,37.805), ]
-[T(0.0,-0.0), T(87.305,194.766), T(-38.408,152.24), T(-204.58,288.475), T(-366.913,204.612), T(-725.963,-1039.029), T(-1140.706,596.005), ]
-[T(-67.624,-2.464), ]
-
-Risk weights
-[T(-0.759,-0.553), T(-0.801,0.025), T(-0.694,0.346), T(-0.627,0.561), T(-0.313,0.687), T(-0.072,0.788), T(0.115,0.915), T(0.129,1.134), T(0.436,0.763), ]
-
-Base Mob Weights
-[T(135.039,106.475), T(149.675,83.195), T(59.336,74.376), T(91.425,76.869), T(53.029,73.799), T(64.904,87.605), T(42.164,83.064), T(-35.633,125.568), ]
-[T(6.865,73.25), T(-78.966,76.897), T(-73.013,73.322), T(-20.155,61.778), T(-80.371,67.431), T(-35.495,76.897), T(-49.303,76.79), T(-15.538,91.239), ]
-[T(-54.653,52.648), T(-77.425,61.825), T(-64.439,46.088), T(-79.872,67.232), T(-77.673,71.929), T(-118.427,65.567), T(-113.19,79.843), T(-60.409,65.151), ]
-[T(-38.749,41.805), T(-71.644,48.394), T(-63.749,64.684), T(-90.221,79.684), T(-90.191,73.102), T(-59.094,62.775), T(-56.523,61.365), T(-38.282,67.286), ]
-[T(-23.735,62.724), T(-23.999,58.154), T(-77.387,72.513), T(-103.941,74.882), T(-88.659,65.657), T(-77.747,67.073), T(-54.633,69.753), T(-25.438,64.3), ]
-[T(-25.02,76.037), T(-61.686,83.608), T(-83.584,72.537), T(-84.161,68.223), T(-102.671,74.209), T(-81.809,73.169), T(-116.283,81.163), T(-55.528,65.635), ]
-[T(-23.331,67.779), T(-81.21,73.968), T(-58.581,58.975), T(-72.301,78.812), T(-50.572,66.57), T(-84.041,57.272), T(-105.611,80.949), T(-20.549,84.338), ]
-[T(-54.074,68.184), T(-3.276,72.66), T(-24.928,68.409), T(-18.225,80.236), T(-28.511,73.845), T(8.775,68.703), T(5.117,63.698), T(51.871,-14.391), ]
-*/
 
 var phaseWeights = [14]int{0,0,0,0,1,1,1,1,2,2,4,4,0,0}
 
@@ -509,10 +481,7 @@ func eval(board *Board) int {
 
 */
 
-	eg := (score + 0x8000) >> 16;
-	mg := int(int16(score))
-
-	score = ((mg * board.phase) + (eg * (24-board.phase)))/24
+	score = decode(score, board.phase) 
 
 	if board.sidetomove == 0 {
 		return -score + 20
@@ -823,7 +792,6 @@ func main() {
 //     - mobility control map
 //          - mobility
 //              - penalize squares with enemy pawn guard
-//              - scale infront of backwards pawns?
 //              - king ring
 //          - attacks
 //              - bonus on backwards and isolated pawns?
@@ -832,16 +800,14 @@ func main() {
 // 3. King Safety
 //     - tbh king safety is not that big a deal for engines, but it leads to more fun attacking games
 //     - king pawn shield quality
-//     - queen tropism?
+//     - king attacks
 // 4. Pawn Structure
 //     - pawn shield
 //     - backwards pawns
 //     - isolated pawns
 //     - passed pawns
-//         - opposite king passer bonus?
+//         - opposite king passer bonus
 //     - encourage trades in completely winning positions? (perhaps implement 50 move and slowly taper eval to 0)
-
-//     - risk scaling, perhaps some combination of activity and/or king safety?
 
 // Still need to figure out how to reward the queen moreso than other pieces for attacking king ring
 

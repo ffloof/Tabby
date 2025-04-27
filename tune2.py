@@ -126,7 +126,7 @@ for line in tqdm(lines):
     isolated = np.zeros((2,64), dtype=np.int8)
     backwards = np.zeros((2,64), dtype=np.int8)
 
-
+    kingAttacks = np.zeros((2,7), dtype=np.int8)
     shield = np.zeros((2,10), dtype=np.int8)
 
     mobtable = np.zeros((2,7,64), dtype=np.int8)
@@ -138,8 +138,11 @@ for line in tqdm(lines):
     ]
     
     pawnAttacksMap = np.zeros((2,64), dtype=np.int8)
-    kingRingMap = np.zeros((2,64), dtype=np.int8)
+    kingRingMap = np.zeros((2,120), dtype=np.bool)
     standers = np.zeros((2,7,64), dtype=np.int8)
+
+    captures = np.zeros((2,7,7), dtype=np.int8)
+    defended = np.zeros((2,7), dtype=np.int8)
     
     for i in range(64):
         piece = virtualboard[mailbox[i]]
@@ -166,9 +169,7 @@ for line in tqdm(lines):
         elif piecetype == 6:
             kings[piececolor] = mailbox[i]
             for off in [N,S,E,W,N+W,N+E,S+W,S+E]:
-                spot = inverse[mailbox[i] + off]
-                if spot != -1:
-                    kingRingMap[piececolor][spot] = 1
+                kingRingMap[piececolor][mailbox[i] + off] = True
 
     wkingfile = kings[1] % 10
     wkingrank = kings[1] // 10
@@ -247,6 +248,19 @@ for line in tqdm(lines):
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)) or piecetype == 1:
                     mobtable[piece&1][piecetype][inverse[current]] += 1
 
+                    if piece & 1 == 0 and (virtualboard[current+S+W] == 3 or virtualboard[current+S+E] == 3):
+                        defended[0][piecetype] += 1
+                    elif piece & 1 == 1 and (virtualboard[current+N+W] == 2 or virtualboard[current+N+E] == 2):
+                        defended[1][piecetype] += 1
+
+
+                    if kingRingMap[1 - (piece&1)][current]:
+                        kingAttacks[piece & 1][piecetype] += 1
+                    if virtualboard[current] != 0 and ((virtualboard[current] & 1) != (piece & 1)):
+                        # TODO: differentiate captures by pawn defended vs not
+                        captures[piece & 1][piecetype][virtualboard[current] // 2] += 1
+
+
                 if virtualboard[current] != 0 or (not isray):
                     break
 
@@ -258,7 +272,6 @@ for line in tqdm(lines):
         bspawn = rearpawns[0][bkingfile + x]
         if bspawn < 10:
             shield[0][bkingfile + x] = 1
-
 
     # Clipping passers
     passers = np.clip(passers, 0, 1) # We dont count doubled pawns as multiple passers
@@ -292,11 +305,11 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], passers[1] - passers[0], shield[1] - shield[0], sidetomove, pushers, isolatedClosed[1] - isolatedClosed[0], isolatedOpen[1] - isolatedOpen[0], backwardsClosed[1] - backwardsClosed[0], backwardsOpen[1] - backwardsOpen[0],],
+        [material[1, :] - material[0, :], passers[1] - passers[0], shield[1] - shield[0], sidetomove, pushers, isolatedClosed[1] - isolatedClosed[0], isolatedOpen[1] - isolatedOpen[0], backwardsClosed[1] - backwardsClosed[0], backwardsOpen[1] - backwardsOpen[0], kingAttacks[1] - kingAttacks[0], (captures[1] - captures[0]).flatten(), defended[1] - defended[0]],
         [mobtable[0].flatten(), standers[0].flatten(), backwards[0], isolated[0]],
         [mobtable[1].flatten(), standers[1].flatten(), backwards[1], isolated[1]],
-        [pawnAttacksMap[1], standers[1].flatten(), kingRingMap[1]],
-        [pawnAttacksMap[0], standers[0].flatten(), kingRingMap[0]],
+        [],
+        [],
         [npawns[0]],
         [npawns[1]],
     ]
@@ -322,6 +335,7 @@ for line in tqdm(lines):
         #plt.imshow((backwards[0]).reshape((8,8)))
         #plt.show()
 
+        print(kingAttacks)
         #sys.exit()
 
     finalterms = []
@@ -357,47 +371,33 @@ class HCE(torch.nn.Module):
         self.tapergridweights = torch.nn.Parameter(torch.randn(self.nsquares))
 
         self.risk = torch.nn.Parameter(torch.randn(starts[7]-starts[6]))
-        self.taperrisk = torch.nn.Parameter(torch.randn(starts[7]-starts[6]))
-
 
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
-        material = (torch.matmul(x[:,starts[1]:starts[1]+7], self.terms[0:7])* phase) + (torch.matmul(x[:,starts[1]:starts[1]+7], self.taperterms[0:7])* (1-phase))
-
-        wup = torch.clamp(material, min=0)
-        bup = torch.clamp(-material, min=0)
-
-
         normal = self.mobilitytable
-        normalTaper = self.tapermobilitytable
-
-        scaleb = bup * ((torch.matmul(x[:,starts[6]:starts[7]], self.risk)*phase) + (torch.matmul(x[:,starts[6]:starts[7]], self.taperrisk)*(1-phase)))
-        scalew = wup * ((torch.matmul(x[:,starts[7]:starts[8]], self.risk)*phase) + (torch.matmul(x[:,starts[7]:starts[8]], self.taperrisk)*(1-phase)))
-
         inverse = torch.flip(normal.reshape((1,8,8)), [1,]).reshape((1,64))
-        inverseTaper = torch.flip(normalTaper.reshape((1,8,8)), [1,]).reshape((1,64))
 
         bgrids = x[:,starts[4]:starts[5]].reshape(x.shape[0], self.nsquares, 64).movedim(1,2)
         wgrids = x[:,starts[5]:starts[6]].reshape(x.shape[0], self.nsquares, 64).movedim(1,2)
 
-        wpost = torch.matmul(wgrids,self.gridweights) + normal
-        bpost = torch.matmul(bgrids,self.gridweights) + inverse
-        wtaperpost = torch.matmul(wgrids,self.tapergridweights) + normalTaper
-        btaperpost = torch.matmul(bgrids,self.tapergridweights) + inverseTaper
-
+        # This can be simplified greatly
         blackmob = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.piecemobility)
         whitemob = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.piecemobility)
         blackmobtaper = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.taperpiecemobility)
         whitemobtaper = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.taperpiecemobility)
 
-        netmob = (whitemob * wpost).sum(dim=1) - (blackmob * bpost).sum(dim=1)
-        netmob2 = (whitemobtaper * wtaperpost).sum(dim=1) - (blackmobtaper * btaperpost).sum(dim=1)
+        netmob = (whitemob * normal).sum(dim=1) - (blackmob * inverse).sum(dim=1)
+        netmob2 = (whitemobtaper * normal).sum(dim=1) - (blackmobtaper * inverse).sum(dim=1)
 
         score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
         finalscore = ((score + netmob) * phase) + ((score2 + netmob2) * (1-phase))
+        wup = torch.clamp(finalscore, min=0)
+        bup = torch.clamp(-(finalscore), min=0)
+        scaleb = bup * torch.matmul(x[:,starts[6]:starts[7]], self.risk)
+        scalew = wup * torch.matmul(x[:,starts[7]:starts[8]], self.risk)
 
         return torch.tanh(finalscore + (scalew - scaleb)) 
 
@@ -407,8 +407,8 @@ class HCE(torch.nn.Module):
             for size in shape:
                 if size >= 64 and forgrid:
                     size = size//64
-                a = np.around(regular[offset:offset+size].detach().numpy() * multiplier, decimals=3)
-                b = np.around(tapered[offset:offset+size].detach().numpy() * multiplier, decimals=3)
+                a = np.around(regular[offset:offset+size].detach().numpy() * multiplier, decimals=0)
+                b = np.around(tapered[offset:offset+size].detach().numpy() * multiplier, decimals=0)
                 if not finalEpoch:
                     print(a)
                     print(b)
@@ -427,25 +427,22 @@ class HCE(torch.nn.Module):
         printparams(self.terms, self.taperterms, sizes[1], m)
 
         print("\nPiece weights")
-        printparams(self.piecemobility, self.taperpiecemobility, sizes[2])
+        printparams(self.piecemobility, self.taperpiecemobility, sizes[2], 1000)
 
         print("\nGrid weights")
-        printparams(self.gridweights, self.tapergridweights, sizes[4], m)
+        printparams(self.gridweights, self.tapergridweights, sizes[4], 1000)
 
         print("\nRisk weights")
-        printparams(self.risk, self.taperrisk, sizes[6])
+        printparams(self.risk, self.risk, sizes[6], 1000)
 
         if finalEpoch:
             print("\nBase Mob Weights")
-            printparams(self.mobilitytable[0], self.tapermobilitytable[0], [8,8,8,8,8,8,8,8], m, False)
+            printparams(self.mobilitytable[0], self.mobilitytable[0], [8,8,8,8,8,8,8,8], m, False)
 
         print("===")
         if finalEpoch:
-            plt.title("Middlegame")
+            plt.title("Board")
             plt.imshow(self.mobilitytable.detach().numpy().reshape((8,8)))
-            plt.show()
-            plt.title("Endgame")
-            plt.imshow(self.tapermobilitytable.detach().numpy().reshape((8,8)))
             plt.show()
 
 
@@ -508,3 +505,5 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # current 0.2468
 # 0.2450
 # 0.2398
+# 0.2389
+# 0.2383
