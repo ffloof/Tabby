@@ -365,11 +365,6 @@ class HCE(torch.nn.Module):
         self.piecemobility = torch.nn.Parameter(torch.randn(self.npieces))
         self.taperpiecemobility = torch.nn.Parameter(torch.randn(self.npieces))
 
-        self.nsquares = (starts[5]-starts[4])//64
-
-        self.gridweights = torch.nn.Parameter(torch.randn(self.nsquares))
-        self.tapergridweights = torch.nn.Parameter(torch.randn(self.nsquares))
-
         self.risk = torch.nn.Parameter(torch.randn(starts[7]-starts[6]))
 
     def forward(self, x):
@@ -378,8 +373,6 @@ class HCE(torch.nn.Module):
         normal = self.mobilitytable
         inverse = torch.flip(normal.reshape((1,8,8)), [1,]).reshape((1,64))
 
-        bgrids = x[:,starts[4]:starts[5]].reshape(x.shape[0], self.nsquares, 64).movedim(1,2)
-        wgrids = x[:,starts[5]:starts[6]].reshape(x.shape[0], self.nsquares, 64).movedim(1,2)
 
         # This can be simplified greatly
         blackmob = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.piecemobility)
@@ -426,18 +419,15 @@ class HCE(torch.nn.Module):
         print("\nLinear terms")
         printparams(self.terms, self.taperterms, sizes[1], m)
 
-        print("\nPiece weights")
-        printparams(self.piecemobility, self.taperpiecemobility, sizes[2], 1000)
-
-        print("\nGrid weights")
-        printparams(self.gridweights, self.tapergridweights, sizes[4], 1000)
+        print("\nMobility weights")
+        printparams(self.piecemobility, self.taperpiecemobility, sizes[2], m)
 
         print("\nRisk weights")
         printparams(self.risk, self.risk, sizes[6], 1000)
 
         if finalEpoch:
-            print("\nBase Mob Weights")
-            printparams(self.mobilitytable[0], self.mobilitytable[0], [8,8,8,8,8,8,8,8], m, False)
+            print("\nBoard Weights")
+            print(np.around(self.mobilitytable[0].detach().numpy().reshape((8,8)), decimals=3))
 
         print("===")
         if finalEpoch:
