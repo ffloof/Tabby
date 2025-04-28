@@ -29,8 +29,34 @@ func decode(eval, phase int) int {
 	return ((mg * phase) + (eg * (24-phase)))/24
 }
 
-var material = []int{ T(0,0), T(31,85), T(276,215), T(308,209), T(410,320), T(808,612), T(0,0), }
+var e_material = []int{ T(0,0), T(31,85), T(276,215), T(308,209), T(410,320), T(808,612), T(0,0), }
 
+// TODO: implement mobility and standing for pawns
+var e_mobility = []int{ T(0,0), T(0, 0), T(4,4), T(3,3), T(3,3), T(1,1), T(-2,2)}
+var e_standers = []int{ T(0,0), T(0, 0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0) }
+
+var e_table = [2][128]int {
+	{
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	}, {
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	},
+}
+const e_divider = 1
 
 var phaseWeights = [14]int{0,0,0,0,1,1,1,1,2,2,4,4,0,0}
 
@@ -138,28 +164,7 @@ func (board *Board) IsHomeRow(i int) bool {
 }
 
 func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
-	//weights := [128]int{}
-
-	/*
-	j := 0
-	if (board.sidetomove == 0) {
-		j = 120
-	}
-
-	for i := range 128 {
-		weights[i^j] = 
-	}*/
-
-
-	
-
-
-
-
-
-
-
-
+	attention := &e_table[board.sidetomove]
 
 	moves := []Move{}
 
@@ -193,20 +198,20 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 		} else {
 			ray := rays[piecetype]
 			pattern := patterns[piecetype]
-			//mobValue := mobChart[piecetype]
+			
+			mobValue := 0
 
 
 			for _, dir := range pattern {
 				for end := i + dir; (end & 0x88) == 0; end += dir {
 					victim := board.squares[end]
+					mobValue += attention[end]
 
 					if victim != 0 {
 						if victim&1 != piece&1 {
 							moves = append(moves, Move{int8(i), int8(end)})
-							//mobility += mobValue
 						}
 					} else {
-						//mobility += mobValue
 						if !capturesOnly {
 							moves = append(moves, Move{int8(i), int8(end)})
 						}
@@ -217,6 +222,8 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 					}
 				}
 			}
+
+			mobility += (mobValue * e_mobility[piecetype]) + (attention[i] * e_standers[piecetype])
 		}
 	}
 
@@ -240,6 +247,7 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 		}
 	}
 
+	mobility = mobility / e_divider
 	board.mobilities[board.sidetomove] = mobility
 
 	return moves
@@ -421,9 +429,9 @@ func eval(board *Board) int {
 	for sq, piece := range board.squares {
 		
 		if piece & 1 == 1 {
-			score += material[piece / 2]
+			score += e_material[piece / 2]
 		} else {
-			score -= material[piece / 2]
+			score -= e_material[piece / 2]
 		}
 
 
