@@ -53,55 +53,61 @@ Risk weights
 [0.338 0.633 0.841 0.96  1.026 1.156 1.113 1.073 1.   ]
 
 Board Weights
-[[-0.347 -0.105  0.225  0.201  0.383  0.161  0.352  0.212]
- [ 0.198  0.443  0.554  0.306  0.583  0.462  0.758  0.284]
- [ 0.542  0.674  0.765  0.573  0.612  0.995  0.859  0.434]
- [ 0.48   0.576  0.542  0.66   0.571  0.501  0.5    0.404]
- [ 0.215  0.433  0.636  0.839  0.674  0.566  0.537  0.28 ]
- [ 0.266  0.558  0.604  0.624  0.745  0.638  0.851  0.342]
- [ 0.271  0.525  0.559  0.588  0.566  0.773  0.833  0.296]
- [ 0.019  0.234  0.28   0.353  0.559  0.129  0.181  0.008]]
+{-347, 105, 225, 201, 383, 161, 352, 212, 0,0,0,0,0,0,0,0,
+  198, 443, 554, 306, 583, 462, 758, 284, 0,0,0,0,0,0,0,0,
+  542, 674, 765, 573, 612, 995, 859, 434, 0,0,0,0,0,0,0,0,
+  480, 576, 542, 660, 571, 501, 500, 404, 0,0,0,0,0,0,0,0,
+  215, 433, 636, 839, 674, 566, 537, 280, 0,0,0,0,0,0,0,0,
+  266, 558, 604, 624, 745, 638, 851, 342, 0,0,0,0,0,0,0,0,
+  271, 525, 559, 588, 566, 773, 833, 296, 0,0,0,0,0,0,0,0,
+  019, 234, 280, 353, 559, 129, 181, 008, 0,0,0,0,0,0,0,0,}
 ===
 */
 
-var e_material = 
-var e_passerFile = 
-var e_shield = 
-var e_tempo = 
-var e_passerRank = 
-var e_kingAttacks = 
-var e_attacks = 
-var e_restricted =
-var e_isolated = 
-var e_backwards= 
+var e_material = []int{T(0,0), T(25,77), T(268,256), T(305,285), T(384,561), T(795,1066), T(0,0), }
+var e_passerFile = []int{T(0,0), T(-9,104), T(-14,93), T(-14,78), T(-14,61), T(-5,50), T(21,42), T(16,64), T(10,65), T(0,0), }
+var e_shield = []int{T(0,0), T(18,9), T(27,12), T(-2,23), T(10,12), T(13,8), T(15,9), T(18,5), T(40,-7), T(0,0), }
+var e_tempo int = T(28,30)
+var e_passerRank = []int{T(-3,-68), T(-3,-62), T(-7,-38), T(2,-4), T(-8,76), T(2,163), T(0,0), T(0,0), T(0,0), T(0,0), }
+var e_kingAttacks = []int{T(0,0), T(27,2), T(7,-5), T(5,-1), T(14,-3), T(6,13), T(-36,-15), }
+var e_attacks = []int{
+	T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), 
+	T(0,0), T(0,0), T(41,6), T(55,29), T(67,-6), T(55,-4), T(125,24), 
+	T(0,0), T(-5,13), T(0,0), T(29,43), T(46,40), T(28,20), T(109,7), 
+	T(0,0), T(-5,8), T(11,31), T(0,0), T(27,29), T(41,45), T(44,72), 
+	T(0,0), T(-18,13), T(2,16), T(16,22), T(0,0), T(53,2), T(193,-18), 
+	T(0,0), T(-2,2), T(-5,10), T(-2,46), T(-5,0), T(0,0), T(48,119), 
+	T(0,0), T(48,24), T(-9,14), T(-26,29), T(-112,46), T(-363,-72), T(0,0), 
+}
+var e_restricted = []int{T(0,0), T(-10,-4), T(-8,-7), T(-4,0), T(-7,-3), T(-6,1), T(5,17), }
+var e_isolated int = T(-16,-9)
+var e_backwards int = T(-2,0)
 
 // TODO: implement mobility and standing for pawns
-var e_mobility = []int{ T(0,0), T(0, 0), T(4,4), T(3,3), T(3,3), T(1,1), T(-2,2)}
-var e_standers = []int{ T(0,0), T(0, 0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0) }
+var e_mobility = []int{T(0,0), T(7,9), T(9,10), T(8,9), T(9,6), T(4,7), T(-19,9), }
+var e_standers = []int{T(0,0), T(65,-9), T(69,35), T(46,17), T(25,-32), T(16,-9), T(26,24), }
 
+func flip(arr1, arr2 *[128]int, xor int){
+	for i := range(len(arr1)) {
+		arr2[i] = arr1[i^xor]
+	}
+}
 
 var e_table = [2][128]int {
+	{},
 	{
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-	}, {
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
-	},
+	-347, 105, 225, 201, 383, 161, 352, 212, 0,0,0,0,0,0,0,0,
+	 198, 443, 554, 306, 583, 462, 758, 284, 0,0,0,0,0,0,0,0,
+	 542, 674, 765, 573, 612, 995, 859, 434, 0,0,0,0,0,0,0,0,
+	 480, 576, 542, 660, 571, 501, 500, 404, 0,0,0,0,0,0,0,0,
+	 215, 433, 636, 839, 674, 566, 537, 280, 0,0,0,0,0,0,0,0,
+	 266, 558, 604, 624, 745, 638, 851, 342, 0,0,0,0,0,0,0,0,
+	 271, 525, 559, 588, 566, 773, 833, 296, 0,0,0,0,0,0,0,0,
+	  19, 234, 280, 353, 559, 129, 181,   8, 0,0,0,0,0,0,0,0,
+	}, 
 }
-const e_divider = 1
+
+const e_divider = 1000
 
 var phaseWeights = [14]int{0,0,0,0,1,1,1,1,2,2,4,4,0,0}
 
@@ -232,14 +238,19 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 				}
 			}
 
+			mobValue := 0
 			for _, pawnCapture := range []int{i + advance + W, i + advance + E} {
 				if pawnCapture&0x88 == 0 {
+					mobValue += attention[pawnCapture]
 					victim := board.squares[pawnCapture]
 					if victim != 0 && (victim&1 != piece&1) {
 						moves = append(moves, Move{int8(i), int8(pawnCapture)})
+						mobility += decode(e_attacks[piecetype * 7 + (victim/2)], board.phase)
 					}
 				}
 			}
+			mobility += ((decode(e_mobility[1],board.phase) * mobValue) + (decode(e_standers[1],board.phase) * attention[i])) / e_divider
+
 		} else {
 			ray := rays[piecetype]
 			pattern := patterns[piecetype]
@@ -250,14 +261,16 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 			for _, dir := range pattern {
 				for end := i + dir; (end & 0x88) == 0; end += dir {
 					victim := board.squares[end]
-					mobValue += attention[end]
 
 					if victim != 0 {
 						if victim&1 != piece&1 {
+							mobValue += attention[end]
+							mobility += decode(e_attacks[piecetype * 7 + (victim/2)], board.phase)
 							moves = append(moves, Move{int8(i), int8(end)})
 						}
 					} else {
 						if !capturesOnly {
+							mobValue += attention[end]
 							moves = append(moves, Move{int8(i), int8(end)})
 						}
 					}
@@ -268,7 +281,7 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 				}
 			}
 
-			mobility += (mobValue * e_mobility[piecetype]) + (attention[i] * e_standers[piecetype])
+			mobility += ((decode(e_mobility[piecetype],board.phase) * mobValue) + (decode(e_standers[piecetype],board.phase) * attention[i]))/ e_divider
 		}
 	}
 
@@ -292,7 +305,6 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 		}
 	}
 
-	mobility = mobility / e_divider
 	board.mobilities[board.sidetomove] = mobility
 
 	return moves
@@ -466,7 +478,7 @@ func findAfter(word string, strlist []string) []string {
 }
 
 func eval(board *Board) int {
-	score := board.mobilities[1] - board.mobilities[0]
+	score := 0
 
 	whiterear := [10]int{0,0,0,0,0,0,0,0,0,0,}
 	blackrear := [10]int{7,7,7,7,7,7,7,7,7,7,}
@@ -535,10 +547,12 @@ func eval(board *Board) int {
 */
 
 	score = decode(score, board.phase) 
-
+	score += board.mobilities[1] - board.mobilities[0]
+	
 	if board.sidetomove == 0 {
 		return -score + 20
 	}
+
 
 	return score + 20
 }
@@ -824,6 +838,10 @@ func main() {
 			Zobrist[i+1][j] = rand.Uint64()
 		}
 	}
+
+	flip(&e_table[1], &e_table[0], 112)
+
+	//fmt.Println(e_table)
 
 	uciBoard = FromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 	reader := bufio.NewReader(os.Stdin)
