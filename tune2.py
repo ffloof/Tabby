@@ -123,8 +123,8 @@ for line in tqdm(lines):
     isolatedClosed = np.zeros((2,1), dtype=np.int8)
     isolatedOpen = np.zeros((2,1), dtype=np.int8)
 
-    isolated = np.zeros((2,64), dtype=np.int8)
-    backwards = np.zeros((2,64), dtype=np.int8)
+    isolatedMap = np.zeros((2,64), dtype=np.int8)
+    backwardsMap = np.zeros((2,64), dtype=np.int8)
 
     kingAttacks = np.zeros((2,7), dtype=np.int8)
     shield = np.zeros((2,10), dtype=np.int8)
@@ -200,13 +200,13 @@ for line in tqdm(lines):
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
                 
                 if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
-                    isolated[0][j] = 1
+                    isolatedMap[0][j] = 1
                     if rearpawns[1][pfile] == 0:
                         isolatedOpen[0] += 1
                     else:
                         isolatedClosed[0] += 1
                 elif rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
-                    backwards[0][j] = 1
+                    backwardsMap[0][j] = 1
                     if rearpawns[1][pfile] == 0:
                         backwardsOpen[0] += 1
                     else:
@@ -219,13 +219,13 @@ for line in tqdm(lines):
                 
                     
                 if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
-                    isolated[1][j] = 1
+                    isolatedMap[1][j] = 1
                     if rearpawns[0][pfile] == 11:
                         isolatedOpen[1] += 1
                     else:
                         isolatedClosed[1] += 1
                 elif rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
-                    backwards[1][j] = 1
+                    backwardsMap[1][j] = 1
                     if rearpawns[0][pfile] == 11:
                         backwardsOpen[1] += 1
                     else:
@@ -303,11 +303,14 @@ for line in tqdm(lines):
     npawns[0][material[0][1]] = 1 
     npawns[1][material[1][1]] = 1
 
+    backwards = backwardsOpen + backwardsClosed
+    isolated = isolatedOpen + isolatedClosed
+
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], passers[1] - passers[0], shield[1] - shield[0], sidetomove, pushers, isolatedClosed[1] - isolatedClosed[0], isolatedOpen[1] - isolatedOpen[0], backwardsClosed[1] - backwardsClosed[0], backwardsOpen[1] - backwardsOpen[0], kingAttacks[1] - kingAttacks[0], (captures[1] - captures[0]).flatten(), defended[1] - defended[0]],
-        [mobtable[0].flatten(), standers[0].flatten(), backwards[0], isolated[0]],
-        [mobtable[1].flatten(), standers[1].flatten(), backwards[1], isolated[1]],
+        [material[1, :] - material[0, :], passers[1] - passers[0], shield[1] - shield[0], sidetomove, pushers, kingAttacks[1] - kingAttacks[0], (captures[1] - captures[0]).flatten(), defended[1] - defended[0], isolated[1]-isolated[0], backwards[1]-backwards[0]], #isolatedClosed[1] - isolatedClosed[0], isolatedOpen[1] - isolatedOpen[0], backwardsClosed[1] - backwardsClosed[0], backwardsOpen[1] - backwardsOpen[0]
+        [mobtable[0].flatten(), standers[0].flatten(), backwardsMap[0], isolatedMap[0]],
+        [mobtable[1].flatten(), standers[1].flatten(), backwardsMap[1], isolatedMap[1]],
         [],
         [],
         [npawns[0]],
@@ -358,8 +361,8 @@ class HCE(torch.nn.Module):
         self.terms = torch.nn.Parameter(torch.randn(starts[2]-starts[1]))
         self.taperterms = torch.nn.Parameter(torch.randn(starts[2]-starts[1]))
 
-        self.mobilitytable = torch.nn.Parameter(torch.randn(1,64))
-        self.tapermobilitytable = torch.nn.Parameter(torch.randn(1,64))
+        self.mobilitytable = torch.nn.Parameter(torch.randn(64))
+        self.tapermobilitytable = torch.nn.Parameter(torch.randn(64))
 
         self.npieces = (starts[3] - starts[2]) // 64
         self.piecemobility = torch.nn.Parameter(torch.randn(self.npieces))
@@ -371,26 +374,22 @@ class HCE(torch.nn.Module):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
         normal = self.mobilitytable
-        inverse = torch.flip(normal.reshape((1,8,8)), [1,]).reshape((1,64))
+        inverse = torch.flip(normal.reshape((1,8,8)), [1,]).reshape((64))
 
+        blackattention = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64), inverse)
+        whiteattention = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64), normal)
 
-        # This can be simplified greatly
-        blackmob = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.piecemobility)
-        whitemob = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.piecemobility)
-        blackmobtaper = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.taperpiecemobility)
-        whitemobtaper = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64).movedim(1,2), self.taperpiecemobility)
-
-        netmob = (whitemob * normal).sum(dim=1) - (blackmob * inverse).sum(dim=1)
-        netmob2 = (whitemobtaper * normal).sum(dim=1) - (blackmobtaper * inverse).sum(dim=1)
+        netmobility = torch.matmul(whiteattention, self.piecemobility) - torch.matmul(blackattention, self.piecemobility)
+        netmobility2 = torch.matmul(whiteattention, self.taperpiecemobility) - torch.matmul(blackattention, self.taperpiecemobility)
 
         score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
-        finalscore = ((score + netmob) * phase) + ((score2 + netmob2) * (1-phase))
-        wup = torch.clamp(finalscore, min=0)
-        bup = torch.clamp(-(finalscore), min=0)
-        scaleb = bup * torch.matmul(x[:,starts[6]:starts[7]], self.risk)
-        scalew = wup * torch.matmul(x[:,starts[7]:starts[8]], self.risk)
+        finalscore = ((score + netmobility) * phase) + ((score2 + netmobility2) * (1-phase))
+        scaleb = torch.clamp(-(finalscore), min=0) * torch.matmul(x[:,starts[6]:starts[7]], self.risk)
+        scalew = torch.clamp(finalscore, min=0) * torch.matmul(x[:,starts[7]:starts[8]], self.risk)
+
+        #scale = () + ()
 
         return torch.tanh(finalscore + (scalew - scaleb)) 
 
@@ -398,8 +397,6 @@ class HCE(torch.nn.Module):
         def printparams(regular, tapered, shape, multiplier=1.0, forgrid=True):
             offset = 0
             for size in shape:
-                if size >= 64 and forgrid:
-                    size = size//64
                 a = np.around(regular[offset:offset+size].detach().numpy() * multiplier, decimals=0)
                 b = np.around(tapered[offset:offset+size].detach().numpy() * multiplier, decimals=0)
                 if not finalEpoch:
@@ -423,11 +420,11 @@ class HCE(torch.nn.Module):
         printparams(self.piecemobility, self.taperpiecemobility, sizes[2], m)
 
         print("\nRisk weights")
-        printparams(self.risk, self.risk, sizes[6], 1000)
+        print(np.around(self.risk.detach().numpy(), decimals=3))
 
         if finalEpoch:
             print("\nBoard Weights")
-            print(np.around(self.mobilitytable[0].detach().numpy().reshape((8,8)), decimals=3))
+            print(np.around(self.mobilitytable.detach().numpy().reshape((8,8)), decimals=3))
 
         print("===")
         if finalEpoch:

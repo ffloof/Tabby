@@ -800,9 +800,8 @@ func main() {
 //     - mobility control map
 //          - mobility
 //              - penalize squares with enemy pawn guard
-//              - king ring
+//          - king ring
 //          - attacks
-//              - bonus on backwards and isolated pawns?
 //          - we can also dual purpose this map for move ordering, no need to do seperate mvvlva?
 //          - should we flip this based on king sides, perhaps create several distinct maps?
 // 3. King Safety
