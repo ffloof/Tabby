@@ -308,11 +308,9 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], passers[1] - passers[0], shield[1] - shield[0], sidetomove, pushers, kingAttacks[1] - kingAttacks[0], (captures[1] - captures[0]).flatten(), defended[1] - defended[0], isolated[1]-isolated[0], backwards[1]-backwards[0]], #isolatedClosed[1] - isolatedClosed[0], isolatedOpen[1] - isolatedOpen[0], backwardsClosed[1] - backwardsClosed[0], backwardsOpen[1] - backwardsOpen[0]
-        [mobtable[0].flatten(), standers[0].flatten(), backwardsMap[0], isolatedMap[0]],
-        [mobtable[1].flatten(), standers[1].flatten(), backwardsMap[1], isolatedMap[1]],
-        [],
-        [],
+        [material[1, :] - material[0, :], passers[1] - passers[0], shield[1] - shield[0], sidetomove, pushers, kingAttacks[1] - kingAttacks[0], (captures[1] - captures[0]).flatten(), defended[1] - defended[0], isolated[1]-isolated[0], backwards[1]-backwards[0]], 
+        [mobtable[0].flatten(), standers[0].flatten(),], #backwardsMap[0], isolatedMap[0]],
+        [mobtable[1].flatten(), standers[1].flatten(),], # backwardsMap[1], isolatedMap[1]],
         [npawns[0]],
         [npawns[1]],
     ]
@@ -368,7 +366,7 @@ class HCE(torch.nn.Module):
         self.piecemobility = torch.nn.Parameter(torch.randn(self.npieces))
         self.taperpiecemobility = torch.nn.Parameter(torch.randn(self.npieces))
 
-        self.risk = torch.nn.Parameter(torch.randn(starts[7]-starts[6]))
+        self.risk = torch.nn.Parameter(torch.randn(starts[5]-starts[4]))
 
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
@@ -386,8 +384,8 @@ class HCE(torch.nn.Module):
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
         finalscore = ((score + netmobility) * phase) + ((score2 + netmobility2) * (1-phase))
-        scaleb = torch.clamp(-(finalscore), min=0) * torch.matmul(x[:,starts[6]:starts[7]], self.risk)
-        scalew = torch.clamp(finalscore, min=0) * torch.matmul(x[:,starts[7]:starts[8]], self.risk)
+        scaleb = torch.clamp(-(finalscore), min=0) * torch.matmul(x[:,starts[4]:starts[5]], self.risk)
+        scalew = torch.clamp(finalscore, min=0) * torch.matmul(x[:,starts[5]:starts[6]], self.risk)
 
         #scale = () + ()
 
@@ -397,21 +395,26 @@ class HCE(torch.nn.Module):
         def printparams(regular, tapered, shape, multiplier=1.0, forgrid=True):
             offset = 0
             for size in shape:
+                if size >= 64 and forgrid:
+                    size = size//64
                 a = np.around(regular[offset:offset+size].detach().numpy() * multiplier, decimals=0)
                 b = np.around(tapered[offset:offset+size].detach().numpy() * multiplier, decimals=0)
                 if not finalEpoch:
                     print(a)
                     print(b)
                 else:
-                    finalstr = "["
+                    finalstr = "{"
                     for i in range(len(a)):
-                        finalstr += "T(" + str(a[i]) + "," + str(b[i]) + "), "
-                    finalstr += "]"
+                        finalstr += "T(" + str(int(a[i])) + "," + str(int(b[i])) + "), "
+                    finalstr += "}"
                     print(finalstr)
                 offset += size
         
 
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
+
+        riskNormalizer = self.risk.detach().numpy()[8] + 1
+        m = m * riskNormalizer
 
         print("\nLinear terms")
         printparams(self.terms, self.taperterms, sizes[1], m)
@@ -420,7 +423,7 @@ class HCE(torch.nn.Module):
         printparams(self.piecemobility, self.taperpiecemobility, sizes[2], m)
 
         print("\nRisk weights")
-        print(np.around(self.risk.detach().numpy(), decimals=3))
+        print(np.around((self.risk.detach().numpy() + 1) / riskNormalizer , decimals=3))
 
         if finalEpoch:
             print("\nBoard Weights")
