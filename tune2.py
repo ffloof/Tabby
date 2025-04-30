@@ -114,7 +114,7 @@ for line in tqdm(lines):
 
     backwardsClosed = np.zeros((2,1), dtype=np.int8)
     backwardsOpen = np.zeros((2,1), dtype=np.int8)
-    passers = np.zeros((2,10), dtype=np.int8)
+    passerDistance = np.zeros((2,8), dtype=np.int8)
     passerRank = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [11,11,11,11,11,11,11,11,11,11],
@@ -125,8 +125,6 @@ for line in tqdm(lines):
 
     isolatedMap = np.zeros((2,64), dtype=np.int8)
     backwardsMap = np.zeros((2,64), dtype=np.int8)
-
-    kingAttacks = np.zeros((2,7), dtype=np.int8)
     shield = np.zeros((2,10), dtype=np.int8)
 
     mobtable = np.zeros((2,7,64), dtype=np.int8)
@@ -138,11 +136,10 @@ for line in tqdm(lines):
     ]
     
     pawnAttacksMap = np.zeros((2,64), dtype=np.int8)
-    kingRingMap = np.zeros((2,120), dtype=np.bool)
     standers = np.zeros((2,7,64), dtype=np.int8)
 
     captures = np.zeros((2,7,7), dtype=np.int8)
-    defended = np.zeros((2,7), dtype=np.int8)
+    restricted = np.zeros((2,7), dtype=np.int8)
     
     for i in range(64):
         piece = virtualboard[mailbox[i]]
@@ -168,8 +165,6 @@ for line in tqdm(lines):
 
         elif piecetype == 6:
             kings[piececolor] = mailbox[i]
-            for off in [N,S,E,W,N+W,N+E,S+W,S+E]:
-                kingRingMap[piececolor][mailbox[i] + off] = True
 
     wkingfile = kings[1] % 10
     wkingrank = kings[1] // 10
@@ -196,7 +191,6 @@ for line in tqdm(lines):
 
             if piece & 1 == 0:
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
-                    passers[0][pfile] += 1
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
                 
                 if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
@@ -214,7 +208,6 @@ for line in tqdm(lines):
 
             else:
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
-                    passers[1][pfile] += 1
                     passerRank[1][pfile] = min(prank, passerRank[1][pfile])
                 
                     
@@ -248,17 +241,19 @@ for line in tqdm(lines):
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)) or piecetype == 1:
                     mobtable[piece&1][piecetype][inverse[current]] += 1
 
+                    pawnDefence = False
                     if piece & 1 == 0 and (virtualboard[current+S+W] == 3 or virtualboard[current+S+E] == 3):
-                        defended[0][piecetype] += 1
+                        pawnDefence = True
                     elif piece & 1 == 1 and (virtualboard[current+N+W] == 2 or virtualboard[current+N+E] == 2):
-                        defended[1][piecetype] += 1
+                        pawnDefence = True
 
+                    if pawnDefence:
+                        restricted[piece & 1][piecetype] += 1
 
-                    if kingRingMap[1 - (piece&1)][current]:
-                        kingAttacks[piece & 1][piecetype] += 1
                     if virtualboard[current] != 0 and ((virtualboard[current] & 1) != (piece & 1)):
-                        # TODO: differentiate captures by pawn defended vs not
-                        captures[piece & 1][piecetype][virtualboard[current] // 2] += 1
+                        if piecetype != virtualboard[current // 2]: # identical pieces can see each other, dont add noise to eval
+                            captures[piece & 1][piecetype][virtualboard[current] // 2] += 1
+
 
 
                 if virtualboard[current] != 0 or (not isray):
@@ -273,8 +268,6 @@ for line in tqdm(lines):
         if bspawn < 10:
             shield[0][bkingfile + x] = 1
 
-    # Clipping passers
-    passers = np.clip(passers, 0, 1) # We dont count doubled pawns as multiple passers
     pushers = np.zeros(10, dtype=np.int8)
 
 
@@ -286,16 +279,11 @@ for line in tqdm(lines):
 
         if wPass >= 0:
             pushers[wPass] += 1
+            passerDistance[1][abs(i-bkingfile)] += 1
+
         if bPass >= 0:
             pushers[bPass] -= 1
-
-
-    if bkingfile < 5:
-        passers[1] = passers[1,::-1]
-   
-    if wkingfile < 5:
-        passers[0] = passers[0,::-1]
-        
+            passerDistance[0][abs(i-wkingfile)] += 1
 
     sidetomove[0] = sign[turn]
 
@@ -306,11 +294,20 @@ for line in tqdm(lines):
     backwards = backwardsOpen + backwardsClosed
     isolated = isolatedOpen + isolatedClosed
 
+    restricted[:,1] = 0
+    passerDistance[:,0] = 0
+
+    kingside = np.zeros(1, dtype=np.int8)
+    if wkingfile >= 5:
+        kingside += 2
+    if bkingfile >= 5:
+        kingside += 1
+
     terms = [
-        [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], passers[1] - passers[0], shield[1] - shield[0], sidetomove, pushers, kingAttacks[1] - kingAttacks[0], (captures[1] - captures[0]).flatten(), defended[1] - defended[0], isolated[1]-isolated[0], backwards[1]-backwards[0]], 
-        [mobtable[0].flatten(), standers[0].flatten(),], #backwardsMap[0], isolatedMap[0]],
-        [mobtable[1].flatten(), standers[1].flatten(),], # backwardsMap[1], isolatedMap[1]],
+        [material[0, :] + material[1, :], kingside],
+        [material[1, :] - material[0, :], shield[1] - shield[0], pushers, isolated[1]-isolated[0], backwards[1]-backwards[0], passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), sidetomove], 
+        [standers[0][1], mobtable[0][2:].flatten() + standers[0][2:].flatten() ], #backwardsMap[0], isolatedMap[0]],
+        [standers[1][1], mobtable[1][2:].flatten() + standers[1][2:].flatten() ], # backwardsMap[1], isolatedMap[1]],
         [npawns[0]],
         [npawns[1]],
     ]
@@ -336,7 +333,7 @@ for line in tqdm(lines):
         #plt.imshow((backwards[0]).reshape((8,8)))
         #plt.show()
 
-        print(kingAttacks)
+        #print(passerDistance)
         #sys.exit()
 
     finalterms = []
@@ -386,8 +383,6 @@ class HCE(torch.nn.Module):
         finalscore = ((score + netmobility) * phase) + ((score2 + netmobility2) * (1-phase))
         scaleb = torch.clamp(-(finalscore), min=0) * torch.matmul(x[:,starts[4]:starts[5]], self.risk)
         scalew = torch.clamp(finalscore, min=0) * torch.matmul(x[:,starts[5]:starts[6]], self.risk)
-
-        #scale = () + ()
 
         return torch.tanh(finalscore + (scalew - scaleb)) 
 

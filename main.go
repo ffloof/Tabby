@@ -30,62 +30,63 @@ func decode(eval, phase int) int {
 }
 
 /*
-==
-19 0.23937637403338358
+===
+19 0.23942338483352407
 
 Linear terms
-{T(0,0), T(25,77), T(268,256), T(305,285), T(384,561), T(795,1066), T(0,0), }
-{T(0,0), T(-9,104), T(-14,93), T(-14,78), T(-14,61), T(-5,50), T(21,42), T(16,64), T(10,65), T(0,0), }
-{T(0,0), T(18,9), T(27,12), T(-2,23), T(10,12), T(13,8), T(15,9), T(18,5), T(40,-7), T(0,0), }
-{T(28,30), }
-{T(-3,-68), T(-3,-62), T(-7,-38), T(2,-4), T(-8,76), T(2,163), T(0,0), T(0,0), T(0,0), T(0,0), }
-{T(0,0), T(27,2), T(7,-5), T(5,-1), T(14,-3), T(6,13), T(-36,-15), }
-{T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(41,6), T(55,29), T(67,-6), T(55,-4), T(125,24), T(0,0), T(-5,13), T(0,0), T(29,43), T(46,40), T(28,20), T(109,7), T(0,0), T(-5,8), T(11,31), T(0,0), T(27,29), T(41,45), T(44,72), T(0,0), T(-18,13), T(2,16), T(16,22), T(0,0), T(53,2), T(193,-18), T(0,0), T(-2,2), T(-5,10), T(-2,46), T(-5,0), T(0,0), T(48,119), T(0,0), T(48,24), T(-9,14), T(-26,29), T(-112,46), T(-363,-72), T(0,0), }
-{T(0,0), T(-10,-4), T(-8,-7), T(-4,0), T(-7,-3), T(-6,1), T(5,17), }
-{T(-16,-9), }
-{T(-2,0), }
+{T(0,0), T(42,87), T(297,294), T(345,326), T(407,600), T(867,1129), T(0,0), }
+{T(0,0), T(-4,58), T(-19,44), T(-11,26), T(-6,8), T(0,0), T(32,-10), T(12,9), T(1,6), T(0,0), }
+{T(0,0), T(28,12), T(43,14), T(0,25), T(13,15), T(15,7), T(17,19), T(15,4), T(37,-8), T(0,0), }
+{T(30,39), }
+{T(2,-17), T(1,-11), T(-6,11), T(9,52), T(-1,139), T(-13,230), T(0,0), T(0,0), T(0,0), T(0,0), }
+{T(0,0), T(34,-5), T(6,-11), T(10,-3), T(9,-1), T(4,5), T(-31,-41), }
+{T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(2,-12), T(39,15), T(53,26), T(67,-21), T(60,4), T(162,9), T(0,0), T(-5,24), T(-38,-6), T(28,49), T(42,58), T(35,12), T(117,5), T(0,0), T(2,13), T(15,41), T(-22,11), T(22,27), T(36,23), T(62,91), T(0,0), T(-13,19), T(7,26), T(21,32), T(-83,37), T(63,-24), T(205,-5), T(0,0), T(-1,3), T(-7,25), T(-12,53), T(-12,1), T(12,52), T(46,120), T(0,0), T(73,46), T(-3,42), T(-25,47), T(-173,75), T(-384,-147), T(0,0), }
+{T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(7,-3), T(44,18), T(74,54), T(43,38), T(47,-6), T(154,48), T(0,0), T(-7,-3), T(-37,-12), T(29,33), T(91,-3), T(22,35), T(129,19), T(0,0), T(-4,-10), T(16,22), T(-25,18), T(53,39), T(55,34), T(61,64), T(0,0), T(-12,-14), T(-6,-5), T(-5,-16), T(-46,-27), T(70,-20), T(135,13), T(0,0), T(-1,-2), T(-5,-11), T(-19,10), T(15,-41), T(44,53), T(96,36), T(0,0), T(20,5), T(-69,-3), T(-43,7), T(-30,2), T(-67,-119), T(0,0), }
+{T(0,0), T(-4,-4), T(-8,-5), T(-3,4), T(-7,1), T(-3,0), T(19,13), }
+{T(-15,-7), }
+{T(-5,2), }
 
 Mobility weights
-{T(0,0), T(7,9), T(9,10), T(8,9), T(9,6), T(4,7), T(-19,9), }
-{T(0,0), T(65,-9), T(69,35), T(46,17), T(25,-32), T(16,-9), T(26,24), }
+{T(62,2), }
+{T(20,19), T(12,9), T(16,6), T(5,13), T(-30,19), }
 
 Risk weights
-[0.338 0.633 0.841 0.96  1.026 1.156 1.113 1.073 1.   ]
+[0.296 0.53  0.723 0.943 0.873 1.024 1.026 1.06  1.   ]
 
 Board Weights
-{-347, 105, 225, 201, 383, 161, 352, 212, 0,0,0,0,0,0,0,0,
-  198, 443, 554, 306, 583, 462, 758, 284, 0,0,0,0,0,0,0,0,
-  542, 674, 765, 573, 612, 995, 859, 434, 0,0,0,0,0,0,0,0,
-  480, 576, 542, 660, 571, 501, 500, 404, 0,0,0,0,0,0,0,0,
-  215, 433, 636, 839, 674, 566, 537, 280, 0,0,0,0,0,0,0,0,
-  266, 558, 604, 624, 745, 638, 851, 342, 0,0,0,0,0,0,0,0,
-  271, 525, 559, 588, 566, 773, 833, 296, 0,0,0,0,0,0,0,0,
-  019, 234, 280, 353, 559, 129, 181, 008, 0,0,0,0,0,0,0,0,}
+[[ 0.058 -0.176  0.069  0.207  0.402  0.41   0.619  0.882]
+ [ 0.42   0.497  0.576  0.291  0.544  0.252  0.655  0.356]
+ [ 0.3    0.486  0.593  0.474  0.503  0.654  0.435  0.239]
+ [ 0.304  0.474  0.334  0.672  0.599  0.413  0.518  0.427]
+ [ 0.102  0.227  0.523  0.668  0.641  0.458  0.427  0.115]
+ [ 0.037  0.332  0.503  0.474  0.615  0.406  0.824  0.121]
+ [ 0.033  0.28   0.457  0.417  0.344  0.564  0.586  0.111]
+ [ 0.364  0.336  0.23   0.336  0.368  0.094  0.223  0.132]]
 ===
 */
 
-var e_material = []int{T(0,0), T(25,77), T(268,256), T(305,285), T(384,561), T(795,1066), T(0,0), }
-var e_passerFile = []int{T(0,0), T(-9,104), T(-14,93), T(-14,78), T(-14,61), T(-5,50), T(21,42), T(16,64), T(10,65), T(0,0), }
-var e_shield = []int{T(0,0), T(18,9), T(27,12), T(-2,23), T(10,12), T(13,8), T(15,9), T(18,5), T(40,-7), T(0,0), }
-var e_tempo int = T(28,30)
-var e_passerRank = []int{T(-3,-68), T(-3,-62), T(-7,-38), T(2,-4), T(-8,76), T(2,163), T(0,0), T(0,0), T(0,0), T(0,0), }
-var e_kingAttacks = []int{T(0,0), T(27,2), T(7,-5), T(5,-1), T(14,-3), T(6,13), T(-36,-15), }
+var e_material = []int{T(0,0), T(42,87), T(297,294), T(345,326), T(407,600), T(867,1129), T(0,0), }
+var e_passerFile = []int{T(0,0), T(-4,58), T(-19,44), T(-11,26), T(-6,8), T(0,0), T(32,-10), T(12,9), T(1,6), T(0,0), }
+var e_shield = []int{T(0,0), T(28,12), T(43,14), T(0,25), T(13,15), T(15,7), T(17,19), T(15,4), T(37,-8), T(0,0), }
+var e_tempo int = T(30,39)
+var e_passerRank = []int{T(2,-17), T(1,-11), T(-6,11), T(9,52), T(-1,139), T(-13,230), T(0,0), T(0,0), T(0,0), T(0,0), }
+var e_kingAttacks = []int{T(0,0), T(34,-5), T(6,-11), T(10,-3), T(9,-1), T(4,5), T(-31,-41), }
 var e_attacks = []int{
-	T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), 
-	T(0,0), T(0,0), T(41,6), T(55,29), T(67,-6), T(55,-4), T(125,24), 
-	T(0,0), T(-5,13), T(0,0), T(29,43), T(46,40), T(28,20), T(109,7), 
-	T(0,0), T(-5,8), T(11,31), T(0,0), T(27,29), T(41,45), T(44,72), 
-	T(0,0), T(-18,13), T(2,16), T(16,22), T(0,0), T(53,2), T(193,-18), 
-	T(0,0), T(-2,2), T(-5,10), T(-2,46), T(-5,0), T(0,0), T(48,119), 
-	T(0,0), T(48,24), T(-9,14), T(-26,29), T(-112,46), T(-363,-72), T(0,0), 
-}
-var e_restricted = []int{T(0,0), T(-10,-4), T(-8,-7), T(-4,0), T(-7,-3), T(-6,1), T(5,17), }
-var e_isolated int = T(-16,-9)
-var e_backwards int = T(-2,0)
+	T(0,0), T(0,0),    T(0,0),    T(0,0),    T(0,0),     T(0,0),       T(0,0), 
+	T(0,0), T(2,-12),  T(39,15),  T(53,26),  T(67,-21),  T(60,4),      T(162,9), 
+	T(0,0), T(-5,24),  T(-38,-6), T(28,49),  T(42,58),   T(35,12),     T(117,5), 
+	T(0,0), T(2,13),   T(15,41),  T(-22,11), T(22,27),   T(36,23),     T(62,91), 
+	T(0,0), T(-13,19), T(7,26),   T(21,32),  T(-83,37),  T(63,-24),    T(205,-5), 
+	T(0,0), T(-1,3),   T(-7,25),  T(-12,53), T(-12,1),   T(12,52),     T(46,120), 
+	T(0,0), T(73,46),  T(-3,42),  T(-25,47), T(-173,75), T(-384,-147), T(0,0), }
 
-// TODO: implement mobility and standing for pawns
-var e_mobility = []int{T(0,0), T(7,9), T(9,10), T(8,9), T(9,6), T(4,7), T(-19,9), }
-var e_standers = []int{T(0,0), T(65,-9), T(69,35), T(46,17), T(25,-32), T(16,-9), T(26,24), }
+var e_restricted = []int{T(0,0), T(-4,-4), T(-8,-5), T(-3,4), T(-7,1), T(-3,0), T(19,13), }
+var e_isolated int = T(-15,-7)
+var e_backwards int = T(-5,2)
+
+// Note mobility only counts current square for pawns
+var e_mobility = []int{T(0,0), T(62,2), T(20,19), T(12,9), T(16,6), T(5,13), T(-30,19), }
+
 
 func flip(arr1, arr2 *[128]int, xor int){
 	for i := range(len(arr1)) {
@@ -93,17 +94,18 @@ func flip(arr1, arr2 *[128]int, xor int){
 	}
 }
 
+var e_risk = []int{ 296, 530, 723, 943, 873, 1024, 1026, 1060, 1000 }
 var e_table = [2][128]int {
 	{},
 	{
-	-347, 105, 225, 201, 383, 161, 352, 212, 0,0,0,0,0,0,0,0,
-	 198, 443, 554, 306, 583, 462, 758, 284, 0,0,0,0,0,0,0,0,
-	 542, 674, 765, 573, 612, 995, 859, 434, 0,0,0,0,0,0,0,0,
-	 480, 576, 542, 660, 571, 501, 500, 404, 0,0,0,0,0,0,0,0,
-	 215, 433, 636, 839, 674, 566, 537, 280, 0,0,0,0,0,0,0,0,
-	 266, 558, 604, 624, 745, 638, 851, 342, 0,0,0,0,0,0,0,0,
-	 271, 525, 559, 588, 566, 773, 833, 296, 0,0,0,0,0,0,0,0,
-	  19, 234, 280, 353, 559, 129, 181,   8, 0,0,0,0,0,0,0,0,
+  58, -176,   69,  207,  402,  410,  619,  882, 0,0,0,0,0,0,0,0,
+ 420,  497,  576,  291,  544,  252,  655,  356, 0,0,0,0,0,0,0,0,
+ 300,  486,  593,  474,  503,  654,  435,  239, 0,0,0,0,0,0,0,0,
+ 304,  474,  334,  672,  599,  413,  518,  427, 0,0,0,0,0,0,0,0,
+ 102,  227,  523,  668,  641,  458,  427,  115, 0,0,0,0,0,0,0,0,
+ 037,  332,  503,  474,  615,  406,  824,  121, 0,0,0,0,0,0,0,0,
+ 033,  280,  457,  417,  344,  564,  586,  111, 0,0,0,0,0,0,0,0,
+ 364,  336,  230,  336,  368,   94,  223,  132, 0,0,0,0,0,0,0,0,
 	}, 
 }
 
@@ -230,6 +232,7 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 		}
 		piecetype := piece / 2
 
+		mobValue := attention[i]
 		if piecetype == 1 {
 			if !capturesOnly && board.squares[i+advance] == 0 {
 				moves = append(moves, Move{int8(i), int8(i + advance)})
@@ -238,10 +241,8 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 				}
 			}
 
-			mobValue := 0
 			for _, pawnCapture := range []int{i + advance + W, i + advance + E} {
 				if pawnCapture&0x88 == 0 {
-					mobValue += attention[pawnCapture]
 					victim := board.squares[pawnCapture]
 					if victim != 0 && (victim&1 != piece&1) {
 						moves = append(moves, Move{int8(i), int8(pawnCapture)})
@@ -249,8 +250,6 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 					}
 				}
 			}
-			mobility += ((decode(e_mobility[1],board.phase) * mobValue) + (decode(e_standers[1],board.phase) * attention[i])) / e_divider
-
 		} else {
 			ray := rays[piecetype]
 			pattern := patterns[piecetype]
@@ -280,9 +279,8 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 					}
 				}
 			}
-
-			mobility += ((decode(e_mobility[piecetype],board.phase) * mobValue) + (decode(e_standers[piecetype],board.phase) * attention[i]))/ e_divider
 		}
+		mobility += (decode(e_mobility[piecetype],board.phase) * mobValue) / e_divider
 	}
 
 	if board.enpassant != 0 {
@@ -504,20 +502,20 @@ func eval(board *Board) int {
 		}
 	}
 
-	/*
 	wkingfile := (board.kings[1]&7) + 1
-	wkingrank := board.kings[1] >> 4
+	//wkingrank := board.kings[1] >> 4
 	bkingfile := (board.kings[0]&7) + 1
-	bkingrank := board.kings[0] >> 4
+	//bkingrank := board.kings[0] >> 4
 
 	for i := -1; i <= 1; i++ {
-		if whiterear[wkingfile + i] != 0 && whiterear[wkingfile + i] < wkingrank {
-			score += shieldChart[wkingfile + i]
+		if whiterear[wkingfile + i] != 0 {
+			score += e_shield[wkingfile + i]
 		}
-		if blackrear[bkingfile + i] != 7 && blackrear[bkingfile + i] > bkingrank {
-			score -= shieldChart[bkingfile + i]
+		if blackrear[bkingfile + i] != 7 {
+			score -= e_shield[bkingfile + i]
 		}
 	}
+	/*
 
 	for sq, piece := range board.squares {
 		if piece / 2 == 1 {
@@ -860,27 +858,20 @@ func main() {
 //     - static count
 //          - perhaps after a threshold is hit we can change to meme eval
 // 2. Activity
-//     - mobility control map
-//          - mobility
-//              - penalize squares with enemy pawn guard
-//          - king ring
+//     - weighted mobility
+//          - penalize squares with enemy pawn guard
 //          - attacks
-//          - we can also dual purpose this map for move ordering, no need to do seperate mvvlva?
 //          - should we flip this based on king sides, perhaps create several distinct maps?
-// 3. King Safety
+// 3. King Safety (covered in other areas)
 //     - tbh king safety is not that big a deal for engines, but it leads to more fun attacking games
-//     - king pawn shield quality
-//     - king attacks
 // 4. Pawn Structure
 //     - pawn shield
 //     - backwards pawns
 //     - isolated pawns
 //     - passed pawns
-//         - opposite king passer bonus
-//     - encourage trades in completely winning positions? (perhaps implement 50 move and slowly taper eval to 0)
+//         - opposite king passer bonus?
 
 // Still need to figure out how to reward the queen moreso than other pieces for attacking king ring
-
 
 
 // Ben finegolds middle name is philip
