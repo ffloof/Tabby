@@ -136,7 +136,6 @@ for line in tqdm(lines):
     ]
     
     pawnAttacksMap = np.zeros((2,64), dtype=np.int8)
-    standers = np.zeros((2,7,64), dtype=np.int8)
 
     captures = np.zeros((2,7,7), dtype=np.int8)
     restricted = np.zeros((2,7), dtype=np.int8)
@@ -153,7 +152,7 @@ for line in tqdm(lines):
         material[piececolor, piecetype] += 1
 
         if piecetype > 0:
-            standers[piece&1][piecetype][i] = 1
+            mobtable[piece&1][piecetype][i] += 1
 
         if piecetype == 1:
             pfile = mailbox[i] % 10
@@ -177,11 +176,6 @@ for line in tqdm(lines):
         piecetype = piece // 2
         isray = rays[piecetype]
         pattern = patterns[piecetype]
-
-        if piece == 2:
-            pattern = [S+W,S+E]
-        elif piece == 3:
-            pattern = [N+W, N+E]
 
         if piecetype == 1:
             pfile = sq % 10
@@ -238,7 +232,7 @@ for line in tqdm(lines):
                 if piecetype == 1:
                     pawnAttacksMap[piece & 1][inverse[current]] += 1
 
-                if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)) or piecetype == 1:
+                if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
                     mobtable[piece&1][piecetype][inverse[current]] += 1
 
                     pawnDefence = False
@@ -294,20 +288,27 @@ for line in tqdm(lines):
     backwards = backwardsOpen + backwardsClosed
     isolated = isolatedOpen + isolatedClosed
 
-    restricted[:,1] = 0
     passerDistance[:,0] = 0
 
-    kingside = np.zeros(1, dtype=np.int8)
+    mobtable = mobtable.reshape(2,7,8,8)
+    mobtable[0] = np.flip(mobtable[0],1)
+
     if wkingfile >= 5:
-        kingside += 2
+        ...
+    else:
+        ...
+        
     if bkingfile >= 5:
-        kingside += 1
+        ...
+    else:
+        ...
+
 
     terms = [
-        [material[0, :] + material[1, :], kingside],
+        [material[0, :] + material[1, :]],
         [material[1, :] - material[0, :], shield[1] - shield[0], pushers, isolated[1]-isolated[0], backwards[1]-backwards[0], passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), sidetomove], 
-        [standers[0][1], mobtable[0][2:].flatten() + standers[0][2:].flatten() ], #backwardsMap[0], isolatedMap[0]],
-        [standers[1][1], mobtable[1][2:].flatten() + standers[1][2:].flatten() ], # backwardsMap[1], isolatedMap[1]],
+        [mobtable[0].flatten()], #backwardsMap[0], isolatedMap[0]],
+        [mobtable[1].flatten()], # backwardsMap[1], isolatedMap[1]],
         [npawns[0]],
         [npawns[1]],
     ]
@@ -368,11 +369,8 @@ class HCE(torch.nn.Module):
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
-        normal = self.mobilitytable
-        inverse = torch.flip(normal.reshape((1,8,8)), [1,]).reshape((64))
-
-        blackattention = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64), inverse)
-        whiteattention = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64), normal)
+        blackattention = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64), self.mobilitytable)
+        whiteattention = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64), self.mobilitytable)
 
         netmobility = torch.matmul(whiteattention, self.piecemobility) - torch.matmul(blackattention, self.piecemobility)
         netmobility2 = torch.matmul(whiteattention, self.taperpiecemobility) - torch.matmul(blackattention, self.taperpiecemobility)
