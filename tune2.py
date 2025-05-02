@@ -123,8 +123,6 @@ for line in tqdm(lines):
     isolatedClosed = np.zeros((2,1), dtype=np.int8)
     isolatedOpen = np.zeros((2,1), dtype=np.int8)
 
-    isolatedMap = np.zeros((2,64), dtype=np.int8)
-    backwardsMap = np.zeros((2,64), dtype=np.int8)
     shield = np.zeros((2,10), dtype=np.int8)
 
     mobtable = np.zeros((2,7,64), dtype=np.int8)
@@ -135,8 +133,6 @@ for line in tqdm(lines):
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]
     
-    pawnAttacksMap = np.zeros((2,64), dtype=np.int8)
-
     captures = np.zeros((2,7,7), dtype=np.int8)
     restricted = np.zeros((2,7), dtype=np.int8)
     
@@ -188,13 +184,11 @@ for line in tqdm(lines):
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
                 
                 if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
-                    isolatedMap[0][j] = 1
                     if rearpawns[1][pfile] == 0:
                         isolatedOpen[0] += 1
                     else:
                         isolatedClosed[0] += 1
                 elif rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
-                    backwardsMap[0][j] = 1
                     if rearpawns[1][pfile] == 0:
                         backwardsOpen[0] += 1
                     else:
@@ -206,19 +200,21 @@ for line in tqdm(lines):
                 
                     
                 if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
-                    isolatedMap[1][j] = 1
                     if rearpawns[0][pfile] == 11:
                         isolatedOpen[1] += 1
                     else:
                         isolatedClosed[1] += 1
                 elif rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
-                    backwardsMap[1][j] = 1
                     if rearpawns[0][pfile] == 11:
                         backwardsOpen[1] += 1
                     else:
                         backwardsClosed[1] += 1
 
-            #continue
+        
+        if piece == 2:
+            pattern = [S+W, S+E]
+        if piece == 3:
+            pattern = [N+W, N+E]
         
 
         for direction in pattern:
@@ -228,25 +224,22 @@ for line in tqdm(lines):
 
                 if virtualboard[current] == 1:
                     break
-                
-                if piecetype == 1:
-                    pawnAttacksMap[piece & 1][inverse[current]] += 1
 
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
-                    mobtable[piece&1][piecetype][inverse[current]] += 1
-
                     pawnDefence = False
-                    if piece & 1 == 0 and (virtualboard[current+S+W] == 3 or virtualboard[current+S+E] == 3):
-                        pawnDefence = True
-                    elif piece & 1 == 1 and (virtualboard[current+N+W] == 2 or virtualboard[current+N+E] == 2):
-                        pawnDefence = True
+                    if piecetype != 1:
+                        mobtable[piece&1][piecetype][inverse[current]] += 1
+
+                        if piece & 1 == 0 and (virtualboard[current+S+W] == 3 or virtualboard[current+S+E] == 3):
+                            pawnDefence = True
+                        elif piece & 1 == 1 and (virtualboard[current+N+W] == 2 or virtualboard[current+N+E] == 2):
+                            pawnDefence = True
 
                     if pawnDefence:
                         restricted[piece & 1][piecetype] += 1
 
                     if virtualboard[current] != 0 and ((virtualboard[current] & 1) != (piece & 1)):
-                        if piecetype != virtualboard[current // 2]: # identical pieces can see each other, dont add noise to eval
-                            captures[piece & 1][piecetype][virtualboard[current] // 2] += 1
+                        captures[piece & 1][piecetype][virtualboard[current] // 2] += 1
 
 
 
@@ -262,14 +255,14 @@ for line in tqdm(lines):
         if bspawn < 10:
             shield[0][bkingfile + x] = 1
 
-    pushers = np.zeros(10, dtype=np.int8)
+    pushers = np.zeros(8, dtype=np.int8)
 
 
     for i in range(10):
         wPass = 11 - passerRank[1][i]
         bPass = passerRank[0][i]
-        wPass -= 3
-        bPass -= 3
+        wPass -= 2
+        bPass -= 2
 
         if wPass >= 0:
             pushers[wPass] += 1
@@ -290,25 +283,22 @@ for line in tqdm(lines):
 
     passerDistance[:,0] = 0
 
-    mobtable = mobtable.reshape(2,7,8,8)
+    mobtable = mobtable.reshape(2,mobtable.shape[1],8,8)
     mobtable[0] = np.flip(mobtable[0],1)
 
-    if wkingfile >= 5:
-        ...
-    else:
-        ...
-        
-    if bkingfile >= 5:
-        ...
-    else:
-        ...
+    if wkingfile < 5:
+        mobtable[1,:,4:8] = np.flip(mobtable[1,:,4:8], 2)
+        mobtable[0,:,0:4] = np.flip(mobtable[0,:,0:4], 2)
 
+    if bkingfile < 5:
+        mobtable[0,:,4:8] = np.flip(mobtable[0,:,4:8], 2)
+        mobtable[1,:,0:4] = np.flip(mobtable[1,:,0:4], 2)
 
     terms = [
         [material[0, :] + material[1, :]],
         [material[1, :] - material[0, :], shield[1] - shield[0], pushers, isolated[1]-isolated[0], backwards[1]-backwards[0], passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), sidetomove], 
-        [mobtable[0].flatten()], #backwardsMap[0], isolatedMap[0]],
-        [mobtable[1].flatten()], # backwardsMap[1], isolatedMap[1]],
+        [mobtable[0].flatten()],
+        [mobtable[1].flatten()],
         [npawns[0]],
         [npawns[1]],
     ]
@@ -327,14 +317,13 @@ for line in tqdm(lines):
 
         print("\nfen " + fen)
         #for a in range(2):
-        #    plt.imshow(kingRingMap[a].reshape((8,8)))
+        #    plt.imshow(mobtable[a][1].reshape((8,8)))
         #    plt.show()
         #    ...
 
         #plt.imshow((backwards[0]).reshape((8,8)))
         #plt.show()
 
-        #print(passerDistance)
         #sys.exit()
 
     finalterms = []
