@@ -101,7 +101,7 @@ var e_table = [2][128]int {
   324,  538,  360,  590,  604,  368,  514,  457,     0,0,0,0, 0,0,0,0,
    92,  238,  430,  674,  586,  387,  338,  160,     0,0,0,0, 0,0,0,0,
   033,  303,  430,  403,  591,  360,  864,  212,     0,0,0,0, 0,0,0,0,
-  002,  221,  313,  382,  373,  791,  677,  134,     0,0,0,0, 0,0,0,0,
+    2,  221,  313,  382,  373,  791,  677,  134,     0,0,0,0, 0,0,0,0,
   523,  214,  285,  191,  298,  672,  024,  -38,     0,0,0,0, 0,0,0,0,},
 }
 
@@ -250,9 +250,6 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 			ray := rays[piecetype]
 			pattern := patterns[piecetype]
 			
-			mobValue := 0
-
-
 			for _, dir := range pattern {
 				for end := i + dir; (end & 0x88) == 0; end += dir {
 					victim := board.squares[end]
@@ -277,8 +274,8 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 							moves = append(moves, Move{int8(i), int8(end)})
 						}
 					} else {
+						mobValue += attention[end]
 						if !capturesOnly {
-							mobValue += attention[end]
 							moves = append(moves, Move{int8(i), int8(end)})
 						}
 					}
@@ -289,6 +286,7 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 				}
 			}
 		}
+		//fmt.Println(mobValue)
 		mobility += (decode(e_mobility[piecetype],board.phase) * mobValue) / e_divider
 	}
 
@@ -561,9 +559,6 @@ func eval(board *Board) int {
 		}
 	}
 
-	//fmt.Println("wp",whitepasser)
-	//fmt.Println("bp",blackpasser)
-
 	for file := range 10 {
 		if whitepasser[file] != 0 {
 			score += e_passerRank[whitepasser[file]]
@@ -583,6 +578,8 @@ func eval(board *Board) int {
 
 	score = decode(score, board.phase) 
 	score += board.mobilities[1] - board.mobilities[0]
+
+	//fmt.Println(board.mobilities)
 
 	leadingpawns := npawns[0]
 	if score >= 0 {
