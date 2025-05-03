@@ -659,10 +659,10 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	pv := beta - alpha != 1
 	if board.ply != 0 && depth > 0 && !pv {
 		// Null move pruning NMP
-		if staticEval >= beta && nullallowed && depth > 3 {
+		if staticEval >= beta && nullallowed && depth >= 3 {
 			nmBoard := board.Apply(nullmove)
 			if nmBoard != nil {
-				nmScore := alphabeta(nmBoard, -beta, -beta+1, 3+depth/6, false)
+				nmScore := alphabeta(nmBoard, -beta, -beta+1, depth - 3 - depth / 6, false)
 				if nmScore >= beta {
 					return beta
 				}
@@ -691,6 +691,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
+	quietsToCheck := depth * depth + 6
 	legals := 0
 	var bestMove Move
 	var boundtype int8 = -1
@@ -766,6 +767,13 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 			}
 
 			break
+		}
+
+		if !pv && board.squares[nextMove.end] == 0 {
+			quietsToCheck -= 1
+			if depth > 0 && quietsToCheck == 0 {
+				break
+			}
 		}
 
 
