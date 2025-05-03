@@ -614,6 +614,7 @@ var table [hashsize]entry
 var history [14][128]int
 
 func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
+	pv := beta - alpha != 1
 	nodes += 1
 	bestScore := -9999 + board.ply
 
@@ -646,18 +647,15 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 	if board.ply != 0 {
 		if tt.key == hash {
-			if tt.depth >= depth || 0 >= depth {
+			if (tt.depth >= depth || 0 >= depth) && !pv {
 				if (tt.bound == 1 && tt.score <= alpha) {return tt.score}
 				if (tt.bound == -1 && tt.score >= beta) {return tt.score}
 				if (tt.bound == 0) {return tt.score}
 			}
-		} else {
-			depth -= 1
 		}
 	}
 
-	pv := beta - alpha != 1
-	if board.ply != 0 && depth > 0 && !pv {
+	if board.ply != 0 && depth > 0 && !pv && board.phase > 4 {
 		// Null move pruning NMP
 		if staticEval >= beta && nullallowed && depth >= 3 {
 			nmBoard := board.Apply(nullmove)
@@ -669,8 +667,8 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 			}
 		}
 
-		// Reverse futility pruning
-		if (depth < 4 && staticEval - depth * 75 > beta) { 
+		// Reverse futility pruning RFP
+		if (depth < 8 && staticEval - depth * 100 > beta) { 
 			return staticEval
 		}
 	}
@@ -691,7 +689,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-	quietsToCheck := depth * depth + 6
+	quietsLeft := depth * depth + 4
 	legals := 0
 	var bestMove Move
 	var boundtype int8 = -1
@@ -719,19 +717,20 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 		legals += 1
 
-		reduction := max(0, (depth/8) + (legals/16) -(priorities[besti] / 172))
-		
+		reduction := max(0, (legals/12) -(priorities[besti] / 172)) 
+
 		var score int
 
 		if ((legals == 1 || depth <= 0)){
 			score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, true)
 		} else {
 			score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1 - reduction, true)
-			if score > alpha {
+			if score > alpha && reduction > 0 {
 				score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1, true)
-				if score > alpha {
-					score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, true)
-				}
+			}
+
+			if score > alpha {
+				score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, true)
 			}
 		}
 
@@ -770,14 +769,15 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 
 		if !pv && board.squares[nextMove.end] == 0 {
-			quietsToCheck -= 1
-			if depth > 0 && quietsToCheck == 0 {
+			quietsLeft -= 1
+			if quietsLeft == 0 {
+				break
+			}
+
+			if depth <= 4 && staticEval + 128 * depth < alpha {
 				break
 			}
 		}
-
-
-		// TODO: Late Move Pruning
 	}
 
 	repetition = repetition[:len(repetition)-1]
@@ -799,11 +799,11 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 var uciBoard Board
 var repetition []uint64 = []uint64{}
-
+   
 func printpv() string {
 	pvstr := ""
 	board := &uciBoard
-	for range 20 {
+	for range 40 {
 		if board == nil {
 			break
 		}
