@@ -112,6 +112,7 @@ var phaseWeights = [14]int{0,0,0,0,1,1,1,1,2,2,4,4,0,0}
 var Zobrist [16][128]uint64
 
 var nodes int = 0
+const MAX_HISTORY = 512
 
 
 type Board struct {
@@ -122,6 +123,8 @@ type Board struct {
 	mobilities [2]int
 	phase int
 	sidetomove int8
+	inCheck bool
+	ply int
 }
 
 type Move struct {
@@ -299,9 +302,9 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 	}
 
 
-
 	kingIndex := board.kings[board.sidetomove]
-	if !capturesOnly && (kingIndex == E8 || kingIndex == E1) && !board.attacked(kingIndex, 1-board.sidetomove) {
+	board.inCheck = board.attacked(kingIndex, 1-board.sidetomove)
+	if !capturesOnly && (kingIndex == E8 || kingIndex == E1) && !board.inCheck {
 		if board.squares[kingIndex+E+E+E+CASTLE] == 1 && board.squares[kingIndex+E+E] == 0 && board.squares[kingIndex+E] == 0 {
 			moves = append(moves, Move{int8(kingIndex), int8(kingIndex+E+E)})
 		} 
@@ -428,6 +431,8 @@ func (board *Board) Apply(move Move) *Board {
 
 	copyBoard.sidetomove = 1 - copyBoard.sidetomove
 	copyBoard.enpassant = newEP
+	copyBoard.inCheck = false
+	copyBoard.ply += 1
 
 	if copyBoard.squares[int(move.start)+CASTLE] != 0 {
 		copyBoard.Edit(int(move.start)+CASTLE, 0)
@@ -608,9 +613,9 @@ var table [hashsize]entry
 
 var history [14][128]int
 
-func alphabeta(board *Board, alpha, beta, depth, ply int, nullallowed bool) int {
+func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	nodes += 1
-	bestScore := -9999 + ply
+	bestScore := -9999 + board.ply
 
 	moves := board.GenerateLegalMoves(depth <= 0)
 	// standpat
@@ -625,11 +630,10 @@ func alphabeta(board *Board, alpha, beta, depth, ply int, nullallowed bool) int 
 		}
 	}
 
-	priorities := make([]int, len(moves), len(moves))
 
 	hash := board.Hash()
 
-	if ply != 0 {
+	if board.ply != 0 {
 		for _, rep := range repetition {
 			if rep == hash {
 				return 0
@@ -640,7 +644,7 @@ func alphabeta(board *Board, alpha, beta, depth, ply int, nullallowed bool) int 
 
 	tt := table[hash % hashsize]
 
-	if ply != 0 {
+	if board.ply != 0 {
 		if tt.key == hash {
 			if tt.depth >= depth || 0 >= depth {
 				if (tt.bound == 1 && tt.score <= alpha) {return tt.score}
@@ -653,12 +657,12 @@ func alphabeta(board *Board, alpha, beta, depth, ply int, nullallowed bool) int 
 	}
 
 	pv := beta - alpha != 1
-	if ply != 0 && depth > 0 && !pv {
+	if board.ply != 0 && depth > 0 && !pv {
 		// Null move pruning NMP
 		if staticEval >= beta && nullallowed && depth > 3 {
 			nmBoard := board.Apply(nullmove)
 			if nmBoard != nil {
-				nmScore := alphabeta(nmBoard, -beta, -beta+1, 3+depth/6, ply+1, false)
+				nmScore := alphabeta(nmBoard, -beta, -beta+1, 3+depth/6, false)
 				if nmScore >= beta {
 					return beta
 				}
@@ -666,15 +670,16 @@ func alphabeta(board *Board, alpha, beta, depth, ply int, nullallowed bool) int 
 		}
 
 		// Reverse futility pruning
-		if (depth < 4 && staticEval - depth * 75 > beta) { return staticEval }
+		if (depth < 4 && staticEval - depth * 75 > beta) { 
+			return staticEval
+		}
 	}
-
-
 
 
 	// Prunings should only happen above this
 	repetition = append(repetition, hash)
 
+	priorities := make([]int, len(moves), len(moves))
 	for i, move := range moves {
 		if board.squares[move.end] != 0 {
 			priorities[i] = (int(board.squares[move.end]) * 20) - int(board.squares[move.start]) + 10000
@@ -713,26 +718,18 @@ func alphabeta(board *Board, alpha, beta, depth, ply int, nullallowed bool) int 
 
 		legals += 1
 
-		reduction := 0
-		if legals > 4 {
-			reduction = legals/16 + depth / 8
-		}
-
-		if !pv {
-			reduction += 1
-		}
-
+		reduction := max(0, (depth/8) + (legals/16) -(priorities[besti] / 172))
 		
 		var score int
 
 		if ((legals == 1 || depth <= 0)){
-			score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, ply + 1, true)
+			score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, true)
 		} else {
-			score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1 - reduction, ply + 1, true)
+			score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1 - reduction, true)
 			if score > alpha {
-				score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1, ply + 1, true)
+				score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1, true)
 				if score > alpha {
-					score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, ply+1, true)
+					score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, true)
 				}
 			}
 		}
@@ -751,14 +748,19 @@ func alphabeta(board *Board, alpha, beta, depth, ply int, nullallowed bool) int 
 			boundtype = 1
 
 			if (board.squares[nextMove.end] == 0) {
+				bonus := depth * depth
+				if staticEval < alpha {
+					bonus = (depth + 1) * (depth + 1)
+				}
+
 				hh := &history[board.squares[nextMove.start]][nextMove.end]
 
-				*hh += depth * depth
+				*hh += bonus - ((bonus * (*hh)) / MAX_HISTORY)
 
 				for m:=0;m<i;m++ {
-					if moves[i].end == 0 {
-						hhm := &history[board.squares[moves[i].start]][moves[i].end]
-						*hhm -= depth * depth
+					if board.squares[moves[m].end] == 0 {
+						hhm := &history[board.squares[moves[m].start]][moves[m].end]
+						*hhm -= (bonus - ((bonus * (*hhm)) / MAX_HISTORY))
 					}
 				}
 			}
@@ -766,13 +768,18 @@ func alphabeta(board *Board, alpha, beta, depth, ply int, nullallowed bool) int 
 			break
 		}
 
+
+		// TODO: Late Move Pruning
 	}
 
 	repetition = repetition[:len(repetition)-1]
 
 	if legals == 0 && depth > 0 {
-		// TODO: stalemate
-		return -9999
+		if board.inCheck {
+			return bestScore // Best score is mate score
+		} else {
+			return 0
+		}
 	}
 
 	if bestMove.start != bestMove.end {
@@ -828,8 +835,8 @@ func parseuci(line string) {
 		for _, movestr := range findAfter("moves", args) {
 			repetition = append(repetition, (uciBoard.Hash()))
 			uciBoard = *(uciBoard.Apply(Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))}))
-			// TODO: add underpromotion condition?
 		}
+		uciBoard.ply = 0
 	case "go":
 		timeAlloc := 1000
 		if len(findAfter("movetime", args)) != 0 {
@@ -849,19 +856,14 @@ func parseuci(line string) {
 		nodes = 0
 		start := time.Now().UnixMilli()
 		for depth := 1; depth <= 100; depth++ {
-			fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, 0, true), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv())
-
-			for i := range 14 {
-				for j := range 128 {
-					history[i][j] /= 8
-				}
-			}
+			fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, true), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv())
 
 			if int(time.Now().UnixMilli() - start) > timeAlloc {
 				break
 			}
 
 		}
+
 		fmt.Println("bestmove", table[uciBoard.Hash() % hashsize].move.stringify())
 	
 	case "eval":
@@ -917,7 +919,7 @@ func main() {
 //     - backwards pawns
 //     - isolated pawns
 //     - passed pawns
-//         - opposite king passer bonus?
+//         - opposite king passer bonus
 
 // Still need to figure out how to reward the queen moreso than other pieces for attacking king ring
 
