@@ -134,7 +134,12 @@ type Move struct {
 }
 var nullmove Move = Move{9,9}
 
-func (move Move) stringify() string {
+func (move Move) stringify(board *Board) string {
+	if board != nil {
+		if (board.squares[move.start] / 2) == 1 && (move.end < A8+S || move.end > H1+N) {
+			return string(FILE[move.start&7]) + string(RANK[move.start>>4]) + string(FILE[move.end&7]) + string(RANK[move.end>>4]) + "q"
+		}
+	}
 	return string(FILE[move.start&7]) + string(RANK[move.start>>4]) + string(FILE[move.end&7]) + string(RANK[move.end>>4])
 }
 
@@ -471,7 +476,7 @@ func perft(perftboard *Board, depth int, maxdepth int) int {
         	subnodes := perft(nextBoard, depth - 1, maxdepth) 
         	nodes += subnodes 
         	if depth == maxdepth {
-        		fmt.Println(i, move.stringify(), subnodes)
+        		fmt.Println(i, move.stringify(nextBoard), subnodes)
         	}
         }
     }
@@ -719,9 +724,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 		legals += 1
 
-		reduction := int(max(0, float64(-priorities[i]) / 256 + (0.25 * math.Sqrt(float64(legals)) * math.Sqrt(float64(depth))) - 1))
-
-		reduction = 0
+		reduction := int(max(0, float64(-priorities[i]) / 256 + (0.1 * math.Sqrt(float64(legals)) * math.Sqrt(float64(max(0,depth)))) - 1))
 
 		var score int
 
@@ -733,7 +736,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 				score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1, true)
 			}
 
-			if score > alpha {
+			if score > alpha && pv {
 				score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, true)
 			}
 		}
@@ -779,10 +782,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 			if quietsLeft == 0 {
 				break
 			}
-			/*
-			if depth <= 6 && staticEval + 125 * depth < alpha {
-				break
-			}*/
 		}
 	}
 
@@ -818,7 +817,7 @@ func printpv() string {
 			break
 		}
 
-		pvstr += m.stringify() + " "
+		pvstr += m.stringify(board) + " "
 
 		//fmt.Println(m.stringify(), table[board.Hash() % hashsize].depth)
 		board = board.Apply(m)
@@ -881,7 +880,7 @@ func parseuci(line string) {
 			}
 		}
 
-		fmt.Println("bestmove", table[uciBoard.Hash() % hashsize].move.stringify())
+		fmt.Println("bestmove", table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard))
 	
 	case "eval":
 		uciBoard.GenerateLegalMoves(true)
