@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 	"math/rand"
+	"math"
 )
 
 const N, S, E, W = -16, 16, 1, -1
@@ -100,7 +101,7 @@ var e_table = [2][128]int {
   279,  603,  758,  358,  492,  759,  474,  252,     0,0,0,0, 0,0,0,0,
   324,  538,  360,  590,  604,  368,  514,  457,     0,0,0,0, 0,0,0,0,
    92,  238,  430,  674,  586,  387,  338,  160,     0,0,0,0, 0,0,0,0,
-  033,  303,  430,  403,  591,  360,  864,  212,     0,0,0,0, 0,0,0,0,
+   33,  303,  430,  403,  591,  360,  864,  212,     0,0,0,0, 0,0,0,0,
     2,  221,  313,  382,  373,  791,  677,  134,     0,0,0,0, 0,0,0,0,
   523,  214,  285,  191,  298,  672,  024,  -38,     0,0,0,0, 0,0,0,0,},
 }
@@ -655,12 +656,12 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-	if board.ply != 0 && depth > 0 && !pv && board.phase > 4 {
+	if depth > 0 && !pv && board.phase > 4 {
 		// Null move pruning NMP
 		if staticEval >= beta && nullallowed && depth >= 3 {
 			nmBoard := board.Apply(nullmove)
 			if nmBoard != nil {
-				nmScore := alphabeta(nmBoard, -beta, -beta+1, depth - 3 - depth / 6, false)
+				nmScore := -alphabeta(nmBoard, -beta, -beta+1, depth - 3 - depth / 6, false)
 				if nmScore >= beta {
 					return beta
 				}
@@ -668,7 +669,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 
 		// Reverse futility pruning RFP
-		if (depth < 8 && staticEval - depth * 100 > beta) { 
+		if (depth < 6 && staticEval - depth * 100 > beta) { 
 			return staticEval
 		}
 	}
@@ -676,6 +677,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 	// Prunings should only happen above this
 	repetition = append(repetition, hash)
+
 
 	priorities := make([]int, len(moves), len(moves))
 	for i, move := range moves {
@@ -689,7 +691,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-	quietsLeft := depth * depth + 4
+	quietsLeft := (depth * depth) - depth + 5
 	legals := 0
 	var bestMove Move
 	var boundtype int8 = -1
@@ -717,7 +719,9 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 		legals += 1
 
-		reduction := max(0, (legals/12) -(priorities[besti] / 172)) 
+		reduction := int(max(0, float64(-priorities[i]) / 256 + (0.25 * math.Sqrt(float64(legals)) * math.Sqrt(float64(depth))) - 1))
+
+		reduction = 0
 
 		var score int
 
@@ -768,15 +772,17 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 			break
 		}
 
+		quietsLeft = quietsLeft
+			
 		if !pv && board.squares[nextMove.end] == 0 {
 			quietsLeft -= 1
 			if quietsLeft == 0 {
 				break
 			}
-
-			if depth <= 4 && staticEval + 128 * depth < alpha {
+			/*
+			if depth <= 6 && staticEval + 125 * depth < alpha {
 				break
-			}
+			}*/
 		}
 	}
 
@@ -822,6 +828,10 @@ func printpv() string {
 
 func parseuci(line string) {
 	args := strings.Fields(line)
+
+	if len(args) == 0 {
+		return
+	}
 
 	switch string(args[0]) {
 	case "uci":
@@ -869,7 +879,6 @@ func parseuci(line string) {
 			if int(time.Now().UnixMilli() - start) > timeAlloc {
 				break
 			}
-
 		}
 
 		fmt.Println("bestmove", table[uciBoard.Hash() % hashsize].move.stringify())
