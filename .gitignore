@@ -3,3 +3,4 @@ uci_options.txt
 main
 main.exe
 main.exe~
+*.exe

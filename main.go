@@ -113,7 +113,7 @@ var phaseWeights = [14]int{0,0,0,0,1,1,1,1,2,2,4,4,0,0}
 var Zobrist [16][128]uint64
 
 var nodes int = 0
-const MAX_HISTORY = 512
+const MAX_HISTORY = 8192
 
 
 type Board struct {
@@ -374,64 +374,73 @@ func (board *Board) Apply(move Move) *Board {
 	currentBoard := *board
 	copyBoard := currentBoard
 
-	movingPiece := copyBoard.squares[move.start]
-	copyBoard.Edit(int(move.start), 0)
-	copyBoard.Edit(int(move.end), movingPiece)
-
-	advance := ADVANCES[copyBoard.sidetomove]
 	newEP := 0
+	
+	if move.start != move.end {
+		movingPiece := copyBoard.squares[move.start]
+		copyBoard.Edit(int(move.start), 0)
+		copyBoard.Edit(int(move.end), movingPiece)
 
-	if movingPiece <= 3 {
-		// Enpassant capture -> remove extra pawn
-		if int(move.end) == copyBoard.enpassant {
-			copyBoard.Edit(int(move.end)-advance, 0)
-		}
-		
-		// Double push -> set enpassant square
-		if int(move.end-move.start) == advance+advance {
-			newEP = int(move.start) + advance
-		}
+		advance := ADVANCES[copyBoard.sidetomove]
 
-		// Promotion -> turn it into a queen
-		if move.end < A8+S || move.end > H1+N {
-			copyBoard.Edit(int(move.end), 10 + copyBoard.sidetomove)
-		}
-	} else if movingPiece >= 12 {
-		// Update kingpos
-		copyBoard.kings[copyBoard.sidetomove] = int(move.end)
-		
-		// Castle -> move rook, do some validation
-		if move.end-move.start == W+W {
-			if copyBoard.attacked(int(move.start) + W, 1 - copyBoard.sidetomove) {
-				return nil
+		if movingPiece <= 3 {
+			// Enpassant capture -> remove extra pawn
+			if int(move.end) == copyBoard.enpassant {
+				copyBoard.Edit(int(move.end)-advance, 0)
 			}
-			copyBoard.Edit(int(move.end) + W + W, 0)
-			copyBoard.Edit(int(move.end) + E, 8+copyBoard.sidetomove)
-		}
-		if move.end-move.start == E+E {
-			if copyBoard.attacked(int(move.start) + E, 1 - copyBoard.sidetomove) {
-				return nil
+			
+			// Double push -> set enpassant square
+			if int(move.end-move.start) == advance+advance {
+				newEP = int(move.start) + advance
 			}
-			copyBoard.Edit(int(move.end) + E, 0)
-			copyBoard.Edit(int(move.end) + W, 8+copyBoard.sidetomove)
+
+			// Promotion -> turn it into a queen
+			if move.end < A8+S || move.end > H1+N {
+				copyBoard.Edit(int(move.end), 10 + copyBoard.sidetomove)
+			}
+		} else if movingPiece >= 12 {
+			// Update kingpos
+			copyBoard.kings[copyBoard.sidetomove] = int(move.end)
+			
+			// Castle -> move rook, do some validation
+			if move.end-move.start == W+W {
+				if copyBoard.attacked(int(move.start) + W, 1 - copyBoard.sidetomove) {
+					return nil
+				}
+				copyBoard.Edit(int(move.end) + W + W, 0)
+				copyBoard.Edit(int(move.end) + E, 8+copyBoard.sidetomove)
+			}
+			if move.end-move.start == E+E {
+				if copyBoard.attacked(int(move.start) + E, 1 - copyBoard.sidetomove) {
+					return nil
+				}
+				copyBoard.Edit(int(move.end) + E, 0)
+				copyBoard.Edit(int(move.end) + W, 8+copyBoard.sidetomove)
+			}
+
+			// Invalidate castling
+			//fmt.Println(move.end)
+
+			if copyBoard.sidetomove == 1 {
+				copyBoard.Edit(A1 + CASTLE, 0)
+				copyBoard.Edit(H1 + CASTLE, 0)
+
+			} else {
+				copyBoard.Edit(A8 + CASTLE, 0)
+				copyBoard.Edit(H8 + CASTLE, 0)
+			}
 		}
 
-		// Invalidate castling
-		//fmt.Println(move.end)
 
-		if copyBoard.sidetomove == 1 {
-			copyBoard.Edit(A1 + CASTLE, 0)
-			copyBoard.Edit(H1 + CASTLE, 0)
-
-		} else {
-			copyBoard.Edit(A8 + CASTLE, 0)
-			copyBoard.Edit(H8 + CASTLE, 0)
+		if copyBoard.squares[int(move.start)+CASTLE] != 0 {
+			copyBoard.Edit(int(move.start)+CASTLE, 0)
+		}
+		if copyBoard.squares[int(move.end)+CASTLE] != 0 {
+			copyBoard.Edit(int(move.end)+CASTLE, 0)
 		}
 	}
 
-	kingIndex := copyBoard.kings[copyBoard.sidetomove]
-
-	if copyBoard.attacked(kingIndex, 1 - copyBoard.sidetomove) {
+	if copyBoard.attacked(copyBoard.kings[copyBoard.sidetomove], 1 - copyBoard.sidetomove) {
 		return nil
 	}
 
@@ -440,12 +449,7 @@ func (board *Board) Apply(move Move) *Board {
 	copyBoard.inCheck = false
 	copyBoard.ply += 1
 
-	if copyBoard.squares[int(move.start)+CASTLE] != 0 {
-		copyBoard.Edit(int(move.start)+CASTLE, 0)
-	}
-	if copyBoard.squares[int(move.end)+CASTLE] != 0 {
-		copyBoard.Edit(int(move.end)+CASTLE, 0)
-	}
+	
 
 	return &copyBoard
 }
@@ -661,21 +665,22 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-	if depth > 0 && !pv && board.phase > 4 {
+
+	if depth > 0 && !pv && board.phase > 4 && !board.inCheck {
+		// Reverse futility pruning RFP
+		if (depth < 8 && staticEval - depth * 100 > beta) { 
+			return staticEval
+		}
+
 		// Null move pruning NMP
 		if staticEval >= beta && nullallowed && depth >= 3 {
 			nmBoard := board.Apply(nullmove)
 			if nmBoard != nil {
-				nmScore := -alphabeta(nmBoard, -beta, -beta+1, depth - 3 - depth / 6, false)
+				nmScore := -alphabeta(nmBoard, -beta, -alpha, depth - 3 - depth / 6, false)
 				if nmScore >= beta {
 					return beta
 				}
 			}
-		}
-
-		// Reverse futility pruning RFP
-		if (depth < 6 && staticEval - depth * 100 > beta) { 
-			return staticEval
 		}
 	}
 
@@ -723,8 +728,8 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 
 		legals += 1
-
-		reduction := int(max(0, float64(-priorities[i]) / 256 + (0.1 * math.Sqrt(float64(legals)) * math.Sqrt(float64(max(0,depth)))) - 1))
+		//reduction := int(max(0, float64(-priorities[i]) / 2048 + (0.4 * math.Cbrt(float64(legals)) * math.Cbrt(float64(max(0,depth)))) + 0.5))
+		reduction := int(math.Sqrt(0))
 
 		var score int
 
@@ -890,6 +895,10 @@ func parseuci(line string) {
 
 		fmt.Println("eval", eval(&uciBoard))
 
+	case "null":
+		uciBoard = *uciBoard.Apply(nullmove)
+
+
 	case "quit":
 		return
 	}
@@ -942,3 +951,10 @@ func main() {
 
 // Ben finegolds middle name is philip
 // Should make a stream where people vote on best move
+
+// Base Search      elo     W/D/L
+// + RFP        ~ 120 elo 81/21/34
+// + LMP        ~ 60 elo  53/37/32?
+// + NMP        ~ -bajillion
+// why nmp no work, lol prolly cuz its bugged asf
+// + NMP v2        ~ 60 elo  56/36/32
