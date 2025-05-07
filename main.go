@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 	"math/rand"
-	"math"
 )
 
 const N, S, E, W = -16, 16, 1, -1
@@ -655,16 +654,12 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 	tt := table[hash % hashsize]
 
-	if board.ply != 0 {
-		if tt.key == hash {
-			if (tt.depth >= depth || 0 >= depth) && !pv {
-				if (tt.bound == 1 && tt.score <= alpha) {return tt.score}
-				if (tt.bound == -1 && tt.score >= beta) {return tt.score}
-				if (tt.bound == 0) {return tt.score}
-			}
-		}
+	if !pv && tt.key == hash && (tt.depth >= depth || 0 >= depth) {
+		if (tt.bound == 1 && tt.score <= alpha) {return tt.score}
+		if (tt.bound == -1 && tt.score >= beta) {return tt.score}
+		if (tt.bound == 0) {return tt.score}
 	}
-
+	
 
 	if depth > 0 && !pv && board.phase > 4 && !board.inCheck {
 		// Reverse futility pruning RFP
@@ -728,8 +723,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 
 		legals += 1
-		//reduction := int(max(0, float64(-priorities[i]) / 2048 + (0.4 * math.Cbrt(float64(legals)) * math.Cbrt(float64(max(0,depth)))) + 0.5))
-		reduction := int(math.Sqrt(0))
+		reduction := (depth+legals)/16
 
 		var score int
 
@@ -955,6 +949,6 @@ func main() {
 // Base Search      elo     W/D/L
 // + RFP        ~ 120 elo 81/21/34
 // + LMP        ~ 60 elo  53/37/32?
-// + NMP        ~ -bajillion
-// why nmp no work, lol prolly cuz its bugged asf
-// + NMP v2        ~ 60 elo  56/36/32
+// + NMP        ~ 60 elo  56/36/32
+// + LMR         ~ 50 elo  170/100/116
+// TODO: squeeze more elo by optimizing pruning/reductions
