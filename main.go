@@ -625,7 +625,7 @@ var history [14][128]int
 func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	pv := beta - alpha != 1
 	nodes += 1
-	bestScore := -9999 + board.ply
+	bestScore := -9999
 
 	moves := board.GenerateLegalMoves(depth <= 0)
 	// standpat
@@ -787,11 +787,13 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	repetition = repetition[:len(repetition)-1]
 
 	if legals == 0 && depth > 0 {
-		if board.inCheck {
-			return bestScore // Best score is mate score
-		} else {
+		if !board.inCheck {
 			return 0
 		}
+	}
+
+	if bestScore < -9000 {
+		bestScore += 1 // Mate distance/delay adjustment
 	}
 
 	if bestMove.start != bestMove.end {
