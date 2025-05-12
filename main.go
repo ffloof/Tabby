@@ -699,7 +699,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	quietsLeft := (depth * depth) - depth + 5
 	legals := 0
 	var bestMove Move
-	var boundtype int8 = -1
+	var boundtype int8 = 1
 
 	for i := range moves {
 		// Selection sort
@@ -751,7 +751,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 
 		if score >= beta {
-			boundtype = 1
+			boundtype = -1
 
 			if (board.squares[nextMove.end] == 0) {
 				bonus := depth * depth
@@ -951,4 +951,5 @@ func main() {
 // + LMP        ~ 60 elo  53/37/32?
 // + NMP        ~ 60 elo  56/36/32
 // + LMR         ~ 50 elo  170/100/116
+// + fixed tt    ~ 100 elo 40/23/18
 // TODO: squeeze more elo by optimizing pruning/reductions
