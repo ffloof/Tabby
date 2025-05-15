@@ -10,6 +10,10 @@ import (
 	"math/rand"
 )
 
+import ("flag"
+	"runtime/pprof"
+)
+
 const N, S, E, W = -16, 16, 1, -1
 const A8, H8, A1, H1 = 0, 7, 112, 119
 const E8, E1 = 4, 116
@@ -117,6 +121,8 @@ const MAX_HISTORY = 8192
 
 type Board struct {
 	squares    [128]int8
+	pieceCount [16]int8
+	pawns      [16]int8
 	kings      [2]int
 	enpassant  int
 	zobrist    uint64
@@ -199,6 +205,8 @@ func (board *Board) Edit(index int, newpiece int8) {
 	board.squares[index] = newpiece
 	board.zobrist ^= Zobrist[oldpiece][index]
 	board.zobrist ^= Zobrist[newpiece][index]
+	board.pieceCount[oldpiece] -= 1
+	board.pieceCount[newpiece] += 1
 }
 
 var rays = [7]bool{false, false, false, true, true, true, false}
@@ -225,16 +233,29 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 
 	moves := []Move{}
 
-	var ourPawn int8 = 2 + board.sidetomove
 	advance := ADVANCES[board.sidetomove]
-
+	
 	mobility := 0
 
+	var pawnIndexes [16]int8
+	pawnCounter := 0
+
 	for i, piece := range board.squares {
-		if piece < 2 || piece & 1 != board.sidetomove {
+		if piece < 2 {
 			continue
 		}
+
 		piecetype := piece / 2
+
+		if piecetype == 1 {
+			pawnIndexes[pawnCounter] = int8(i)
+			pawnCounter++
+		}
+
+		if piece & 1 != board.sidetomove {
+			continue
+		}
+
 
 		mobValue := attention[i]
 		if piecetype == 1 {
@@ -262,19 +283,19 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 				for end := i + dir; (end & 0x88) == 0; end += dir {
 					victim := board.squares[end]
 
-					if (end - advance + W) & 0x88 == 0 {
-						if board.squares[end - advance + W] == (3-board.sidetomove) {
+					// TODO: we are doing the same check here as we do in board.attacked we should create a seperate function for pawnAttacked
+					if (end + advance + W) & 0x88 == 0 {
+						if board.squares[end + advance + W] == (3-board.sidetomove) {
 							mobility += decode(e_restricted[piecetype], board.phase)
 						}
 					}
 
-					if (end - advance + E) & 0x88 == 0 {
-						if board.squares[end - advance + E] == (3-board.sidetomove) {
+					if (end + advance + E) & 0x88 == 0 {
+						if board.squares[end + advance + E] == (3-board.sidetomove) {
 							mobility += decode(e_restricted[piecetype], board.phase)
 						}
 					}
 					
-
 					if victim != 0 {
 						if victim&1 != piece&1 {
 							mobValue += attention[end]
@@ -294,13 +315,12 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 				}
 			}
 		}
-		//fmt.Println(mobValue)
 		mobility += (decode(e_mobility[piecetype],board.phase) * mobValue) / e_divider
 	}
 
 	if board.enpassant != 0 {
 		for _, enpassantStart := range []int{board.enpassant - advance + W, board.enpassant - advance + E} {
-			if board.squares[enpassantStart] == ourPawn {
+			if board.squares[enpassantStart] == 2 + board.sidetomove {
 				moves = append(moves, Move{int8(enpassantStart), int8(board.enpassant)})
 			}
 		}
@@ -319,6 +339,7 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 	}
 
 	board.mobilities[board.sidetomove] = mobility
+	board.pawns = pawnIndexes
 
 	return moves
 }
@@ -499,21 +520,20 @@ func findAfter(word string, strlist []string) []string {
 func eval(board *Board) int {
 	score := 0
 
+	for piecetype := range 7 {
+		score += e_material[piecetype] * int((board.pieceCount[piecetype * 2 + 1] - board.pieceCount[piecetype * 2]))
+	}
+
+	//fmt.Println(board.pawns)
+
 	whiterear := [10]int{0,0,0,0,0,0,0,0,0,0,}
 	blackrear := [10]int{7,7,7,7,7,7,7,7,7,7,}
 
-	for sq, piece := range board.squares {
-		
-		if piece & 1 == 1 {
-			score += e_material[piece / 2]
-		} else {
-			score -= e_material[piece / 2]
-		}
-
-
+	for _, sq := range board.pawns {
+		piece := board.squares[sq]
 		if piece / 2 == 1 {
 			pawnfile := (sq & 7) + 1
-			pawnrank := sq >> 4
+			pawnrank := int(sq >> 4)
 
 			if (piece & 1) == 1 {
 				whiterear[pawnfile] = max(whiterear[pawnfile], pawnrank)
@@ -543,11 +563,12 @@ func eval(board *Board) int {
 	var whitepasser [10]int
 	var blackpasser [10]int
 
-	for sq, piece := range board.squares {
+	for _, sq := range board.pawns {
+		piece := board.squares[sq]
 		if piece / 2 == 1 {
 			npawns[piece & 1] += 1
-			pfile := (sq & 7) + 1
-			prank := sq >> 4
+			pfile := int((sq & 7) + 1)
+			prank := int(sq >> 4)
 
 			if piece & 1 == 1 {
 				if whiterear[pfile-1] == 0 && whiterear[pfile+1] == 0 {
@@ -595,9 +616,9 @@ func eval(board *Board) int {
 
 	//fmt.Println(board.mobilities)
 
-	leadingpawns := npawns[0]
+	leadingpawns := board.pieceCount[2]
 	if score >= 0 {
-		leadingpawns = npawns[1]
+		leadingpawns = board.pieceCount[3]
 	}
 	
 	score = (score * e_risk[leadingpawns]) / e_divider
@@ -826,11 +847,11 @@ func printpv() string {
 	return strings.TrimSpace(pvstr)
 }
 
-func parseuci(line string) {
+func parseuci(line string) bool {
 	args := strings.Fields(line)
 
 	if len(args) == 0 {
-		return
+		return false
 	}
 
 	switch string(args[0]) {
@@ -896,11 +917,27 @@ func parseuci(line string) {
 
 
 	case "quit":
-		return
+		return true
 	}
+	return false
 }
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+
 func main() {
+	flag.Parse()
+    if *cpuprofile != "" {
+        f, err := os.Create(*cpuprofile)
+		if err != nil {
+            fmt.Println(err)//log.Fatal("could not create CPU profile: ", err)
+        }
+        defer f.Close() // error handling omitted for example
+        if err := pprof.StartCPUProfile(f); err != nil {
+            fmt.Println(err) //log.Fatal("could not start CPU profile: ", err)
+        }
+        defer pprof.StopCPUProfile()
+    }
+
 	fmt.Println("info string Started")
 	for i := range 15 {
 		for j := range 128 {
@@ -920,7 +957,9 @@ func main() {
 	for {
 		line, _ := reader.ReadString('\n')
 		line = strings.Replace(line, "startpos", "fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 1)
-		parseuci(line)
+		if parseuci(line) {
+			break
+		}
 	}
 }
 
