@@ -20,6 +20,9 @@ outcomescore = {
     "1-0":1,
     "0-1":-1,
     "1/2-1/2":0,
+    "[1.0]":1,
+    "[0.0]":-1,
+    "[0.5]":0,
 }
 
 sign = [-1,1]
@@ -67,12 +70,13 @@ patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E
 
 
 for line in tqdm(lines):
-    if len(outputs) > 1_000_000:
+    if len(outputs) > 2_000_000:
         break
 
     packed = line.split("c9")
-    fen = packed[0].strip()
-    outcome = outcomescore[packed[1].strip().replace(";", "").replace("\"", "")]
+
+    fen = line[:line.rfind(" ")].strip()
+    outcome = outcomescore[line[line.rfind(" "):].strip()]
 
     turn = fen.split(" ")[1].lower().strip() == "w"
     virtualboard = [
@@ -294,9 +298,11 @@ for line in tqdm(lines):
         mobtable[0,:,4:8] = np.flip(mobtable[0,:,4:8], 2)
         mobtable[1,:,0:4] = np.flip(mobtable[1,:,0:4], 2)
 
+    captures[:,:,6] = 0 
+
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], shield[1] - shield[0], pushers, isolated[1]-isolated[0], backwards[1]-backwards[0], passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), sidetomove], 
+        [material[1, :] - material[0, :], shield[1] - shield[0], pushers, isolated[1]-isolated[0], isolatedOpen[1]-isolatedOpen[0], backwards[1]-backwards[0], backwardsOpen[1]-backwardsOpen[0], passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), sidetomove], 
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
         [npawns[0]],
