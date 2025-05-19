@@ -298,11 +298,11 @@ for line in tqdm(lines):
         mobtable[0,:,4:8] = np.flip(mobtable[0,:,4:8], 2)
         mobtable[1,:,0:4] = np.flip(mobtable[1,:,0:4], 2)
 
-    captures[:,:,6] = 0 
+    #captures[:,:,6] = 0 
 
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], shield[1] - shield[0], pushers, isolated[1]-isolated[0], isolatedOpen[1]-isolatedOpen[0], backwards[1]-backwards[0], backwardsOpen[1]-backwardsOpen[0], passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), sidetomove], 
+        [material[1, :] - material[0, :], pushers, shield[1]-shield[0], sidetomove, passerDistance[1] - passerDistance[0], isolated[1]-isolated[0], backwards[1]-backwards[0], isolatedOpen[1]-isolatedOpen[0],  backwardsOpen[1]-backwardsOpen[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(),], 
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
         [npawns[0]],
@@ -464,24 +464,19 @@ for epoch in range(epochs):  # Adjust the number of epochs
     model.printfinal(epoch == epochs - 1)
 
 
-# no tapering
-# material + pawns + tempo + mobilities = 0.2706
-# + isolated + backwards + passers = 0.2647
-# + shield * queens = 0.2641
-# isolated and passer inversion = .2639
-# + backwards and race = 0.259
+# tapered and pawn scaled 2M
+# material .3456
+# + weighted mobility .3207
+# + passerRank 0.3164
+# + shield .3166
+# + tempo  .3139
+# + passerKingFileDistance .3115
+# + isolated .3105
+# + backwards .3092
+# + open distinction .3089
+# + restricted .3066
+# + attacks (without king) .3037
+# + attacks (with checks) .3042
 
-
-# lots of tapering
-# material + pawns + tempo = 0.2671
-# + mobilities = 0.2608
-# + shield * queens = 0.2539
-
-# current 0.2533
-# current 0.2497
-# current 0.2491 / 0.2487
-# current 0.2468
-# 0.2450
-# 0.2398
-# 0.2389
-# 0.2383
+# can we combine candidate passers and unpushable pawns
+# i.e. a pawn can be weak but not necessarily backwards or overextended
