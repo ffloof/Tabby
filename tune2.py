@@ -298,7 +298,7 @@ for line in tqdm(lines):
         mobtable[0,:,4:8] = np.flip(mobtable[0,:,4:8], 2)
         mobtable[1,:,0:4] = np.flip(mobtable[1,:,0:4], 2)
 
-    #captures[:,:,6] = 0 
+    captures[:,:,6] = 0 
 
     terms = [
         [material[0, :] + material[1, :]],
@@ -477,6 +477,7 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # + restricted .3066
 # + attacks (without king) .3037
 # + attacks (with checks) .3042
+# - (with checks) - shield .3055
 
 # can we combine candidate passers and unpushable pawns
 # i.e. a pawn can be weak but not necessarily backwards or overextended
