@@ -1,51 +1,76 @@
 import requests
 import json
 import time
-
-print()
-
-x1 = 110
-y1 = 160
-z1 = -70
-
-size_x = 250
-size_y = -250
-size_z = 0
-
-
-
-
-
-#290
-#220
+import numpy as np
 
 def movearm(x,y,z=10,spd=0.25,t=3.14):
 	requests.get("http://192.168.4.1/js?json=" + json.dumps({"T":104,"x":x,"y":y,"z":z,"t":t,"spd":spd}))
 
+#      X+
+#      
+#  B-------D
+#  |       |
+#  |       |  Y-
+#  |       |
+#  A-------C
+#     ARM
+#      |
+#     Y=0
+A = (90,  150, -40)
+B = (420, 160, -20)
+C = (60, -165, -40)
+D = (415,-160, -20)
 
-def movesq(sq, z=10,spd=0.25,t=3.14 ,shiftx=0, shifty=0):
-	dy = (ord(sq[0]) - ord('a'))
-	dx = (ord(sq[1]) - ord('1'))
+def movesq(sq, heightOffset=0, spd=0.25,t=3.14, shift=0):
+	dy = (ord(sq[0]) - ord('a'))/7
+	dx = (ord(sq[1]) - ord('1'))/7
+	dy = 1-(dy*2)
+	print(dx, dy)
 
-	sqx = x1 + (size_x * (dx / 7)) - (size_x / 16) + shiftx
-	sqy = y1 + (size_y * (dy / 7)) - (size_y / 16) + shifty
-	movearm(sqx, sqy, z=z, spd=spd, t=t)
+	if dy >= 0:
+		x = (B[0]*dx) + (A[0]*(1-dx))
+		y = (B[1]*dx) + (A[1]*(1-dx))
+		z = (B[2]*dx) + (A[2]*(1-dx))
+		y *= dy
+	else:
+		x = (D[0]*dx) + (C[0]*(1-dx))
+		y = (D[1]*dx) + (C[1]*(1-dx))
+		z = (D[2]*dx) + (C[2]*(1-dx))
+		y *= abs(dy)
 
-	mag = ((sqx ** 2) + (sqy ** 2)) ** 0.5
-	print("deflection", sqx/mag, sqy/mag)
+	if dx == 0:
+		theta = np.arctan((0.5*dy)/0.00001) + (np.pi / 2)
+	else:
+		theta = np.arctan((0.5*dy)/dx) + (np.pi / 2)
+
+	x += shift*np.cos(theta)
+	y += shift*np.sin(theta)
 
 
+	movearm(x, y, z=z+heightOffset, spd=spd, t=t)
 
 def calibrate():
-	movearm(x1,y1,z=z1)
+	movearm(A[0],A[1],A[2]) # A
 	input()
-	#movearm(x1+size_x,y1,z=z1+size_z)
-	#time.sleep(3)
-	movearm(x1+size_x,y1+size_y,z=z1+size_z)
+	movearm(B[0],B[1], B[2]) #D
 	input()
-	movearm(x1,y1+size_y,z=z1+size_z)
+	movearm(C[0],C[1],C[2]) # C
 	input()
+	movearm(D[0],D[1],D[2]) # B
 
+
+def calibrate2():
+	movesq("a8")
+	input()
+	movesq("a8", shift=50)
+	input()
+	movesq("h1")
+	input()
+	movesq("h1", shift=50)
+	input()
+	movesq("e4")
+	input()
+	movesq("e4", shift=50)
 
 def movemove(movestr):
 	start = movestr[0:2]  
@@ -68,8 +93,10 @@ def movemove(movestr):
 
 #movemove("a1h8")
 
-movesq("a1", z=100)
-calibrate()
+#calibrate()
+calibrate2()
+
+
 
 #movemove("a2a4")
 #movemove("e2e4")
