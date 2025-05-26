@@ -24,11 +24,11 @@ const FILE = "abcdefgh"
 var ADVANCES = [...]int{S,N}
 
 func T(a,b int) int{
-	return (a + (b * 0x10000))
+	return (a + (b * 0x100000000))
 }
 
 func decode(eval, phase int) int {
-	eg := (eval + 0x8000) >> 16;
+	eg := (eval + 0x80000000) >> 32;
 	mg := int(int16(eval))
 	return ((mg * phase) + (eg * (24-phase)))/24
 }
@@ -103,8 +103,8 @@ var e_table = [2][128]int {
   425,  703,  589,  369,  616,  366,  887,  591,     0,0,0,0, 0,0,0,0,
   279,  603,  758,  358,  492,  759,  474,  252,     0,0,0,0, 0,0,0,0,
   324,  538,  360,  590,  604,  368,  514,  457,     0,0,0,0, 0,0,0,0,
-   92,  238,  430,  674,  586,  387,  338,  160,     0,0,0,0, 0,0,0,0,
-   33,  303,  430,  403,  591,  360,  864,  212,     0,0,0,0, 0,0,0,0,
+   92,  238,  430,  674,  591,  387,  338,  160,     0,0,0,0, 0,0,0,0,
+   33,  303,  430,  403,  586,  360,  864,  212,     0,0,0,0, 0,0,0,0,
     2,  221,  313,  382,  373,  791,  677,  134,     0,0,0,0, 0,0,0,0,
   523,  214,  285,  191,  298,  672,  024,  -38,     0,0,0,0, 0,0,0,0,},
 }
@@ -122,7 +122,6 @@ const MAX_HISTORY = 8192
 type Board struct {
 	squares    [128]int8
 	pieceCount [16]int8
-	pawns      [16]int8
 	kings      [2]int
 	enpassant  int
 	zobrist    uint64
@@ -228,7 +227,19 @@ func (board *Board) IsHomeRow(i int) bool {
 	return i <= H8+S
 }
 
-func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
+func (board *Board) PawnDefends(sq int, attacker int8) bool {
+	for _, dir := range []int{W - ADVANCES[attacker], E - ADVANCES[attacker]} {
+		if ((sq + dir) & 0x88) != 0 {
+			continue
+		}
+		if (board.squares[sq + dir] == 2 + attacker) {
+			return true
+		}
+	}
+	return false
+}
+
+func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	attention := &e_table[board.sidetomove]
 
 	moves := []Move{}
@@ -283,17 +294,8 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 				for end := i + dir; (end & 0x88) == 0; end += dir {
 					victim := board.squares[end]
 
-					// TODO: we are doing the same check here as we do in board.attacked we should create a seperate function for pawnAttacked
-					if (end + advance + W) & 0x88 == 0 {
-						if board.squares[end + advance + W] == (3-board.sidetomove) {
-							mobility += decode(e_restricted[piecetype], board.phase)
-						}
-					}
-
-					if (end + advance + E) & 0x88 == 0 {
-						if board.squares[end + advance + E] == (3-board.sidetomove) {
-							mobility += decode(e_restricted[piecetype], board.phase)
-						}
+					if board.PawnDefends(end, 1-board.sidetomove) {
+						mobility += decode(e_restricted[piecetype], board.phase)
 					}
 					
 					if victim != 0 {
@@ -339,31 +341,125 @@ func (board *Board) GenerateLegalMoves(capturesOnly bool) []Move {
 	}
 
 	board.mobilities[board.sidetomove] = mobility
-	board.pawns = pawnIndexes
 
-	return moves
+	score := 0
+
+	for piecetype := range 7 {
+		score += e_material[piecetype] * int((board.pieceCount[piecetype * 2 + 1] - board.pieceCount[piecetype * 2]))
+	}
+
+
+	whiterear := [10]int{0,0,0,0,0,0,0,0,0,0,}
+	blackrear := [10]int{7,7,7,7,7,7,7,7,7,7,}
+
+	for _, sq := range pawnIndexes {
+		piece := board.squares[sq]
+		if piece / 2 == 1 {
+			pawnfile := (sq & 7) + 1
+			pawnrank := int(sq >> 4)
+
+			if (piece & 1) == 1 {
+				whiterear[pawnfile] = max(whiterear[pawnfile], pawnrank)
+			} else {
+				blackrear[pawnfile] = min(blackrear[pawnfile], pawnrank)
+			}
+		}
+	}
+
+	wkingfile := (board.kings[1]&7) + 1
+	bkingfile := (board.kings[0]&7) + 1
+	//wkingrank := board.kings[1] >> 4
+	//bkingrank := board.kings[0] >> 4
+
+	for i := -1; i <= 1; i++ {
+		if whiterear[wkingfile + i] != 0 {
+			score += e_shield[wkingfile + i]
+		}
+		if blackrear[bkingfile + i] != 7 {
+			score -= e_shield[bkingfile + i]
+		}
+	}
+
+
+	npawns := [2]int{0,0}
+	
+	var whitepasser [10]int
+	var blackpasser [10]int
+
+	for _, sq := range pawnIndexes {
+		piece := board.squares[sq]
+		if piece / 2 == 1 {
+			npawns[piece & 1] += 1
+			pfile := int((sq & 7) + 1)
+			prank := int(sq >> 4)
+
+			if piece & 1 == 1 {
+				if whiterear[pfile-1] == 0 && whiterear[pfile+1] == 0 {
+					score += e_isolated
+				}
+				if whiterear[pfile - 1] < prank && whiterear[pfile + 1] < prank {
+					score += e_backwards
+				}
+				if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
+					whitepasser[pfile] = max(whitepasser[pfile], 7 - prank)
+				}
+			} else {
+				if blackrear[pfile-1] == 7 && blackrear[pfile+1] == 7 {
+					score -= e_isolated
+				}
+				if blackrear[pfile - 1] > prank && blackrear[pfile + 1] > prank {
+					score -= e_backwards
+				}
+				if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
+					blackpasser[pfile] = max(blackpasser[pfile], prank)
+				}
+			}
+		}
+	}
+
+	for file := range 10 {
+		if whitepasser[file] != 0 {
+			score += e_passerRank[whitepasser[file]]
+			score += e_passerFile[max(file - bkingfile, bkingfile - file)]
+		}
+		if blackpasser[file] != 0 {
+			score -= e_passerRank[blackpasser[file]]
+			score -= e_passerRank[max(file - wkingfile, wkingfile - file)]
+		}
+	}
+
+	if board.sidetomove == 1 {
+		score += e_tempo
+	} else {
+		score -= e_tempo
+	}
+
+	score = decode(score, board.phase) 
+	score += board.mobilities[1] - board.mobilities[0]
+
+	leadingpawns := board.pieceCount[2]
+	if score >= 0 {
+		leadingpawns = board.pieceCount[3]
+	}
+	
+	score = (score * e_risk[leadingpawns]) / e_divider
+
+	if board.sidetomove == 0 {
+		return moves, -score
+	}
+	return moves, score
 }
 
 func (board *Board) attacked(start int, attacker int8) bool {
-	advance := ADVANCES[attacker]
-
-	for _, dir := range []int{W - advance, E - advance} {
-		if ((start + dir) & 0x88) != 0 {
-			continue
-		}
-		if (board.squares[start + dir] == 2 + attacker) {
-			return true
-		}
+	if board.PawnDefends(start, attacker) {
+		return true
 	}
 
 	for i, dir := range []int{N,S,E,W,N+W,N+E,S+E,S+W} {
 		for sq := start + dir; (0x88 & sq) == 0; sq += dir {
 			piece := board.squares[sq]
 			if piece != 0 {
-				if (i < 4 && (piece == 10 + attacker  || piece == 8 + attacker)) {
-					return true
-				}
-				if (i >= 4 && (piece == 10 + attacker || piece == 6 + attacker)) {
+				if (i < 4 && (piece == 10 + attacker  || piece == 8 + attacker)) || (i >= 4 && (piece == 10 + attacker || piece == 6 + attacker)) {
 					return true
 				}
 				break
@@ -377,10 +473,7 @@ func (board *Board) attacked(start int, attacker int8) bool {
 		}
 		piece := board.squares[start + dir]
 
-		if (i >= 8 && (piece == 4 + attacker)) {
-			return true
-		}
-		if (i < 8 && (piece == 12 + attacker)) {
+		if (i >= 8 && (piece == 4 + attacker)) || (i < 8 && (piece == 12 + attacker)) {
 			return true
 		}
 	}
@@ -439,8 +532,6 @@ func (board *Board) Apply(move Move) *Board {
 			}
 
 			// Invalidate castling
-			//fmt.Println(move.end)
-
 			if copyBoard.sidetomove == 1 {
 				copyBoard.Edit(A1 + CASTLE, 0)
 				copyBoard.Edit(H1 + CASTLE, 0)
@@ -491,7 +582,7 @@ func (board *Board) Hash() uint64 {
 func perft(perftboard *Board, depth int, maxdepth int) int {
     if (depth == 0) { return 1 }
 
-    movelist := perftboard.GenerateLegalMoves(false)
+    movelist, _ := perftboard.Generate(false)
     nodes := 0
 
     for i, move := range movelist {
@@ -517,119 +608,6 @@ func findAfter(word string, strlist []string) []string {
 	return []string{}
 }
 
-func eval(board *Board) int {
-	score := 0
-
-	for piecetype := range 7 {
-		score += e_material[piecetype] * int((board.pieceCount[piecetype * 2 + 1] - board.pieceCount[piecetype * 2]))
-	}
-
-	//fmt.Println(board.pawns)
-
-	whiterear := [10]int{0,0,0,0,0,0,0,0,0,0,}
-	blackrear := [10]int{7,7,7,7,7,7,7,7,7,7,}
-
-	for _, sq := range board.pawns {
-		piece := board.squares[sq]
-		if piece / 2 == 1 {
-			pawnfile := (sq & 7) + 1
-			pawnrank := int(sq >> 4)
-
-			if (piece & 1) == 1 {
-				whiterear[pawnfile] = max(whiterear[pawnfile], pawnrank)
-			} else {
-				blackrear[pawnfile] = min(blackrear[pawnfile], pawnrank)
-			}
-		}
-	}
-
-	wkingfile := (board.kings[1]&7) + 1
-	bkingfile := (board.kings[0]&7) + 1
-	//wkingrank := board.kings[1] >> 4
-	//bkingrank := board.kings[0] >> 4
-
-	for i := -1; i <= 1; i++ {
-		if whiterear[wkingfile + i] != 0 {
-			score += e_shield[wkingfile + i]
-		}
-		if blackrear[bkingfile + i] != 7 {
-			score -= e_shield[bkingfile + i]
-		}
-	}
-
-
-	npawns := [2]int{0,0}
-	
-	var whitepasser [10]int
-	var blackpasser [10]int
-
-	for _, sq := range board.pawns {
-		piece := board.squares[sq]
-		if piece / 2 == 1 {
-			npawns[piece & 1] += 1
-			pfile := int((sq & 7) + 1)
-			prank := int(sq >> 4)
-
-			if piece & 1 == 1 {
-				if whiterear[pfile-1] == 0 && whiterear[pfile+1] == 0 {
-					score += e_isolated
-				}
-				if whiterear[pfile - 1] < prank && whiterear[pfile + 1] < prank {
-					score += e_backwards
-				}
-				if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
-					whitepasser[pfile] = max(whitepasser[pfile], 7 - prank)
-				}
-			} else {
-				if blackrear[pfile-1] == 7 && blackrear[pfile+1] == 7 {
-					score -= e_isolated
-				}
-				if blackrear[pfile - 1] > prank && blackrear[pfile + 1] > prank {
-					score -= e_backwards
-				}
-				if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
-					blackpasser[pfile] = max(blackpasser[pfile], prank)
-				}
-			}
-		}
-	}
-
-	for file := range 10 {
-		if whitepasser[file] != 0 {
-			score += e_passerRank[whitepasser[file]]
-			score += e_passerFile[max(file - bkingfile, bkingfile - file)]
-		}
-		if blackpasser[file] != 0 {
-			score -= e_passerRank[blackpasser[file]]
-			score -= e_passerRank[max(file - wkingfile, wkingfile - file)]
-		}
-	}
-
-	if board.sidetomove == 1 {
-		score += e_tempo
-	} else {
-		score -= e_tempo
-	}
-
-	score = decode(score, board.phase) 
-	score += board.mobilities[1] - board.mobilities[0]
-
-	//fmt.Println(board.mobilities)
-
-	leadingpawns := board.pieceCount[2]
-	if score >= 0 {
-		leadingpawns = board.pieceCount[3]
-	}
-	
-	score = (score * e_risk[leadingpawns]) / e_divider
-
-	if board.sidetomove == 0 {
-		return -score
-	}
-	return score
-}
-
-
 type entry struct {
 	key uint64
 	move Move
@@ -648,9 +626,8 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	nodes += 1
 	bestScore := -9999
 
-	moves := board.GenerateLegalMoves(depth <= 0)
+	moves, staticEval := board.Generate(depth <= 0)
 	// standpat
-	staticEval := eval(board)
 	if (depth <= 0) {
 		bestScore = staticEval
 		if bestScore > alpha {
@@ -905,12 +882,12 @@ func parseuci(line string) bool {
 		fmt.Println("bestmove", table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard))
 	
 	case "eval":
-		uciBoard.GenerateLegalMoves(true)
 		uciBoard.sidetomove = 1 - uciBoard.sidetomove
-		uciBoard.GenerateLegalMoves(true)
+		uciBoard.Generate(true)
 		uciBoard.sidetomove = 1 - uciBoard.sidetomove
+		_, e := uciBoard.Generate(true)
 
-		fmt.Println("eval", eval(&uciBoard))
+		fmt.Println("eval", e)
 
 	case "null":
 		uciBoard = *uciBoard.Apply(nullmove)

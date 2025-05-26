@@ -129,7 +129,7 @@ for line in tqdm(lines):
 
     shield = np.zeros((2,10), dtype=np.int8)
 
-    mobtable = np.zeros((2,7,64), dtype=np.int8)
+    mobtable = np.zeros((2,11,64), dtype=np.int8)
 
     kings = [-1, -1]
     rearpawns = [
@@ -169,7 +169,6 @@ for line in tqdm(lines):
     wkingrank = kings[1] // 10
     bkingfile = kings[0] % 10
     bkingrank = kings[0] // 10
-    
 
     for sq in range(len(virtualboard)):
         piece = virtualboard[sq]
@@ -190,13 +189,17 @@ for line in tqdm(lines):
                 if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
                     if rearpawns[1][pfile] == 0:
                         isolatedOpen[0] += 1
+                        mobtable[0][9][inverse[sq]] = 1
                     else:
                         isolatedClosed[0] += 1
+                        mobtable[0][10][inverse[sq]] = 1
                 elif rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
                     if rearpawns[1][pfile] == 0:
                         backwardsOpen[0] += 1
+                        mobtable[0][7][inverse[sq]] = 1
                     else:
                         backwardsClosed[0] += 1
+                        mobtable[0][8][inverse[sq]] = 1
 
             else:
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
@@ -206,14 +209,17 @@ for line in tqdm(lines):
                 if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
                     if rearpawns[0][pfile] == 11:
                         isolatedOpen[1] += 1
+                        mobtable[1][9][inverse[sq]] = 1
                     else:
                         isolatedClosed[1] += 1
+                        mobtable[1][10][inverse[sq]] = 1
                 elif rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
                     if rearpawns[0][pfile] == 11:
                         backwardsOpen[1] += 1
+                        mobtable[1][7][inverse[sq]] = 1
                     else:
                         backwardsClosed[1] += 1
-
+                        mobtable[1][8][inverse[sq]] = 1
         
         if piece == 2:
             pattern = [S+W, S+E]
@@ -300,9 +306,17 @@ for line in tqdm(lines):
 
     captures[:,:,6] = 0 
 
+    bishoppair = np.zeros(1, dtype=np.int8)
+
+    if material[0,3] == 2:
+        bishoppair -= 1
+    if material[1,3] == 2:
+        bishoppair += 1
+
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], pushers, shield[1]-shield[0], sidetomove, passerDistance[1] - passerDistance[0], isolated[1]-isolated[0], backwards[1]-backwards[0], isolatedOpen[1]-isolatedOpen[0],  backwardsOpen[1]-backwardsOpen[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(),], 
+        # isolated[1]-isolated[0], backwards[1]-backwards[0],
+        [material[1, :] - material[0, :], pushers, shield[1]-shield[0], sidetomove, passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), bishoppair], 
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
         [npawns[0]],
@@ -322,12 +336,13 @@ for line in tqdm(lines):
         #print(starts, sizes)
 
         print("\nfen " + fen)
+        print(bishoppair)
         #for a in range(2):
         #    plt.imshow(mobtable[a][1].reshape((8,8)))
         #    plt.show()
         #    ...
 
-        #plt.imshow((backwards[0]).reshape((8,8)))
+        #plt.imshow((mobtable[0][8]).reshape((8,8)))
         #plt.show()
 
         #sys.exit()
@@ -373,9 +388,14 @@ class HCE(torch.nn.Module):
         score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
-        finalscore = ((score + netmobility) * phase) + ((score2 + netmobility2) * (1-phase))
-        scaleb = torch.clamp(-(finalscore), min=0) * torch.matmul(x[:,starts[4]:starts[5]], self.risk)
+        midscore = ((score + netmobility) * phase)
+        endscore = ((score2 + netmobility2) * (1-phase))
+
+
+
+        finalscore = midscore + endscore
         scalew = torch.clamp(finalscore, min=0) * torch.matmul(x[:,starts[5]:starts[6]], self.risk)
+        scaleb = torch.clamp(-(finalscore), min=0) * torch.matmul(x[:,starts[4]:starts[5]], self.risk)
 
         return torch.tanh(finalscore + (scalew - scaleb)) 
 
@@ -475,9 +495,8 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # + backwards .3092
 # + open distinction .3089
 # + restricted .3066
-# + attacks (without king) .3037
-# + attacks (with checks) .3042
-# - (with checks) - shield .3055
+# + attacks .3042
+# + bishoppair .3035
 
 # can we combine candidate passers and unpushable pawns
 # i.e. a pawn can be weak but not necessarily backwards or overextended
