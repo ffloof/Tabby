@@ -673,6 +673,8 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 				if nmScore >= beta {
 					return beta
 				}
+			} else {
+				fmt.Println("SCREAM") // TODO: remove when we have ensured this doesnt happen
 			}
 		}
 	}
@@ -777,6 +779,13 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		if !pv && board.squares[nextMove.end] == 0 {
 			quietsLeft -= 1
 			if quietsLeft == 0 {
+				break
+			}
+
+			// TODO: see if we can use different conditions for table quiet move vs regular quiet move
+			// i.e. even if a table quiet didnt work out its still possible a capture might, whereas once captures are searched its much less likely we get large score improvements
+			// could even connect this with history heuristic
+			if depth <= 8 && (staticEval + (depth * 128) < alpha) {
 				break
 			}
 		}
