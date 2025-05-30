@@ -35,60 +35,74 @@ func decode(eval, phase int) int {
 
 /*
 ===
-19 0.24038275860488212
+19 0.3027535860054364
 
 Linear terms
-{T(0,0), T(43,80), T(285,264), T(328,293), T(383,544), T(825,1019), T(0,0), }
-{T(0,0), T(7,10), T(42,10), T(4,20), T(16,8), T(14,9), T(13,12), T(20,6), T(29,-3), T(0,0), }
-{T(0,0), T(10,-25), T(1,-18), T(-3,6), T(5,40), T(-5,117), T(-20,202), T(0,0) }
-{T(-11,-9), }
-{T(-5,1), }
-{T(0,0), T(14,6), T(3,16), T(-12,33), T(-17,49), T(-31,60), T(-13,54), T(-67,73), }
-{T(0,0), T(0,0), T(-8,-6), T(-6,-1), T(-10,2), T(-6,2), T(-23,14), }
-{T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(37,2), T(64,37), T(76,-9), T(46,6), T(122,24), T(0,0), T(-7,10), T(0,0), T(21,38), T(33,35), T(29,28), T(107,-2), T(0,0), T(-2,9), T(11,33), T(0,0), T(23,24), T(39,36), T(48,73), T(0,0), T(-15,13), T(-1,16), T(14,18), T(0,0), T(49,-19), T(173,-12), T(0,0), T(0,5), T(-6,9), T(-4,37), T(-4,0), T(0,0), T(55,101), T(0,0), T(34,28), T(10,22), T(-16,30), T(-118,44), T(-354,-79), T(0,0), }
-{T(30,33), }
+{T(0,0), T(25,73), T(161,292), T(185,298), T(225,541), T(505,1002), T(0,0), }
+{T(0,0), T(-9,-18), T(-17,-13), T(-16,3), T(-12,28), T(4,93), T(10,145), T(0,0), }
+{T(0,0), T(21,3), T(32,4), T(9,10), T(3,8), T(11,8), T(12,11), T(29,6), T(32,-7), T(0,0), }
+{T(21,20), }
+{T(0,0), T(25,3), T(7,10), T(-3,26), T(-2,42), T(-10,61), T(-3,49), T(-5,46), }
+{T(0,0), T(0,0), T(-8,-4), T(-4,-1), T(-7,-5), T(-5,1), T(-9,1), }
+
+{
+
+T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), 
+T(0,0), T(0,0), T(44,9), T(41,30), T(56,11), T(58,-21), T(0,0), 
+T(0,0), T(-8,5), T(0,0), T(16,19), T(44,15), T(32,-12), T(0,0), 
+T(0,0), T(2,7), T(7,25), T(0,0), T(28,22), T(28,102), T(0,0), 
+T(0,0), T(-10,10), T(1,16), T(7,11), T(0,0), T(51,19), T(0,0), 
+T(0,0), T(1,5), T(2,3), T(-1,19), T(4,4), T(0,0), T(0,0), 
+T(0,0), T(37,20), T(-12,27), T(12,25), T(-41,29), T(0,0), T(0,0), }
+
+{T(8,45), }
 
 Mobility weights
-{T(0,0), T(58,3), T(21,15), T(11,7), T(18,5), T(4,17), T(-12,14), }
+{T(0,0), T(-36,-2), T(-20,-13), T(-12,-10), T(-14,-4), T(-5,-12), T(30,-18), 
+T(-24,-39), T(-12,0), T(-37,-41), T(-16,-22), }
 
 Risk weights
-[0.334 0.595 0.82  0.935 1.046 1.042 1.172 1.078 1.   ]
+[0.334 0.629 0.723 1.002 1.118 1.236 1.276 1.145 1.   ]
 
 Board Weights
-[[-0.064 -0.297  0.049  0.207  0.401  0.386  0.787  1.231]
- [ 0.425  0.703  0.589  0.369  0.616  0.366  0.887  0.591]
- [ 0.279  0.603  0.758  0.358  0.492  0.759  0.474  0.252]
- [ 0.324  0.538  0.36   0.59   0.604  0.368  0.514  0.457]
- [ 0.092  0.238  0.43   0.674  0.586  0.387  0.338  0.16 ]
- [ 0.033  0.303  0.43   0.403  0.591  0.36   0.864  0.212]
- [ 0.002  0.221  0.313  0.382  0.373  0.791  0.677  0.134]
- [ 0.523  0.214  0.285  0.191  0.298  0.672  0.024 -0.038]]
+[[ 0.015  0.016 -0.204 -0.269 -0.269 -0.269 -0.813 -1.169]
+ [-0.453 -0.542 -0.519 -0.443 -0.475 -0.466 -0.996 -0.81 ]
+ [-0.5   -0.544 -0.696 -0.512 -0.576 -0.818 -0.641 -0.546]
+ [-0.379 -0.521 -0.441 -0.556 -0.657 -0.551 -0.525 -0.57 ]
+ [-0.212 -0.269 -0.41  -0.487 -0.586 -0.35  -0.308 -0.339]
+ [-0.032 -0.351 -0.253 -0.425 -0.437 -0.327 -0.466 -0.273]
+ [-0.011 -0.37  -0.303 -0.219 -0.251 -0.492 -0.468 -0.134]
+ [-0.168 -0.164 -0.146 -0.185 -0.202 -0.213 -0.218  0.052]]
 ===
 */
 
-var e_material = []int{T(0,0), T(43,80), T(285,264), T(328,293), T(383,544), T(825,1019), T(0,0), }
-var e_shield = []int{T(0,0), T(7,10), T(42,10), T(4,20), T(16,8), T(14,9), T(13,12), T(20,6), T(29,-3), T(0,0), }
-var e_passerRank = []int{T(0,0), T(10,-25), T(1,-18), T(-3,6), T(5,40), T(-5,117), T(-20,202), T(0,0), }
-var e_isolated int = T(-11,-9)
-var e_backwards int = T(-5,1)
-var e_passerFile = []int{T(0,0), T(14,6), T(3,16), T(-12,33), T(-17,49), T(-31,60), T(-13,54), T(-67,73), }
-var e_restricted = []int{T(0,0), T(0,0), T(-8,-6), T(-6,-1), T(-10,2), T(-6,2), T(-23,14), }
+
+
+var e_material = []int{T(0,0), T(25,73), T(161,292), T(185,298), T(225,541), T(505,1002), T(0,0), }
+var e_passerRank = []int{T(0,0), T(-9,-18), T(-17,-13), T(-16,3), T(-12,28), T(4,93), T(10,145), T(0,0), }
+var e_shield = []int{T(0,0), T(21,3), T(32,4), T(9,10), T(3,8), T(11,8), T(12,11), T(29,6), T(32,-7), T(0,0), }
+var e_tempo int = T(10,10) //T(21,20)
+var e_passerFile = []int{T(0,0), T(25,3), T(7,10), T(-3,26), T(-2,42), T(-10,61), T(-3,49), T(-5,46), }
+var e_restricted = []int{T(0,0), T(0,0), T(-8,-4), T(-4,-1), T(-7,-5), T(-5,1), T(-9,1), }
 
 var e_attacks = []int{
 	T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), 
-	T(0,0), T(0,0), T(37,2), T(64,37), T(76,-9), T(46,6), T(122,24), 
-	T(0,0), T(-7,10), T(0,0), T(21,38), T(33,35), T(29,28), T(107,-2), 
-	T(0,0), T(-2,9), T(11,33), T(0,0), T(23,24), T(39,36), T(48,73), 
-	T(0,0), T(-15,13), T(-1,16), T(14,18), T(0,0), T(49,-19), T(173,-12), 
-	T(0,0), T(0,5), T(-6,9), T(-4,37), T(-4,0), T(0,0), T(55,101), 
-	T(0,0), T(34,28), T(10,22), T(-16,30), T(-118,44), T(-354,-79), T(0,0), 
+	T(0,0), T(0,0), T(44,9), T(41,30), T(56,11), T(58,-21), T(0,0), 
+	T(0,0), T(-8,5), T(0,0), T(16,19), T(44,15), T(32,-12), T(0,0), 
+	T(0,0), T(2,7), T(7,25), T(0,0), T(28,22), T(28,102), T(0,0), 
+	T(0,0), T(-10,10), T(1,16), T(7,11), T(0,0), T(51,19), T(0,0), 
+	T(0,0), T(1,5), T(2,3), T(-1,19), T(4,4), T(0,0), T(0,0), 
+	T(0,0), T(37,20), T(-12,27), T(12,25), T(-41,29), T(0,0), T(0,0),
 }
 
-//var e_tempo int = T(30,33)
-var e_tempo int = T(10,10)
+var e_bishopPair int = T(8,45)
 
 // Note mobility only counts current square for pawns
-var e_mobility = []int{T(0,0), T(58,3), T(21,15), T(11,7), T(18,5), T(4,17), T(-12,14), }
+var e_mobility = []int{T(0,0), T(36,2), T(20,13), T(12,10), T(14,4), T(5,12), T(-30,18), }
+var e_phalanxOpen int = T(24,39)
+var e_phalanxClosed int = T(12,0)
+var e_chainOpen int = T(37,41)
+var e_chainClosed int = T(16,22)
 
 func flip(arr1, arr2 *[128]int, xor int){
 	for i := range(len(arr1)) {
@@ -96,18 +110,21 @@ func flip(arr1, arr2 *[128]int, xor int){
 	}
 }
 
-var e_risk = []int{ 334, 595, 820, 935, 1046, 1042, 1172, 1078, 1000 }
+var e_risk = []int{ 334, 629, 723, 1002, 1118, 1236, 1276, 1145, 1000 }
 var e_table = [2][128]int {
 	{},
-{ -64, -297,   49,  207,  401,  386,  787,  231,     0,0,0,0, 0,0,0,0,
-  425,  703,  589,  369,  616,  366,  887,  591,     0,0,0,0, 0,0,0,0,
-  279,  603,  758,  358,  492,  759,  474,  252,     0,0,0,0, 0,0,0,0,
-  324,  538,  360,  590,  604,  368,  514,  457,     0,0,0,0, 0,0,0,0,
-   92,  238,  430,  674,  591,  387,  338,  160,     0,0,0,0, 0,0,0,0,
-   33,  303,  430,  403,  586,  360,  864,  212,     0,0,0,0, 0,0,0,0,
-    2,  221,  313,  382,  373,  791,  677,  134,     0,0,0,0, 0,0,0,0,
-  523,  214,  285,  191,  298,  672,  024,  -38,     0,0,0,0, 0,0,0,0,},
+{-15, -16, 204, 269, 269, 269, 813, 1169, 0,0,0,0, 0,0,0,0,
+ 453, 542, 519, 443, 475, 466, 996, 810,  0,0,0,0, 0,0,0,0,
+ 500, 544, 696, 512, 576, 818, 641, 546,  0,0,0,0, 0,0,0,0,
+ 379, 521, 441, 556, 657, 551, 525, 570,  0,0,0,0, 0,0,0,0,
+ 212, 269, 410, 487, 586, 350, 308, 339,  0,0,0,0, 0,0,0,0,
+  32, 351, 253, 425, 437, 327, 466, 273,  0,0,0,0, 0,0,0,0,
+  11, 370, 303, 219, 251, 492, 468, 134,  0,0,0,0, 0,0,0,0,
+ 168, 164, 146, 185, 202, 213, 218, -52,  0,0,0,0, 0,0,0,0,},
 }
+
+
+
 
 const e_divider = 1000
 
@@ -340,7 +357,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		}
 	}
 
-	board.mobilities[board.sidetomove] = mobility
 
 	score := 0
 
@@ -365,6 +381,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			}
 		}
 	}
+
 
 	wkingfile := (board.kings[1]&7) + 1
 	bkingfile := (board.kings[0]&7) + 1
@@ -393,27 +410,41 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			pfile := int((sq & 7) + 1)
 			prank := int(sq >> 4)
 
+			semiopen := false
+			
 			if piece & 1 == 1 {
-				if whiterear[pfile-1] == 0 && whiterear[pfile+1] == 0 {
-					score += e_isolated
-				}
-				if whiterear[pfile - 1] < prank && whiterear[pfile + 1] < prank {
-					score += e_backwards
-				}
+				semiopen = (blackrear[pfile] == 7)
 				if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
 					whitepasser[pfile] = max(whitepasser[pfile], 7 - prank)
 				}
 			} else {
-				if blackrear[pfile-1] == 7 && blackrear[pfile+1] == 7 {
-					score -= e_isolated
-				}
-				if blackrear[pfile - 1] > prank && blackrear[pfile + 1] > prank {
-					score -= e_backwards
-				}
+				semiopen = (whiterear[pfile] == 0)
 				if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
 					blackpasser[pfile] = max(blackpasser[pfile], prank)
 				}
 			}
+
+			if piece & 1 == board.sidetomove {
+				
+				if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
+					if semiopen {
+						mobility += (decode(e_phalanxOpen, board.phase) * attention[sq]) / e_divider 
+					} else {
+						mobility += (decode(e_phalanxClosed, board.phase) * attention[sq]) / e_divider
+					}
+				}
+
+				if board.PawnDefends(int(sq), board.sidetomove) {
+					if semiopen {
+						mobility += (decode(e_chainOpen, board.phase) * attention[sq]) / e_divider
+					} else {
+						mobility += (decode(e_chainClosed, board.phase) * attention[sq]) / e_divider 
+					}
+				}
+			}
+
+
+
 		}
 	}
 
@@ -428,6 +459,14 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		}
 	}
 
+	if board.pieceCount[6] == 2 {
+		score -= e_bishopPair
+	}
+
+	if board.pieceCount[7] == 2 {
+		score += e_bishopPair
+	}
+
 	if board.sidetomove == 1 {
 		score += e_tempo
 	} else {
@@ -435,6 +474,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	}
 
 	score = decode(score, board.phase) 
+	board.mobilities[board.sidetomove] = mobility
 	score += board.mobilities[1] - board.mobilities[0]
 
 	leadingpawns := board.pieceCount[2]
@@ -782,12 +822,13 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 				break
 			}
 
+			// Futility pruning FP
 			// TODO: see if we can use different conditions for table quiet move vs regular quiet move
 			// i.e. even if a table quiet didnt work out its still possible a capture might, whereas once captures are searched its much less likely we get large score improvements
 			// could even connect this with history heuristic
 			if depth <= 8 && (staticEval + (depth * 128) < alpha) {
 				break
-			}
+			} 
 		}
 	}
 
@@ -979,4 +1020,9 @@ func main() {
 // + NMP        ~ 60 elo  56/36/32
 // + LMR         ~ 50 elo  170/100/116
 // + fixed tt    ~ 100 elo 40/23/18
+// + futility pruning ~ 50 elo 248/267/160
+// + NMP margin reduction ~ 0 elo 488/690/483
+// + new eval 
+
+
 // TODO: squeeze more elo by optimizing pruning/reductions
