@@ -116,16 +116,13 @@ for line in tqdm(lines):
 
     sidetomove = np.zeros(1, dtype=np.int8)
 
-    backwardsClosed = np.zeros((2,1), dtype=np.int8)
-    backwardsOpen = np.zeros((2,1), dtype=np.int8)
+
+
     passerDistance = np.zeros((2,8), dtype=np.int8)
     passerRank = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [11,11,11,11,11,11,11,11,11,11],
     ], dtype=np.int8)
-
-    isolatedClosed = np.zeros((2,1), dtype=np.int8)
-    isolatedOpen = np.zeros((2,1), dtype=np.int8)
 
     shield = np.zeros((2,10), dtype=np.int8)
 
@@ -183,43 +180,37 @@ for line in tqdm(lines):
             j = inverse[sq]
 
             if piece & 1 == 0:
-                if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
-                    passerRank[0][pfile] = max(prank, passerRank[0][pfile])
-                
-                if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
+                if virtualboard[sq + W] == 2 or virtualboard[sq + E] == 2:
                     if rearpawns[1][pfile] == 0:
-                        isolatedOpen[0] += 1
-                        mobtable[0][9][inverse[sq]] = 1
-                    else:
-                        isolatedClosed[0] += 1
-                        mobtable[0][10][inverse[sq]] = 1
-                elif rearpawns[0][pfile-1] > prank and rearpawns[0][pfile+1] > prank:
-                    if rearpawns[1][pfile] == 0:
-                        backwardsOpen[0] += 1
                         mobtable[0][7][inverse[sq]] = 1
                     else:
-                        backwardsClosed[0] += 1
                         mobtable[0][8][inverse[sq]] = 1
 
-            else:
-                if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
-                    passerRank[1][pfile] = min(prank, passerRank[1][pfile])
-                
-                    
-                if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
-                    if rearpawns[0][pfile] == 11:
-                        isolatedOpen[1] += 1
-                        mobtable[1][9][inverse[sq]] = 1
+                if virtualboard[sq + W + N] == 2 or virtualboard[sq + E + N] == 2:
+                    if rearpawns[1][pfile] == 0:
+                        mobtable[0][9][inverse[sq]] = 1
                     else:
-                        isolatedClosed[1] += 1
-                        mobtable[1][10][inverse[sq]] = 1
-                elif rearpawns[1][pfile-1] < prank and rearpawns[1][pfile+1] < prank:
+                        mobtable[0][10][inverse[sq]] = 1
+
+                if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
+                    passerRank[0][pfile] = max(prank, passerRank[0][pfile])
+
+            else:
+                if virtualboard[sq + W] == 3 or virtualboard[sq + E] == 3:
                     if rearpawns[0][pfile] == 11:
-                        backwardsOpen[1] += 1
                         mobtable[1][7][inverse[sq]] = 1
                     else:
-                        backwardsClosed[1] += 1
                         mobtable[1][8][inverse[sq]] = 1
+
+                if virtualboard[sq + W + S] == 3 or virtualboard[sq + E + S] == 3:
+                    if rearpawns[0][pfile] == 11:
+                        mobtable[1][9][inverse[sq]] = 1
+                    else:
+                        mobtable[1][10][inverse[sq]] = 1
+
+
+                if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
+                    passerRank[1][pfile] = min(prank, passerRank[1][pfile])
         
         if piece == 2:
             pattern = [S+W, S+E]
@@ -288,8 +279,6 @@ for line in tqdm(lines):
     npawns[0][material[0][1]] = 1 
     npawns[1][material[1][1]] = 1
 
-    backwards = backwardsOpen + backwardsClosed
-    isolated = isolatedOpen + isolatedClosed
 
     passerDistance[:,0] = 0
 
@@ -315,8 +304,7 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :]],
-        # isolated[1]-isolated[0], backwards[1]-backwards[0],
-        [material[1, :] - material[0, :], pushers, shield[1]-shield[0], sidetomove, passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), bishoppair], 
+        [material[1, :] - material[0, :], pushers, shield[1]-shield[0], sidetomove, passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), bishoppair, ], 
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
         [npawns[0]],
@@ -336,7 +324,9 @@ for line in tqdm(lines):
         #print(starts, sizes)
 
         print("\nfen " + fen)
-        print(bishoppair)
+        print(chainOpen)
+        print(chainClosed)
+        #print(bishoppair)
         #for a in range(2):
         #    plt.imshow(mobtable[a][1].reshape((8,8)))
         #    plt.show()
@@ -400,38 +390,35 @@ class HCE(torch.nn.Module):
         return torch.tanh(finalscore + (scalew - scaleb)) 
 
     def printfinal(self, finalEpoch=False):
-        def printparams(regular, tapered, shape, multiplier=1.0, forgrid=True):
+        print((self.risk.detach().numpy()))
+
+
+        m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
+        riskNormalizer = self.risk.detach().numpy()[8] + 1
+
+        def printparams(regular, tapered, shape, forgrid=True):
             offset = 0
             for size in shape:
                 if size >= 64 and forgrid:
                     size = size//64
-                a = np.around(regular[offset:offset+size].detach().numpy() * multiplier, decimals=0)
-                b = np.around(tapered[offset:offset+size].detach().numpy() * multiplier, decimals=0)
-                if not finalEpoch:
-                    print(a)
-                    print(b)
-                else:
-                    finalstr = "{"
-                    for i in range(len(a)):
-                        finalstr += "T(" + str(int(a[i])) + "," + str(int(b[i])) + "), "
-                    finalstr += "}"
-                    print(finalstr)
+                a = np.around(regular[offset:offset+size].detach().numpy() * m * riskNormalizer, decimals=0)
+                b = np.around(tapered[offset:offset+size].detach().numpy() * m * riskNormalizer , decimals=0)
+                
+                finalstr = "{"
+                for i in range(len(a)):
+                    finalstr += "T(" + str(int(a[i])) + "," + str(int(b[i])) + "), "
+                finalstr += "}"
+                print(finalstr)
                 offset += size
         
-
-        m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
-
-        riskNormalizer = self.risk.detach().numpy()[8] + 1
-        m = m * riskNormalizer
-
         print("\nLinear terms")
-        printparams(self.terms, self.taperterms, sizes[1], m)
+        printparams(self.terms, self.taperterms, sizes[1])
 
         print("\nMobility weights")
-        printparams(self.piecemobility, self.taperpiecemobility, sizes[2], m)
+        printparams(self.piecemobility, self.taperpiecemobility, sizes[2])
 
         print("\nRisk weights")
-        print(np.around((self.risk.detach().numpy() + 1) / riskNormalizer , decimals=3))
+        print(np.around((1+self.risk.detach().numpy())/riskNormalizer , decimals=3))
 
         if finalEpoch:
             print("\nBoard Weights")
@@ -497,6 +484,8 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # + restricted .3066
 # + attacks .3042
 # + bishoppair .3035
+# - backwards and isolated
+# + phalanx and chain .3028
 
 # can we combine candidate passers and unpushable pawns
 # i.e. a pawn can be weak but not necessarily backwards or overextended
