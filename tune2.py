@@ -117,6 +117,11 @@ for line in tqdm(lines):
     sidetomove = np.zeros(1, dtype=np.int8)
 
 
+    phalanxOpen = np.zeros((2, 1), dtype=np.int8)
+    phalanxClosed = np.zeros((2, 1), dtype=np.int8)
+    chainOpen = np.zeros((2, 1), dtype=np.int8)
+    chainClosed = np.zeros((2, 1), dtype=np.int8) 
+
 
     passerDistance = np.zeros((2,8), dtype=np.int8)
     passerRank = np.array([
@@ -182,15 +187,19 @@ for line in tqdm(lines):
             if piece & 1 == 0:
                 if virtualboard[sq + W] == 2 or virtualboard[sq + E] == 2:
                     if rearpawns[1][pfile] == 0:
-                        mobtable[0][7][inverse[sq]] = 1
+                        #mobtable[0][7][inverse[sq]] = 1
+                        phalanxOpen[0] += 1
                     else:
-                        mobtable[0][8][inverse[sq]] = 1
+                        #mobtable[0][8][inverse[sq]] = 1
+                        phalanxClosed[0] += 1
 
                 if virtualboard[sq + W + N] == 2 or virtualboard[sq + E + N] == 2:
                     if rearpawns[1][pfile] == 0:
-                        mobtable[0][9][inverse[sq]] = 1
+                        #mobtable[0][9][inverse[sq]] = 1
+                        chainOpen[0] += 1
                     else:
-                        mobtable[0][10][inverse[sq]] = 1
+                        #mobtable[0][10][inverse[sq]] = 1
+                        chainClosed[0] += 1
 
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
@@ -198,15 +207,19 @@ for line in tqdm(lines):
             else:
                 if virtualboard[sq + W] == 3 or virtualboard[sq + E] == 3:
                     if rearpawns[0][pfile] == 11:
-                        mobtable[1][7][inverse[sq]] = 1
+                        #mobtable[1][7][inverse[sq]] = 1
+                        phalanxOpen[1] += 1
                     else:
-                        mobtable[1][8][inverse[sq]] = 1
+                        #mobtable[1][8][inverse[sq]] = 1
+                        phalanxClosed[1] += 1
 
                 if virtualboard[sq + W + S] == 3 or virtualboard[sq + E + S] == 3:
                     if rearpawns[0][pfile] == 11:
-                        mobtable[1][9][inverse[sq]] = 1
+                        #mobtable[1][9][inverse[sq]] = 1
+                        chainOpen[1] += 1
                     else:
-                        mobtable[1][10][inverse[sq]] = 1
+                        #mobtable[1][10][inverse[sq]] = 1
+                        chainClosed[1] += 1
 
 
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
@@ -304,7 +317,7 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :]],
-        [material[1, :] - material[0, :], pushers, shield[1]-shield[0], sidetomove, passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), bishoppair, ], 
+        [material[1, :] - material[0, :], pushers, shield[1]-shield[0], sidetomove, passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), bishoppair, phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0] ], 
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
         [npawns[0]],
@@ -485,7 +498,4 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # + attacks .3042
 # + bishoppair .3035
 # - backwards and isolated
-# + phalanx and chain .3028
-
-# can we combine candidate passers and unpushable pawns
-# i.e. a pawn can be weak but not necessarily backwards or overextended
+# + phalanx and chain .3027

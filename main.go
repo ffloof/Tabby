@@ -133,7 +133,7 @@ var phaseWeights = [14]int{0,0,0,0,1,1,1,1,2,2,4,4,0,0}
 var Zobrist [16][128]uint64
 
 var nodes int = 0
-const MAX_HISTORY = 8192
+const MAX_HISTORY = 256
 
 
 type Board struct {
@@ -807,6 +807,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 					if board.squares[moves[m].end] == 0 {
 						hhm := &history[board.squares[moves[m].start]][moves[m].end]
 						*hhm -= (bonus - ((bonus * (*hhm)) / MAX_HISTORY))
+						// TODO: after history test figure out if this should be -= bonus + bonus * grav, like in 4ku
 					}
 				}
 			}
@@ -1022,7 +1023,12 @@ func main() {
 // + fixed tt    ~ 100 elo 40/23/18
 // + futility pruning ~ 50 elo 248/267/160
 // + NMP margin reduction ~ 0 elo 488/690/483
-// + new eval 
+// + new eval             ~ 30 elo 810/592/633
+	// what % of this was bpair ~ 136/158/137, bishoppair doesnt seem to matter? lmao?
+	// attacks seem to matter :/
+	// restricted test ~ 30 elo 893/726/708?
+	// old low tempo (10) vs new high tempo (20)   -50 elo 567/844/917
 
+// history heuristic size 256 v 512 v 1024 v 2048 v 4096 v 8192
 
 // TODO: squeeze more elo by optimizing pruning/reductions
