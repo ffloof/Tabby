@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 	"math/rand"
+	"math"
 )
 
 import ("flag"
@@ -76,8 +77,6 @@ Board Weights
 ===
 */
 
-
-
 var e_material = []int{T(0,0), T(25,73), T(161,292), T(185,298), T(225,541), T(505,1002), T(0,0), }
 var e_passerRank = []int{T(0,0), T(-9,-18), T(-17,-13), T(-16,3), T(-12,28), T(4,93), T(10,145), T(0,0), }
 var e_shield = []int{T(0,0), T(21,3), T(32,4), T(9,10), T(3,8), T(11,8), T(12,11), T(29,6), T(32,-7), T(0,0), }
@@ -123,9 +122,6 @@ var e_table = [2][128]int {
  168, 164, 146, 185, 202, 213, 218, -52,  0,0,0,0, 0,0,0,0,},
 }
 
-
-
-
 const e_divider = 1000
 
 var phaseWeights = [14]int{0,0,0,0,1,1,1,1,2,2,4,4,0,0}
@@ -134,7 +130,6 @@ var Zobrist [16][128]uint64
 
 var nodes int = 0
 const MAX_HISTORY = 256
-
 
 type Board struct {
 	squares    [128]int8
@@ -153,7 +148,6 @@ type Move struct {
 	start int8
 	end   int8
 }
-var nullmove Move = Move{9,9}
 
 func (move Move) stringify(board *Board) string {
 	if board != nil {
@@ -225,8 +219,6 @@ func (board *Board) Edit(index int, newpiece int8) {
 	board.pieceCount[newpiece] += 1
 }
 
-var rays = [7]bool{false, false, false, true, true, true, false}
-
 var patterns = [7][]int{
 	{},
 	{},
@@ -246,11 +238,10 @@ func (board *Board) IsHomeRow(i int) bool {
 
 func (board *Board) PawnDefends(sq int, attacker int8) bool {
 	for _, dir := range []int{W - ADVANCES[attacker], E - ADVANCES[attacker]} {
-		if ((sq + dir) & 0x88) != 0 {
-			continue
-		}
-		if (board.squares[sq + dir] == 2 + attacker) {
-			return true
+		if ((sq + dir) & 0x88) == 0 {
+			if (board.squares[sq + dir] == 2 + attacker) {
+				return true
+			}
 		}
 	}
 	return false
@@ -304,7 +295,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 				}
 			}
 		} else {
-			ray := rays[piecetype]
+			ray := (piecetype / 3) == 1
 			pattern := patterns[piecetype]
 			
 			for _, dir := range pattern {
@@ -442,9 +433,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 					}
 				}
 			}
-
-
-
 		}
 	}
 
@@ -522,8 +510,6 @@ func (board *Board) attacked(start int, attacker int8) bool {
 }
 
 func (board *Board) Apply(move Move) *Board {
-	// TODO: see perf difference vs just using non pointer method
-
 	currentBoard := *board
 	copyBoard := currentBoard
 
@@ -701,20 +687,15 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 	if depth > 0 && !pv && board.phase > 4 && !board.inCheck {
 		// Reverse futility pruning RFP
-		if (depth < 8 && staticEval - depth * 100 > beta) { 
+		if (depth < 8 && staticEval - depth * 80 > beta) { 
 			return staticEval
 		}
 
 		// Null move pruning NMP
 		if staticEval >= beta && nullallowed && depth >= 3 {
-			nmBoard := board.Apply(nullmove)
-			if nmBoard != nil {
-				nmScore := -alphabeta(nmBoard, -beta, -alpha, depth - 3 - depth / 6, false)
-				if nmScore >= beta {
-					return beta
-				}
-			} else {
-				fmt.Println("SCREAM") // TODO: remove when we have ensured this doesnt happen
+			nmScore := -alphabeta(board.Apply(Move{9,9}), -beta, -alpha, depth - 3 - depth / 6, false)
+			if nmScore >= beta {
+				return beta
 			}
 		}
 	}
@@ -736,7 +717,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-	quietsLeft := (depth * depth) - depth + 5
+	quietsLeft := (depth * depth) - depth + 4
 	legals := 0
 	var bestMove Move
 	var boundtype int8 = 1
@@ -763,7 +744,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 
 		legals += 1
-		reduction := (depth+legals)/16
+		reduction := ((depth+legals)/16) + max(0,-max(-2, history[board.squares[nextMove.start]][nextMove.end] / 64))
 
 		var score int
 
@@ -806,30 +787,19 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 				for m:=0;m<i;m++ {
 					if board.squares[moves[m].end] == 0 {
 						hhm := &history[board.squares[moves[m].start]][moves[m].end]
-						*hhm -= (bonus - ((bonus * (*hhm)) / MAX_HISTORY))
-						// TODO: after history test figure out if this should be -= bonus + bonus * grav, like in 4ku
+						*hhm -= (bonus + ((bonus * (*hhm)) / MAX_HISTORY))
 					}
 				}
 			}
 
 			break
 		}
-
-		quietsLeft = quietsLeft
 			
-		if !pv && board.squares[nextMove.end] == 0 {
+		if !pv && !board.inCheck && board.squares[nextMove.end] == 0 {
 			quietsLeft -= 1
 			if quietsLeft == 0 {
 				break
 			}
-
-			// Futility pruning FP
-			// TODO: see if we can use different conditions for table quiet move vs regular quiet move
-			// i.e. even if a table quiet didnt work out its still possible a capture might, whereas once captures are searched its much less likely we get large score improvements
-			// could even connect this with history heuristic
-			if depth <= 8 && (staticEval + (depth * 128) < alpha) {
-				break
-			} 
 		}
 	}
 
@@ -868,8 +838,6 @@ func printpv() string {
 		}
 
 		pvstr += m.stringify(board) + " "
-
-		//fmt.Println(m.stringify(), table[board.Hash() % hashsize].depth)
 		board = board.Apply(m)
 	}
 	return strings.TrimSpace(pvstr)
@@ -912,25 +880,36 @@ func parseuci(line string) bool {
 
 		if len(findAfter("wtime", args)) != 0 && uciBoard.sidetomove == 1 {
 			timeAlloc, _ = strconv.Atoi(findAfter("wtime", args)[0])
-			timeAlloc /= 30
+			timeAlloc /= 10
 		}
 
 		if len(findAfter("btime", args)) != 0 && uciBoard.sidetomove == 0 {
 			timeAlloc, _ = strconv.Atoi(findAfter("btime", args)[0])
-			timeAlloc /= 30
+			timeAlloc /= 10
 		}
 
 		nodes = 0
 		start := time.Now().UnixMilli()
+		chosenMove := table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
+		streak := 0
 		for depth := 1; depth <= 100; depth++ {
 			fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, true), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv())
 
-			if int(time.Now().UnixMilli() - start) > timeAlloc {
+			if chosenMove == table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard) {
+				streak += 1
+			} else {
+				streak = 0
+			}
+			chosenMove = table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
+			fmt.Println("info string streak", streak)
+
+
+			if time.Now().UnixMilli() - start > int64(float64(timeAlloc) * math.Pow(0.9, float64(streak))) {
 				break
 			}
 		}
 
-		fmt.Println("bestmove", table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard))
+		fmt.Println("bestmove", chosenMove)
 	
 	case "eval":
 		uciBoard.sidetomove = 1 - uciBoard.sidetomove
@@ -940,9 +919,10 @@ func parseuci(line string) bool {
 
 		fmt.Println("eval", e)
 
+	/*
 	case "null":
 		uciBoard = *uciBoard.Apply(nullmove)
-
+	*/
 
 	case "quit":
 		return true
@@ -974,13 +954,10 @@ func main() {
 	}
 
 	flip(&e_table[1], &e_table[0], 112)
-
 	//fmt.Println(e_table)
 
 	uciBoard = FromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 	reader := bufio.NewReader(os.Stdin)
-
-	//parseuci("position fen rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
 
 	for {
 		line, _ := reader.ReadString('\n')
@@ -1028,7 +1005,9 @@ func main() {
 	// attacks seem to matter :/
 	// restricted test ~ 30 elo 893/726/708?
 	// old low tempo (10) vs new high tempo (20)   -50 elo 567/844/917
+// + fix history, lmr adjust pruning ~100 elo
+// adjusted RFP margin ~ 15 elo
 
-// history heuristic size 256 v 512 v 1024 v 2048 v 4096 v 8192
+// Testing added incheck condition on late move pruning and futility pruning
 
 // TODO: squeeze more elo by optimizing pruning/reductions
