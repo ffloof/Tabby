@@ -652,6 +652,25 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	nodes += 1
 	bestScore := -9999
 
+
+	hash := board.Hash()
+	tt := table[hash % hashsize]
+
+	if board.ply != 0 {
+		for _, rep := range repetition {
+			if rep == hash {
+				return 0
+			}
+		}
+	}
+
+	if !pv && tt.key == hash && (tt.depth >= depth || 0 >= depth) {
+		if (tt.bound == 1 && tt.score <= alpha) {return tt.score}
+		if (tt.bound == -1 && tt.score >= beta) {return tt.score}
+		if (tt.bound == 0) {return tt.score}
+	}
+
+
 	moves, staticEval := board.Generate(depth <= 0)
 	// standpat
 	if (depth <= 0) {
@@ -665,26 +684,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	}
 
 
-	hash := board.Hash()
-
-	if board.ply != 0 {
-		for _, rep := range repetition {
-			if rep == hash {
-				return 0
-			}
-		}
-	}
-
-
-	tt := table[hash % hashsize]
-
-	if !pv && tt.key == hash && (tt.depth >= depth || 0 >= depth) {
-		if (tt.bound == 1 && tt.score <= alpha) {return tt.score}
-		if (tt.bound == -1 && tt.score >= beta) {return tt.score}
-		if (tt.bound == 0) {return tt.score}
-	}
-	
-
 	if depth > 0 && !pv && board.phase > 4 && !board.inCheck {
 		// Reverse futility pruning RFP
 		if (depth < 8 && staticEval - depth * 80 > beta) { 
@@ -693,7 +692,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 		// Null move pruning NMP
 		if staticEval >= beta && nullallowed && depth >= 3 {
-			nmScore := -alphabeta(board.Apply(Move{9,9}), -beta, -alpha, depth - 3 - depth / 6, false)
+			nmScore := -alphabeta(board.Apply(Move{9,9}), -beta, -alpha, (depth - 3) - (depth / 6), false)
 			if nmScore >= beta {
 				return beta
 			}
@@ -718,6 +717,13 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	}
 
 	quietsLeft := (depth * depth) - depth + 4
+	
+	// Futility pruning
+	if (depth <= 5 && staticEval + depth * 100 < alpha) {
+		quietsLeft = 1
+	}
+
+
 	legals := 0
 	var bestMove Move
 	var boundtype int8 = 1
@@ -736,7 +742,11 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		priorities[i], priorities[besti] = priorities[besti], priorities[i]
 		moves[i], moves[besti] = moves[besti], moves[i]
 
-
+		if depth <= 0 && !pv && !board.inCheck { // Delta pruning
+			if staticEval + decode(e_material[board.squares[nextMove.end]/2], board.phase) + 75 < alpha {
+				break
+			}
+		}
 
 		nextBoard := board.Apply(nextMove)
 		if nextBoard == nil {
@@ -744,13 +754,18 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 
 		legals += 1
-		reduction := ((depth+legals)/16) + max(0,-max(-2, history[board.squares[nextMove.start]][nextMove.end] / 64))
 
 		var score int
 
 		if ((legals == 1 || depth <= 0)){
 			score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, true)
 		} else {
+			// TODO: improve LMR
+			reduction := ((depth+legals)/16)
+			if board.squares[nextMove.end] == 0 {
+				reduction += max(0,-max(-2, history[board.squares[nextMove.start]][nextMove.end] / 64))
+			}
+			
 			score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1 - reduction, true)
 			if score > alpha && reduction > 0 {
 				score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1, true)
@@ -795,7 +810,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 			break
 		}
 			
-		if !pv && !board.inCheck && board.squares[nextMove.end] == 0 {
+		if !pv && !board.inCheck && board.squares[nextMove.end] == 0 && legals != 1 {
 			quietsLeft -= 1
 			if quietsLeft == 0 {
 				break
@@ -858,7 +873,6 @@ func parseuci(line string) bool {
 	case "isready":
 		fmt.Println("readyok")
 	case "print":
-
 		uciBoard.print()
 	case "perft":
 		start := time.Now().UnixMilli()
@@ -902,7 +916,6 @@ func parseuci(line string) bool {
 			}
 			chosenMove = table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
 			fmt.Println("info string streak", streak)
-
 
 			if time.Now().UnixMilli() - start > int64(float64(timeAlloc) * math.Pow(0.9, float64(streak))) {
 				break
@@ -1007,7 +1020,10 @@ func main() {
 	// old low tempo (10) vs new high tempo (20)   -50 elo 567/844/917
 // + fix history, lmr adjust pruning ~100 elo
 // adjusted RFP margin ~ 15 elo
-
-// Testing added incheck condition on late move pruning and futility pruning
+// removed history reduction for captures ~25 elo  237/311/189
+// Currently tied with a 200 games match with UFIM so around 2500 ccrl elo
+// Changed testing to use RODENT's opening database instead of gmopenings to reduce drawishness
+// Internal iterative reductions ~ 0 elo
+// Move TT and rep cutoffs before movegen
 
 // TODO: squeeze more elo by optimizing pruning/reductions
