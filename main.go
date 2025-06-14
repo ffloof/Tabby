@@ -637,8 +637,8 @@ func findAfter(word string, strlist []string) []string {
 type entry struct {
 	key uint64
 	move Move
-	depth int
-	score int
+	score int16
+	depth int8
 	bound int8
 }
 
@@ -656,7 +656,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	hash := board.Hash()
 	tt := &table[hash % hashsize]
 
-	if board.ply != 0 {
+	if board.ply != 0 && depth > 0 {
 		for _, rep := range repetition {
 			if rep == hash {
 				return 0
@@ -664,23 +664,23 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-	if !pv && tt.key == hash && (tt.depth >= depth || 0 >= depth) {
-		if (tt.bound == 1 && tt.score <= alpha) {return tt.score}
-		if (tt.bound == -1 && tt.score >= beta) {return tt.score}
-		if (tt.bound == 0) {return tt.score}
+	if !pv && tt.key == hash && (int(tt.depth) >= depth || 0 >= depth) {
+		if (tt.bound == 1 && int(tt.score) <= alpha) {return int(tt.score)}
+		if (tt.bound == -1 && int(tt.score) >= beta) {return int(tt.score)}
+		if (tt.bound == 0) {return int(tt.score)}
 	}
 
 	// Weird Aspiration Window
 	if pv && tt.key == hash && alpha == -10000 && beta == 10000 && depth >= 8 {
-		//fmt.Println("test", alpha, beta, depth)
-		cacheScore := tt.score
+		cacheScore := int(tt.score)
+		// Could try depth based width
 		aspirationScore := alphabeta(board, cacheScore - 20, cacheScore + 20, depth, nullallowed)
 		if cacheScore - 20 < aspirationScore && aspirationScore < cacheScore + 20 {
 			return aspirationScore
 		}
 
 	}
-
+     
 	moves, staticEval := board.Generate(depth <= 0)
 	// standpat
 	if (depth <= 0) {
@@ -841,7 +841,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	}
 
 	if bestMove.start != bestMove.end {
-		table[hash % hashsize] = entry{hash, bestMove, depth, bestScore, boundtype}
+		table[hash % hashsize] = entry{hash, bestMove, int16(bestScore), int8(depth), boundtype}
 	}
 
 	return bestScore
