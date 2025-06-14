@@ -654,7 +654,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 
 	hash := board.Hash()
-	tt := table[hash % hashsize]
+	tt := &table[hash % hashsize]
 
 	if board.ply != 0 {
 		for _, rep := range repetition {
@@ -670,6 +670,16 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		if (tt.bound == 0) {return tt.score}
 	}
 
+	// Weird Aspiration Window
+	if pv && tt.key == hash && alpha == -10000 && beta == 10000 && depth >= 8 {
+		//fmt.Println("test", alpha, beta, depth)
+		cacheScore := tt.score
+		aspirationScore := alphabeta(board, cacheScore - 20, cacheScore + 20, depth, nullallowed)
+		if cacheScore - 20 < aspirationScore && aspirationScore < cacheScore + 20 {
+			return aspirationScore
+		}
+
+	}
 
 	moves, staticEval := board.Generate(depth <= 0)
 	// standpat
@@ -686,13 +696,13 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 	if depth > 0 && !pv && board.phase > 4 && !board.inCheck {
 		// Reverse futility pruning RFP
-		if (depth < 8 && staticEval - depth * 80 > beta) { 
+		if (staticEval - ((depth * 50) + (5 * depth * depth)) > beta) { 
 			return staticEval
 		}
 
 		// Null move pruning NMP
 		if staticEval >= beta && nullallowed && depth >= 3 {
-			nmScore := -alphabeta(board.Apply(Move{9,9}), -beta, -alpha, (depth - 3) - (depth / 6), false)
+			nmScore := -alphabeta(board.Apply(Move{9,9}), -beta, -alpha, ((depth - 4) - (depth / 5)), false)
 			if nmScore >= beta {
 				return beta
 			}
@@ -915,7 +925,6 @@ func parseuci(line string) bool {
 				streak = 0
 			}
 			chosenMove = table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
-			fmt.Println("info string streak", streak)
 
 			if time.Now().UnixMilli() - start > int64(float64(timeAlloc) * math.Pow(0.9, float64(streak))) {
 				break
@@ -1005,25 +1014,5 @@ func main() {
 // Ben finegolds middle name is philip
 // Should make a stream where people vote on best move
 
-// Base Search      elo     W/D/L
-// + RFP        ~ 120 elo 81/21/34
-// + LMP        ~ 60 elo  53/37/32?
-// + NMP        ~ 60 elo  56/36/32
-// + LMR         ~ 50 elo  170/100/116
-// + fixed tt    ~ 100 elo 40/23/18
-// + futility pruning ~ 50 elo 248/267/160
-// + NMP margin reduction ~ 0 elo 488/690/483
-// + new eval             ~ 30 elo 810/592/633
-	// what % of this was bpair ~ 136/158/137, bishoppair doesnt seem to matter? lmao?
-	// attacks seem to matter :/
-	// restricted test ~ 30 elo 893/726/708?
-	// old low tempo (10) vs new high tempo (20)   -50 elo 567/844/917
-// + fix history, lmr adjust pruning ~100 elo
-// adjusted RFP margin ~ 15 elo
-// removed history reduction for captures ~25 elo  237/311/189
-// Currently tied with a 200 games match with UFIM so around 2500 ccrl elo
-// Changed testing to use RODENT's opening database instead of gmopenings to reduce drawishness
-// Internal iterative reductions ~ 0 elo
-// Move TT and rep cutoffs before movegen
 
 // TODO: squeeze more elo by optimizing pruning/reductions

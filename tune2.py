@@ -316,7 +316,7 @@ for line in tqdm(lines):
         bishoppair += 1
 
     terms = [
-        [material[0, :] + material[1, :]],
+        [material[0, :] + material[1, :], sidetomove],
         [material[1, :] - material[0, :], pushers, shield[1]-shield[0], sidetomove, passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), bishoppair, phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0] ], 
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
@@ -379,6 +379,8 @@ class HCE(torch.nn.Module):
 
         self.risk = torch.nn.Parameter(torch.randn(starts[5]-starts[4]))
 
+        self.tempomulter = torch.nn.Parameter(torch.randn(1))
+
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
@@ -391,10 +393,11 @@ class HCE(torch.nn.Module):
         score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
-        midscore = ((score + netmobility) * phase)
-        endscore = ((score2 + netmobility2) * (1-phase))
+        bonus = torch.abs(netmobility) *  x[:,7] * self.tempomulter
+        bonus2 = torch.abs(netmobility2) * x[:,7] * self.tempomulter
 
-
+        midscore = ((score + netmobility + bonus) * phase)
+        endscore = ((score2 + netmobility2 + bonus2) * (1-phase))
 
         finalscore = midscore + endscore
         scalew = torch.clamp(finalscore, min=0) * torch.matmul(x[:,starts[5]:starts[6]], self.risk)
@@ -404,6 +407,8 @@ class HCE(torch.nn.Module):
 
     def printfinal(self, finalEpoch=False):
         print((self.risk.detach().numpy()))
+
+        print("TempoMulter", self.tempomulter)
 
 
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
