@@ -34,6 +34,13 @@ func decode(eval, phase int) int {
 	return ((mg * phase) + (eg * (24-phase)))/24
 }
 
+func BOOL(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 /*
 ===
 19 0.3027535860054364
@@ -645,7 +652,7 @@ type entry struct {
 const hashsize = 16777216
 var table [hashsize]entry
 
-var history [14][128]int
+var history [2][14][128]int
 
 func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	pv := beta - alpha != 1
@@ -717,12 +724,12 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	priorities := make([]int, len(moves), len(moves))
 	for i, move := range moves {
 		if board.squares[move.end] != 0 {
-			priorities[i] = (int(board.squares[move.end]) * 20) - int(board.squares[move.start]) + 10000
-		} else {
-			priorities[i] = history[board.squares[move.start]][move.end]
+			priorities[i] = (int(board.squares[move.end]) * 1_000_000)
 		}
+		priorities[i] += history[BOOL(board.squares[move.end] == 0)][board.squares[move.start]][move.end]
+		
 		if tt.move.end == move.end && tt.move.start == move.start {
-			priorities[i] = 100000
+			priorities[i] = 1_000_000_000
 		}
 	}
 
@@ -772,9 +779,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		} else {
 			// TODO: improve LMR
 			reduction := ((depth+legals)/16)
-			if board.squares[nextMove.end] == 0 {
-				reduction += max(0,-max(-2, history[board.squares[nextMove.start]][nextMove.end] / 64))
-			}
+			reduction += max(0,-max(-2, history[BOOL(board.squares[nextMove.end] == 0)][board.squares[nextMove.start]][nextMove.end] / 64))
 			
 			score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1 - reduction, true)
 			if score > alpha && reduction > 0 {
@@ -799,24 +804,19 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		if score >= beta {
 			boundtype = -1
 
-			if (board.squares[nextMove.end] == 0) {
-				bonus := depth * depth
-				if staticEval < alpha {
-					bonus = (depth + 1) * (depth + 1)
-				}
-
-				hh := &history[board.squares[nextMove.start]][nextMove.end]
-
-				*hh += bonus - ((bonus * (*hh)) / MAX_HISTORY)
-
-				for m:=0;m<i;m++ {
-					if board.squares[moves[m].end] == 0 {
-						hhm := &history[board.squares[moves[m].start]][moves[m].end]
-						*hhm -= (bonus + ((bonus * (*hhm)) / MAX_HISTORY))
-					}
-				}
+			bonus := depth * depth
+			if staticEval < alpha {
+				bonus = (depth + 1) * (depth + 1)
 			}
 
+			hh := &history[BOOL(board.squares[nextMove.end] == 0)][board.squares[nextMove.start]][nextMove.end]
+
+			*hh += bonus - ((bonus * (*hh)) / MAX_HISTORY)
+
+			for m:=0;m<i;m++ {
+				hhm := &history[BOOL(board.squares[moves[m].end] == 0)][board.squares[moves[m].start]][moves[m].end]
+				*hhm -= (bonus + ((bonus * (*hhm)) / MAX_HISTORY))
+			}
 			break
 		}
 			
