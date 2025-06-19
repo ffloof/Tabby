@@ -34,7 +34,7 @@ func decode(eval, phase int) int {
 	return ((mg * phase) + (eg * (24-phase)))/24
 }
 
-func BOOL(b bool) int {
+func BOOL(b bool) int { // golang for reasons unknown to me has no native way to convert a boolean to an integer
 	if b {
 		return 1
 	}
@@ -98,7 +98,7 @@ var e_attacks = []int{
 	T(0,0), T(2,7), T(7,25), T(0,0), T(28,22), T(28,102), T(0,0), 
 	T(0,0), T(-10,10), T(1,16), T(7,11), T(0,0), T(51,19), T(0,0), 
 	T(0,0), T(1,5), T(2,3), T(-1,19), T(4,4), T(0,0), T(0,0), 
-	T(0,0), T(37,20), T(-12,27), T(12,25), T(-41,29), T(0,0), T(0,0),
+	T(0,0), T(37,20), T(-12,27), T(12,25), T(-41,29), T(-200,-100), T(0,0),
 }
 
 var e_bishopPair int = T(8,45)
@@ -191,22 +191,12 @@ func FromFen(fen string) Board {
 		i += 1
 	}
 
-	if fenparts[1] == "w" {
-		board.sidetomove = 1
-	}
+	board.sidetomove = int8(BOOL(fenparts[1] == "w"))
 
-	if strings.Index(fenparts[2], "k") > -1 {
-		board.Edit(H8+CASTLE, 1)
-	}
-	if strings.Index(fenparts[2], "q") > -1 {
-		board.Edit(A8+CASTLE, 1)
-	}
-	if strings.Index(fenparts[2], "K") > -1 {
-		board.Edit(H1+CASTLE, 1)
-	}
-	if strings.Index(fenparts[2], "Q") > -1 {
-		board.Edit(A1+CASTLE, 1)
-	}
+	board.Edit(H8+CASTLE, int8(BOOL(strings.Index(fenparts[2], "k") > -1)))
+	board.Edit(A8+CASTLE, int8(BOOL(strings.Index(fenparts[2], "q") > -1)))
+	board.Edit(H1+CASTLE, int8(BOOL(strings.Index(fenparts[2], "K") > -1)))
+	board.Edit(A1+CASTLE, int8(BOOL(strings.Index(fenparts[2], "Q") > -1)))
 
 	if fenparts[3] != "-" {
 		board.enpassant = Parse(fenparts[3])
@@ -701,7 +691,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	}
 
 
-	if depth > 0 && !pv && board.phase > 4 && !board.inCheck {
+	if depth > 0 && !pv && board.phase > 4 && !board.inCheck { // TODO: consider moving the board.phase > 4 check to only nmp
 		// Reverse futility pruning RFP
 		if (staticEval - ((depth * 50) + (5 * depth * depth)) > beta) { 
 			return staticEval
@@ -780,7 +770,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 			// TODO: improve LMR
 			reduction := ((depth+legals)/16)
 			reduction += max(0,-max(-2, history[BOOL(board.squares[nextMove.end] == 0)][board.squares[nextMove.start]][nextMove.end] / 64))
-			
+
 			score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1 - reduction, true)
 			if score > alpha && reduction > 0 {
 				score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1, true)
