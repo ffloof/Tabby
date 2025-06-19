@@ -298,13 +298,17 @@ for line in tqdm(lines):
     mobtable = mobtable.reshape(2,mobtable.shape[1],8,8)
     mobtable[0] = np.flip(mobtable[0],1)
 
-    if wkingfile < 5:
-        mobtable[1,:,4:8] = np.flip(mobtable[1,:,4:8], 2)
-        mobtable[0,:,0:4] = np.flip(mobtable[0,:,0:4], 2)
+    percentb = ((wkingfile - 1))
+    percentw = ((bkingfile - 1))
 
-    if bkingfile < 5:
-        mobtable[0,:,4:8] = np.flip(mobtable[0,:,4:8], 2)
-        mobtable[1,:,0:4] = np.flip(mobtable[1,:,0:4], 2)
+    kblack = (percentb * mobtable[0,:,:,:])
+    qblack = ((7-percentb) * np.flip(mobtable[0,:,:,:], 2))
+
+    kwhite = (percentw * mobtable[1,:,:,:])
+    qwhite = ((7-percentw) * np.flip(mobtable[1,:,:,:], 2))
+
+    mobtable[1] = kwhite + qwhite
+    mobtable[0] = kblack + qblack
 
     captures[:,:,6] = 0 
 
@@ -337,13 +341,17 @@ for line in tqdm(lines):
         #print(starts, sizes)
 
         print("\nfen " + fen)
-        print(chainOpen)
-        print(chainClosed)
-        #print(bishoppair)
-        #for a in range(2):
-        #    plt.imshow(mobtable[a][1].reshape((8,8)))
-        #    plt.show()
-        #    ...
+        for a in range(2):
+            plt.imshow(kwhite[1].reshape((8,8)))
+            plt.show()
+            plt.imshow(qwhite[1].reshape((8,8)))
+            plt.show()
+            plt.imshow((kwhite+qwhite)[1].reshape((8,8)))
+            plt.show()
+            plt.imshow(mobtable[1][1].reshape((8,8)))
+            plt.show()
+            break
+            ...
 
         #plt.imshow((mobtable[0][8]).reshape((8,8)))
         #plt.show()
@@ -438,7 +446,7 @@ class HCE(torch.nn.Module):
         print("\nRisk weights")
         print(np.around((1+self.risk.detach().numpy())/riskNormalizer , decimals=3))
 
-        if finalEpoch:
+        if finalEpoch or True:
             print("\nBoard Weights")
             print(np.around(self.mobilitytable.detach().numpy().reshape((8,8)), decimals=3))
 
@@ -467,7 +475,7 @@ model = HCE()
 criterion = torch.nn.MSELoss(reduction='sum')
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
 
-epochs = 20
+epochs = 30
 
 # Training loop
 for epoch in range(epochs):  # Adjust the number of epochs
@@ -504,3 +512,16 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # + bishoppair .3035
 # - backwards and isolated
 # + phalanx and chain .3027
+
+'''
+Board Weights
+[[-0.054  0.108 -0.263 -0.178 -0.176 -0.379 -0.664 -0.88 ]
+ [-0.525 -0.482 -0.55  -0.47  -0.622 -0.514 -0.844 -1.004]
+ [-0.474 -0.545 -0.76  -0.467 -0.559 -0.844 -0.588 -0.651]
+ [-0.356 -0.543 -0.373 -0.566 -0.636 -0.624 -0.65  -0.49 ]
+ [-0.33  -0.289 -0.479 -0.538 -0.601 -0.41  -0.376 -0.268]
+ [ 0.003 -0.312 -0.222 -0.41  -0.481 -0.243 -0.461 -0.156]
+ [-0.104 -0.274 -0.323 -0.193 -0.387 -0.453 -0.439 -0.121]
+ [-0.096 -0.112 -0.216 -0.175 -0.216 -0.143 -0.335  0.079]]
+===
+'''
