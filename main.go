@@ -727,7 +727,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	
 	// Futility pruning
 	if (depth <= 5 && staticEval + depth * 100 < alpha) {
-		quietsLeft = 1
+		quietsLeft = 0
 	}
 
 
@@ -753,6 +753,13 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 			if staticEval + decode(e_material[board.squares[nextMove.end]/2], board.phase) + 75 < alpha {
 				break
 			}
+		}
+
+		if !pv && !board.inCheck && board.squares[nextMove.end] == 0 && legals != 0 {
+			if quietsLeft <= 0 {
+				break
+			}
+			quietsLeft -= 1
 		}
 
 		nextBoard := board.Apply(nextMove)
@@ -808,13 +815,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 				*hhm -= (bonus + ((bonus * (*hhm)) / MAX_HISTORY))
 			}
 			break
-		}
-			
-		if !pv && !board.inCheck && board.squares[nextMove.end] == 0 && legals != 1 {
-			quietsLeft -= 1
-			if quietsLeft == 0 {
-				break
-			}
 		}
 	}
 
