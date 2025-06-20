@@ -691,14 +691,14 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	}
 
 
-	if depth > 0 && !pv && board.phase > 4 && !board.inCheck { // TODO: consider moving the board.phase > 4 check to only nmp
+	if depth > 0 && !pv && !board.inCheck { // TODO: consider moving the board.phase > 4 check to only nmp
 		// Reverse futility pruning RFP
 		if (staticEval - ((depth * 50) + (5 * depth * depth)) > beta) { 
 			return staticEval
 		}
 
 		// Null move pruning NMP
-		if staticEval >= beta && nullallowed && depth >= 3 {
+		if staticEval >= beta && nullallowed && depth >= 3 && board.phase > 4 {
 			nmScore := -alphabeta(board.Apply(Move{9,9}), -beta, -alpha, ((depth - 4) - (depth / 5)), false)
 			if nmScore >= beta {
 				return beta
