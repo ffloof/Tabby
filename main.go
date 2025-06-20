@@ -226,13 +226,6 @@ var patterns = [7][]int{
 	{N, S, E, W, N + W, N + E, S + W, S + E},
 }
 
-func (board *Board) IsHomeRow(i int) bool {
-	if board.sidetomove == 1 {
-		return A1+N <= i
-	}
-	return i <= H8+S
-}
-
 func (board *Board) PawnDefends(sq int, attacker int8) bool {
 	for _, dir := range []int{W - ADVANCES[attacker], E - ADVANCES[attacker]} {
 		if ((sq + dir) & 0x88) == 0 {
@@ -253,8 +246,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	
 	mobility := 0
 
-	var pawnIndexes [16]int8
-	pawnCounter := 0
+	pawnIndexes := make([]int8, 0, 16)
 
 	for i, piece := range board.squares {
 		if piece < 2 {
@@ -264,8 +256,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		piecetype := piece / 2
 
 		if piecetype == 1 {
-			pawnIndexes[pawnCounter] = int8(i)
-			pawnCounter++
+			pawnIndexes = append(pawnIndexes,int8(i))
 		}
 
 		if piece & 1 != board.sidetomove {
@@ -277,7 +268,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		if piecetype == 1 {
 			if !capturesOnly && board.squares[i+advance] == 0 {
 				moves = append(moves, Move{int8(i), int8(i + advance)})
-				if board.IsHomeRow(i) && board.squares[i+advance+advance] == 0 {
+				if ((board.sidetomove == 1 && A1+N <= i) || (board.sidetomove == 0 && i <= H8+S)) && board.squares[i+advance+advance] == 0 {
 					moves = append(moves, Move{int8(i), int8(i + advance + advance)})
 				}
 			}
@@ -358,15 +349,13 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	for _, sq := range pawnIndexes {
 		piece := board.squares[sq]
-		if piece / 2 == 1 {
-			pawnfile := (sq & 7) + 1
-			pawnrank := int(sq >> 4)
+		pawnfile := (sq & 7) + 1
+		pawnrank := int(sq >> 4)
 
-			if (piece & 1) == 1 {
-				whiterear[pawnfile] = max(whiterear[pawnfile], pawnrank)
-			} else {
-				blackrear[pawnfile] = min(blackrear[pawnfile], pawnrank)
-			}
+		if (piece & 1) == 1 {
+			whiterear[pawnfile] = max(whiterear[pawnfile], pawnrank)
+		} else {
+			blackrear[pawnfile] = min(blackrear[pawnfile], pawnrank)
 		}
 	}
 
@@ -393,41 +382,39 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	for _, sq := range pawnIndexes {
 		piece := board.squares[sq]
-		if piece / 2 == 1 {
-			npawns[piece & 1] += 1
-			pfile := int((sq & 7) + 1)
-			prank := int(sq >> 4)
+		npawns[piece & 1] += 1
+		pfile := int((sq & 7) + 1)
+		prank := int(sq >> 4)
 
-			semiopen := false
+		semiopen := false
+		
+		if piece & 1 == 1 {
+			semiopen = (blackrear[pfile] == 7)
+			if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
+				whitepasser[pfile] = max(whitepasser[pfile], 7 - prank)
+			}
+		} else {
+			semiopen = (whiterear[pfile] == 0)
+			if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
+				blackpasser[pfile] = max(blackpasser[pfile], prank)
+			}
+		}
+
+		if piece & 1 == board.sidetomove {
 			
-			if piece & 1 == 1 {
-				semiopen = (blackrear[pfile] == 7)
-				if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
-					whitepasser[pfile] = max(whitepasser[pfile], 7 - prank)
-				}
-			} else {
-				semiopen = (whiterear[pfile] == 0)
-				if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
-					blackpasser[pfile] = max(blackpasser[pfile], prank)
+			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
+				if semiopen {
+					mobility += (decode(e_phalanxOpen, board.phase) * attention[sq]) / e_divider 
+				} else {
+					mobility += (decode(e_phalanxClosed, board.phase) * attention[sq]) / e_divider
 				}
 			}
 
-			if piece & 1 == board.sidetomove {
-				
-				if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
-					if semiopen {
-						mobility += (decode(e_phalanxOpen, board.phase) * attention[sq]) / e_divider 
-					} else {
-						mobility += (decode(e_phalanxClosed, board.phase) * attention[sq]) / e_divider
-					}
-				}
-
-				if board.PawnDefends(int(sq), board.sidetomove) {
-					if semiopen {
-						mobility += (decode(e_chainOpen, board.phase) * attention[sq]) / e_divider
-					} else {
-						mobility += (decode(e_chainClosed, board.phase) * attention[sq]) / e_divider 
-					}
+			if board.PawnDefends(int(sq), board.sidetomove) {
+				if semiopen {
+					mobility += (decode(e_chainOpen, board.phase) * attention[sq]) / e_divider
+				} else {
+					mobility += (decode(e_chainClosed, board.phase) * attention[sq]) / e_divider 
 				}
 			}
 		}
@@ -679,6 +666,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	}
      
 	moves, staticEval := board.Generate(depth <= 0)
+
 	// standpat
 	if (depth <= 0) {
 		bestScore = staticEval
@@ -699,8 +687,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 		// Null move pruning NMP
 		if staticEval >= beta && nullallowed && depth >= 3 && board.phase > 4 {
-			nmScore := -alphabeta(board.Apply(Move{9,9}), -beta, -alpha, ((depth - 4) - (depth / 5)), false)
-			if nmScore >= beta {
+			if -alphabeta(board.Apply(Move{9,9}), -beta, -alpha, ((depth - 4) - (depth / 5)), false) >= beta {
 				return beta
 			}
 		}
@@ -722,8 +709,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 			priorities[i] = 1_000_000_000
 		}
 	}
-
-	quietsLeft := (depth * depth) - depth + 4
 	
 	// Futility pruning
 	if (depth <= 5 && staticEval + depth * 100 < alpha) {
