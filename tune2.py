@@ -70,7 +70,7 @@ patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E
 
 
 for line in tqdm(lines):
-    if len(outputs) > 2_000_000:
+    if len(outputs) > 500_000:
         break
 
     packed = line.split("c9")
@@ -298,8 +298,8 @@ for line in tqdm(lines):
     mobtable = mobtable.reshape(2,mobtable.shape[1],8,8)
     mobtable[0] = np.flip(mobtable[0],1)
 
-    percentb = ((wkingfile - 1))
-    percentw = ((bkingfile - 1))
+    percentb = ((bkingfile - 1))
+    percentw = ((wkingfile - 1))
 
     kblack = (percentb * mobtable[0,:,:,:])
     qblack = ((7-percentb) * np.flip(mobtable[0,:,:,:], 2))
@@ -341,17 +341,17 @@ for line in tqdm(lines):
         #print(starts, sizes)
 
         print("\nfen " + fen)
-        for a in range(2):
-            plt.imshow(kwhite[1].reshape((8,8)))
-            plt.show()
-            plt.imshow(qwhite[1].reshape((8,8)))
-            plt.show()
-            plt.imshow((kwhite+qwhite)[1].reshape((8,8)))
-            plt.show()
-            plt.imshow(mobtable[1][1].reshape((8,8)))
-            plt.show()
-            break
-            ...
+        #for a in range(2):
+        #    plt.imshow(kwhite[1].reshape((8,8)))
+        #    plt.show()
+        #    plt.imshow(qwhite[1].reshape((8,8)))
+        #    plt.show()
+        #    plt.imshow((kwhite+qwhite)[1].reshape((8,8)))
+        #    plt.show()
+        #    plt.imshow(mobtable[1][1].reshape((8,8)))
+        #    plt.show()
+        #    break
+        #    ...
 
         #plt.imshow((mobtable[0][8]).reshape((8,8)))
         #plt.show()
@@ -387,8 +387,6 @@ class HCE(torch.nn.Module):
 
         self.risk = torch.nn.Parameter(torch.randn(starts[5]-starts[4]))
 
-        self.tempomulter = torch.nn.Parameter(torch.randn(1))
-
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
@@ -401,9 +399,6 @@ class HCE(torch.nn.Module):
         score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
-        bonus = torch.abs(netmobility) *  x[:,7] * self.tempomulter
-        bonus2 = torch.abs(netmobility2) * x[:,7] * self.tempomulter
-
         midscore = ((score + netmobility + bonus) * phase)
         endscore = ((score2 + netmobility2 + bonus2) * (1-phase))
 
@@ -415,9 +410,6 @@ class HCE(torch.nn.Module):
 
     def printfinal(self, finalEpoch=False):
         print((self.risk.detach().numpy()))
-
-        print("TempoMulter", self.tempomulter)
-
 
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
         riskNormalizer = self.risk.detach().numpy()[8] + 1

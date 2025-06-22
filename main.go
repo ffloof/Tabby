@@ -243,9 +243,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	moves := []Move{}
 
 	advance := ADVANCES[board.sidetomove]
-	
 	mobility := 0
-
 	pawnIndexes := make([]int8, 0, 16)
 
 	for i, piece := range board.squares {
@@ -326,6 +324,8 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 
 	kingIndex := board.kings[board.sidetomove]
+
+	// TODO: we could save a lot of time if we moved the incheck inside of the capturesOnly clause since we dont yet use it in eval, and its worthless in qsearch
 	board.inCheck = board.attacked(kingIndex, 1-board.sidetomove)
 	if !capturesOnly && (kingIndex == E8 || kingIndex == E1) && !board.inCheck {
 		if board.squares[kingIndex+E+E+E+CASTLE] == 1 && board.squares[kingIndex+E+E] == 0 && board.squares[kingIndex+E] == 0 {
@@ -662,7 +662,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		if cacheScore - 20 < aspirationScore && aspirationScore < cacheScore + 20 {
 			return aspirationScore
 		}
-
 	}
      
 	moves, staticEval := board.Generate(depth <= 0)
@@ -670,9 +669,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	// standpat
 	if (depth <= 0) {
 		bestScore = staticEval
-		if bestScore > alpha {
-			alpha = bestScore
-		}
+		alpha = max(alpha, bestScore)
 		if bestScore >= beta {
 			return bestScore
 		}
@@ -694,21 +691,19 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	}
 
 
-	// Prunings should only happen above this
+	// Prunings that return should only happen above this
 	repetition = append(repetition, hash)
-
 
 	priorities := make([]int, len(moves), len(moves))
 	for i, move := range moves {
-		if board.squares[move.end] != 0 {
-			priorities[i] = (int(board.squares[move.end]) * 1_000_000)
-		}
-		priorities[i] += history[BOOL(board.squares[move.end] == 0)][board.squares[move.start]][move.end]
+		priorities[i] = (int(board.squares[move.end]) * 1_000_000) + history[BOOL(board.squares[move.end] == 0)][board.squares[move.start]][move.end]
 		
 		if tt.move.end == move.end && tt.move.start == move.start {
 			priorities[i] = 1_000_000_000
 		}
 	}
+
+	quietsLeft := (depth * depth) - depth + 4
 	
 	// Futility pruning
 	if (depth <= 5 && staticEval + depth * 100 < alpha) {
@@ -759,7 +754,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		if ((legals == 1 || depth <= 0)){
 			score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, true)
 		} else {
-			// TODO: improve LMR
 			reduction := ((depth+legals)/16)
 			reduction += max(0,-max(-2, history[BOOL(board.squares[nextMove.end] == 0)][board.squares[nextMove.start]][nextMove.end] / 64))
 
@@ -787,12 +781,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 			boundtype = -1
 
 			bonus := depth * depth
-			if staticEval < alpha {
-				bonus = (depth + 1) * (depth + 1)
-			}
-
 			hh := &history[BOOL(board.squares[nextMove.end] == 0)][board.squares[nextMove.start]][nextMove.end]
-
 			*hh += bonus - ((bonus * (*hh)) / MAX_HISTORY)
 
 			for m:=0;m<i;m++ {
@@ -815,7 +804,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		bestScore += 1 // Mate distance/delay adjustment
 	}
 
-	if bestMove.start != bestMove.end {
+	if bestMove.start != bestMove.end { // Many nodes in Qsearch either have no captures, or (in check) no legal captures, not worth storing them in tt since they are cheap and plentiful
 		table[hash % hashsize] = entry{hash, bestMove, int16(bestScore), int8(depth), boundtype}
 	}
 
