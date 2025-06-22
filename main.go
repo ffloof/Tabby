@@ -666,6 +666,11 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
      
 	moves, staticEval := board.Generate(depth <= 0)
 
+	// TODO: improving functions only on evaluation function evals not tt
+	if tt.key == hash {
+		staticEval = int(tt.score)
+	}
+
 	// standpat
 	if (depth <= 0) {
 		bestScore = staticEval
