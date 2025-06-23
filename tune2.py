@@ -17,6 +17,9 @@ for line in file1.readlines():
 random.shuffle(lines)
 
 outcomescore = {
+    "\"1-0\";":1,
+    "\"1/2-1/2\";":0,
+    "\"0-1\";":-1,
     "1-0":1,
     "0-1":-1,
     "1/2-1/2":0,
@@ -131,7 +134,7 @@ for line in tqdm(lines):
 
     shield = np.zeros((2,10), dtype=np.int8)
 
-    mobtable = np.zeros((2,11,64), dtype=np.int8)
+    mobtable = np.zeros((2,7,64), dtype=np.int8)
 
     kings = [-1, -1]
     rearpawns = [
@@ -154,7 +157,7 @@ for line in tqdm(lines):
         material[piececolor, piecetype] += 1
 
         if piecetype > 0:
-            mobtable[piece&1][piecetype][i] += 1
+            mobtable[piece&1][piecetype][i] += 2 #1
 
         if piecetype == 1:
             pfile = mailbox[i] % 10
@@ -301,6 +304,7 @@ for line in tqdm(lines):
     percentb = ((bkingfile - 1))
     percentw = ((wkingfile - 1))
 
+
     kblack = (percentb * mobtable[0,:,:,:])
     qblack = ((7-percentb) * np.flip(mobtable[0,:,:,:], 2))
 
@@ -399,8 +403,8 @@ class HCE(torch.nn.Module):
         score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
         score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
 
-        midscore = ((score + netmobility + bonus) * phase)
-        endscore = ((score2 + netmobility2 + bonus2) * (1-phase))
+        midscore = ((score + netmobility) * phase)
+        endscore = ((score2 + netmobility2) * (1-phase))
 
         finalscore = midscore + endscore
         scalew = torch.clamp(finalscore, min=0) * torch.matmul(x[:,starts[5]:starts[6]], self.risk)
