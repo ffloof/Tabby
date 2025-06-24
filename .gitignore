@@ -1,5 +1,6 @@
 uci_options.txt
 *.uci_options
+old
 main
 main.exe
 main.exe~

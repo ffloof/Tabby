@@ -301,8 +301,8 @@ for line in tqdm(lines):
     mobtable = mobtable.reshape(2,mobtable.shape[1],8,8)
     mobtable[0] = np.flip(mobtable[0],1)
 
-    percentb = ((bkingfile - 1))
-    percentw = ((wkingfile - 1))
+    percentw = ((bkingfile - 1))
+    percentb = ((wkingfile - 1))
 
 
     kblack = (percentb * mobtable[0,:,:,:])
