@@ -41,49 +41,7 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 	return 0
 }
 
-/*
-===
-18 0.23725980257695797
-
-Linear terms
-
-material {T(0,0), T(39,82), T(291,298), T(317,321), T(401,618), T(853,1159), T(0,0), }
-passerRank {T(0,0), T(3,0), T(-4,-12), T(-9,9), T(-1,36), T(2,101), T(-8,176), T(0,0), }
-shield {T(0,0), T(17,27), T(53,17), T(2,26), T(20,10), T(31,5), T(28,9), T(8,12), T(69,-4), T(0,0), }
-tempo {T(31,30), }
-passerDistance {T(0,0), T(19,8), T(4,7), T(-17,26), T(-18,26), T(-34,27), T(-9,6), T(-75,6), }
-restricted {T(0,0), T(0,0), T(-6,-4), T(-5,0), T(-5,-1), T(-5,1), T(-15,5), }
-attacks {T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(48,9), T(60,28), T(68,0), T(59,9), T(96,47), T(0,0), T(-7,12), T(0,0), T(20,45), T(37,39), T(27,15), T(100,1), T(0,0), T(-3,13), T(8,20), T(0,0), T(23,17), T(41,44), T(47,72), T(0,0), T(-15,12), T(-3,12), T(18,12), T(0,0), T(65,-8), T(194,-8), T(0,0), T(-1,6), T(-7,12), T(-1,37), T(2,6), T(0,0), T(62,115), T(0,0), T(29,30), T(6,17), T(-18,24), T(-126,48), T(-358,-92), T(0,0), }
-bishoppair {T(18,39), }
-phalanxOpen {T(6,11), }
-phalanxClosed {T(5,0), }
-chainOpen {T(18,21), }
-chainClosed {T(9,7), }
-isolatedOpen {T(-11,-3), }
-isolatedClosed {T(-1,-5), }
-unstoppable {T(-273,117), }
-protectedpasser {T(52,-20), }
-unstoppable2 {T(9,71), }
-shield2 {T(0,0), T(-31,25), T(15,13), T(-26,19), T(18,7), T(23,-3), T(11,0), T(-8,18), T(39,13), T(0,0), }
-
-Mobility weights
-{T(0,0), T(28,1), T(20,15), T(13,11), T(14,5), T(5,16), T(-24,22), }
-
-Risk weights
-[0.327 0.534 0.779 0.932 1.052 1.044 1.054 1.062 1.   ]
-
-Board Weights
-[[-0.08  -0.129  0.283  0.161  0.452  0.56   0.485  0.785]
- [ 0.425  0.618  0.505  0.346  0.524  0.541  0.681  0.44 ]
- [ 0.454  0.52   0.508  0.373  0.538  0.832  0.591  0.296]
- [ 0.369  0.587  0.395  0.709  0.683  0.467  0.535  0.538]
- [ 0.219  0.249  0.537  0.72   0.598  0.363  0.354  0.097]
- [ 0.024  0.312  0.423  0.357  0.488  0.404  0.793  0.157]
- [ 0.081  0.406  0.417  0.497  0.436  0.635  0.766  0.151]
- [-0.011  0.146  0.296  0.346  0.367 -0.039  0.131  0.078]]
-===
-*/
-
+// 0.23725980257695797
 var e_material = []int{T(0,0), T(39,82), T(291,298), T(317,321), T(401,618), T(853,1159), T(0,0), }
 var e_passerRank = []int{T(0,0), T(3,0), T(-4,-12), T(-9,9), T(-1,36), T(2,101), T(-8,176), T(0,0), }
 var e_shield = []int{T(0,0), T(17,27), T(53,17), T(2,26), T(20,10), T(31,5), T(28,9), T(8,12), T(69,-4), T(0,0), }
@@ -114,6 +72,8 @@ func flip(arr1, arr2 *[128]int, xor int){
 		arr2[i] = arr1[i^xor]
 	}
 }
+
+var evals [256]int
 
 var e_risk = []int{ 327, 534, 779, 932, 1052, 1044, 1054, 1062, 1000 }
 var e_table = [2][128]int {
@@ -750,8 +710,10 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	}
      
 	moves, staticEval := board.Generate(depth <= 0)
+	evals[board.ply] = staticEval
 
-	// TODO: improving functions only on evaluation function evals not tt
+	improving := board.ply > 1 && staticEval > evals[board.ply - 2];
+
 	if tt.key == hash {
 		staticEval = int(tt.score)
 	}
@@ -793,7 +755,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-	quietsLeft := (depth * depth) - depth + 4
+	quietsLeft := ((depth * depth + 1) >> BOOL(!improving)) + 1
 	
 	// Futility pruning
 	if (depth <= 5 && staticEval + depth * 100 < alpha) {
@@ -845,7 +807,9 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 			score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, true)
 		} else {
 			reduction := ((depth+legals)/16)
-			reduction += max(0,-max(-2, history[BOOL(board.squares[nextMove.end] == 0)][board.squares[nextMove.start]][nextMove.end] / 64))
+			reduction += max(-2,-max(-2, history[BOOL(board.squares[nextMove.end] == 0)][board.squares[nextMove.start]][nextMove.end] / 64))
+			// TODO: test if we should just not reduce captures
+			reduction = max(reduction, 0)
 
 			score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1 - reduction, true)
 			if score > alpha && reduction > 0 {
@@ -1051,6 +1015,3 @@ func main() {
 
 // Ben finegolds middle name is philip
 // Should make a stream where people vote on best move
-
-
-// TODO: squeeze more elo by optimizing pruning/reductions
