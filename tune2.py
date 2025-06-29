@@ -73,7 +73,7 @@ patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E
 
 
 for line in tqdm(lines):
-    if len(outputs) > 500_000:
+    if len(outputs) >= len(lines):
         break
 
     packed = line.split("c9")
@@ -124,7 +124,8 @@ for line in tqdm(lines):
     phalanxClosed = np.zeros((2, 1), dtype=np.int8)
     chainOpen = np.zeros((2, 1), dtype=np.int8)
     chainClosed = np.zeros((2, 1), dtype=np.int8) 
-
+    isolatedOpen = np.zeros((2, 1), dtype=np.int8)
+    isolatedClosed = np.zeros((2, 1), dtype=np.int8)
 
     passerDistance = np.zeros((2,8), dtype=np.int8)
     passerRank = np.array([
@@ -133,6 +134,7 @@ for line in tqdm(lines):
     ], dtype=np.int8)
 
     shield = np.zeros((2,10), dtype=np.int8)
+    shield2 = np.zeros((2,10), dtype=np.int8)
 
     mobtable = np.zeros((2,7,64), dtype=np.int8)
 
@@ -162,6 +164,7 @@ for line in tqdm(lines):
         if piecetype == 1:
             pfile = mailbox[i] % 10
             prank = mailbox[i] // 10
+
             if piececolor == 0:
                 rearpawns[piececolor][pfile] = min(rearpawns[piececolor][pfile], prank)
             else:
@@ -177,11 +180,20 @@ for line in tqdm(lines):
 
     for sq in range(len(virtualboard)):
         piece = virtualboard[sq]
+
+        if piece < 2:
+            continue
+
         piecetype = piece // 2
         isray = rays[piecetype]
         pattern = patterns[piecetype]
 
         if piecetype == 1:
+            if piece == 2:
+                pattern = [S+W, S+E]
+            if piece == 3:
+                pattern = [N+W, N+E]
+
             pfile = sq % 10
             prank = sq // 10
 
@@ -204,6 +216,12 @@ for line in tqdm(lines):
                         #mobtable[0][10][inverse[sq]] = 1
                         chainClosed[0] += 1
 
+                if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
+                    if rearpawns[1][pfile] == 0:
+                        isolatedOpen[0] += 1
+                    else:
+                        isolatedClosed[0] += 1
+
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
 
@@ -224,14 +242,16 @@ for line in tqdm(lines):
                         #mobtable[1][10][inverse[sq]] = 1
                         chainClosed[1] += 1
 
+                if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
+                    if rearpawns[0][pfile] == 11:
+                        isolatedOpen[1] += 1
+                    else:
+                        isolatedClosed[1] += 1
 
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
                     passerRank[1][pfile] = min(prank, passerRank[1][pfile])
         
-        if piece == 2:
-            pattern = [S+W, S+E]
-        if piece == 3:
-            pattern = [N+W, N+E]
+        
         
 
         for direction in pattern:
@@ -267,12 +287,29 @@ for line in tqdm(lines):
         wspawn = rearpawns[1][wkingfile + x]
         if wspawn > 0:
             shield[1][wkingfile + x] = 1
+        elif rearpawns[0][wkingfile + x] < 10:
+            shield2[1][wkingfile+x] = 1
 
         bspawn = rearpawns[0][bkingfile + x]
         if bspawn < 10:
             shield[0][bkingfile + x] = 1
+        elif rearpawns[1][bkingfile + x] > 0:
+            shield2[0][bkingfile + x] = 1
+
+
+
+
 
     pushers = np.zeros(8, dtype=np.int8)
+    unstoppable = np.zeros((2,1), dtype=np.int8)
+    protectedpasser = np.zeros((2,1), dtype=np.int8)
+    unstoppable2 = np.zeros((2,1), dtype=np.int8)
+
+    BTEMPO = 1
+    WTEMPO = 0
+    if turn:
+        WTEMPO = 1
+        BTEMPO = 0
 
 
     for i in range(10):
@@ -284,10 +321,24 @@ for line in tqdm(lines):
         if wPass >= 0:
             pushers[wPass] += 1
             passerDistance[1][abs(i-bkingfile)] += 1
+            if passerRank[1][i] < bkingrank - BTEMPO:
+                unstoppable[1] += 1
+            if (7-wPass < abs(i-bkingfile)-BTEMPO):
+                unstoppable2[1] += 1
 
+            if virtualboard[passerRank[1][i] * 10 + i + S + W] == 3 and virtualboard[passerRank[1][i] * 10 + i + S + E] == 3:
+                protectedpasser[1] += 1
         if bPass >= 0:
             pushers[bPass] -= 1
             passerDistance[0][abs(i-wkingfile)] += 1
+            if passerRank[0][i] > wkingrank + WTEMPO:
+                unstoppable[0] += 1
+            if (7-bPass < abs(i-wkingfile)-WTEMPO):
+                unstoppable2[0] += 1
+
+
+            if virtualboard[passerRank[1][i] * 10 + i + N + W] == 2 and virtualboard[passerRank[1][i] * 10 + i + N + E] == 2:
+                protectedpasser[0] += 1
 
     sidetomove[0] = sign[turn]
 
@@ -301,20 +352,7 @@ for line in tqdm(lines):
     mobtable = mobtable.reshape(2,mobtable.shape[1],8,8)
     mobtable[0] = np.flip(mobtable[0],1)
 
-    percentw = ((bkingfile - 1))
-    percentb = ((wkingfile - 1))
-
-
-    kblack = (percentb * mobtable[0,:,:,:])
-    qblack = ((7-percentb) * np.flip(mobtable[0,:,:,:], 2))
-
-    kwhite = (percentw * mobtable[1,:,:,:])
-    qwhite = ((7-percentw) * np.flip(mobtable[1,:,:,:], 2))
-
-    mobtable[1] = kwhite + qwhite
-    mobtable[0] = kblack + qblack
-
-    captures[:,:,6] = 0 
+    #captures[:,:,6] = 0 
 
     bishoppair = np.zeros(1, dtype=np.int8)
 
@@ -325,7 +363,7 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :], sidetomove],
-        [material[1, :] - material[0, :], pushers, shield[1]-shield[0], sidetomove, passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), bishoppair, phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0] ], 
+        [material[1, :] - material[0, :], pushers, shield[1] - shield[0], sidetomove, passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), bishoppair, phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], isolatedOpen[1] - isolatedOpen[0], isolatedClosed[1] - isolatedClosed[0], unstoppable[1] - unstoppable[0], protectedpasser[1]-protectedpasser[0], unstoppable2[1]-unstoppable2[0] , shield2[1]-shield2[0]], 
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
         [npawns[0]],
@@ -413,7 +451,7 @@ class HCE(torch.nn.Module):
         return torch.tanh(finalscore + (scalew - scaleb)) 
 
     def printfinal(self, finalEpoch=False):
-        print((self.risk.detach().numpy()))
+        #print((self.risk.detach().numpy()))
 
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
         riskNormalizer = self.risk.detach().numpy()[8] + 1
@@ -453,10 +491,6 @@ class HCE(torch.nn.Module):
             plt.show()
 
 
-
-
-
-
 inputs = torch.FloatTensor(np.array(inputs))
 outputs = torch.FloatTensor(outputs)
 size = len(outputs)
@@ -471,7 +505,7 @@ model = HCE()
 criterion = torch.nn.MSELoss(reduction='sum')
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
 
-epochs = 30
+epochs = 20
 
 # Training loop
 for epoch in range(epochs):  # Adjust the number of epochs
@@ -493,31 +527,27 @@ for epoch in range(epochs):  # Adjust the number of epochs
     model.printfinal(epoch == epochs - 1)
 
 
-# tapered and pawn scaled 2M
-# material .3456
-# + weighted mobility .3207
-# + passerRank 0.3164
-# + shield .3166
-# + tempo  .3139
-# + passerKingFileDistance .3115
-# + isolated .3105
-# + backwards .3092
-# + open distinction .3089
-# + restricted .3066
-# + attacks .3042
-# + bishoppair .3035
-# - backwards and isolated
-# + phalanx and chain .3027
+# start = 23884
 
-'''
-Board Weights
-[[-0.054  0.108 -0.263 -0.178 -0.176 -0.379 -0.664 -0.88 ]
- [-0.525 -0.482 -0.55  -0.47  -0.622 -0.514 -0.844 -1.004]
- [-0.474 -0.545 -0.76  -0.467 -0.559 -0.844 -0.588 -0.651]
- [-0.356 -0.543 -0.373 -0.566 -0.636 -0.624 -0.65  -0.49 ]
- [-0.33  -0.289 -0.479 -0.538 -0.601 -0.41  -0.376 -0.268]
- [ 0.003 -0.312 -0.222 -0.41  -0.481 -0.243 -0.461 -0.156]
- [-0.104 -0.274 -0.323 -0.193 -0.387 -0.453 -0.439 -0.121]
- [-0.096 -0.112 -0.216 -0.175 -0.216 -0.143 -0.335  0.079]]
-===
-'''
+# - isolated 23914     30
+# - phalanx 23920   36
+# - shield2 = 23922    38
+# - horizontal flip 23930 46
+# - bishoppair = 23936  52
+# - unstoppable2 = 23959    75
+# - chain 23980   96
+# - unstoppable = 23985  101
+# - shield = 23998 114
+# - protectedpasser = 24080  196
+# - passer distance = 24102  218
+# - passerFile 24103  219
+# - open/closed 24109  225
+# - restricted 24173  289
+# - phalanx and chain = 24175   291
+# - attacks 24233  349
+# - all phalanx and chain and isolated = 24449  565
+# - tempo = 24619  735
+# - material 35800 11916 
+
+# + checking eval 23725 ~159
+# + TODO: try adding mobtable for weak pawns

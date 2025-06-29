@@ -43,72 +43,71 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 
 /*
 ===
-19 0.3027535860054364
+18 0.23725980257695797
 
 Linear terms
-{T(0,0), T(25,73), T(161,292), T(185,298), T(225,541), T(505,1002), T(0,0), }
-{T(0,0), T(-9,-18), T(-17,-13), T(-16,3), T(-12,28), T(4,93), T(10,145), T(0,0), }
-{T(0,0), T(21,3), T(32,4), T(9,10), T(3,8), T(11,8), T(12,11), T(29,6), T(32,-7), T(0,0), }
-{T(21,20), }
-{T(0,0), T(25,3), T(7,10), T(-3,26), T(-2,42), T(-10,61), T(-3,49), T(-5,46), }
-{T(0,0), T(0,0), T(-8,-4), T(-4,-1), T(-7,-5), T(-5,1), T(-9,1), }
 
-{
-
-T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), 
-T(0,0), T(0,0), T(44,9), T(41,30), T(56,11), T(58,-21), T(0,0), 
-T(0,0), T(-8,5), T(0,0), T(16,19), T(44,15), T(32,-12), T(0,0), 
-T(0,0), T(2,7), T(7,25), T(0,0), T(28,22), T(28,102), T(0,0), 
-T(0,0), T(-10,10), T(1,16), T(7,11), T(0,0), T(51,19), T(0,0), 
-T(0,0), T(1,5), T(2,3), T(-1,19), T(4,4), T(0,0), T(0,0), 
-T(0,0), T(37,20), T(-12,27), T(12,25), T(-41,29), T(0,0), T(0,0), }
-
-{T(8,45), }
+material {T(0,0), T(39,82), T(291,298), T(317,321), T(401,618), T(853,1159), T(0,0), }
+passerRank {T(0,0), T(3,0), T(-4,-12), T(-9,9), T(-1,36), T(2,101), T(-8,176), T(0,0), }
+shield {T(0,0), T(17,27), T(53,17), T(2,26), T(20,10), T(31,5), T(28,9), T(8,12), T(69,-4), T(0,0), }
+tempo {T(31,30), }
+passerDistance {T(0,0), T(19,8), T(4,7), T(-17,26), T(-18,26), T(-34,27), T(-9,6), T(-75,6), }
+restricted {T(0,0), T(0,0), T(-6,-4), T(-5,0), T(-5,-1), T(-5,1), T(-15,5), }
+attacks {T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(48,9), T(60,28), T(68,0), T(59,9), T(96,47), T(0,0), T(-7,12), T(0,0), T(20,45), T(37,39), T(27,15), T(100,1), T(0,0), T(-3,13), T(8,20), T(0,0), T(23,17), T(41,44), T(47,72), T(0,0), T(-15,12), T(-3,12), T(18,12), T(0,0), T(65,-8), T(194,-8), T(0,0), T(-1,6), T(-7,12), T(-1,37), T(2,6), T(0,0), T(62,115), T(0,0), T(29,30), T(6,17), T(-18,24), T(-126,48), T(-358,-92), T(0,0), }
+bishoppair {T(18,39), }
+phalanxOpen {T(6,11), }
+phalanxClosed {T(5,0), }
+chainOpen {T(18,21), }
+chainClosed {T(9,7), }
+isolatedOpen {T(-11,-3), }
+isolatedClosed {T(-1,-5), }
+unstoppable {T(-273,117), }
+protectedpasser {T(52,-20), }
+unstoppable2 {T(9,71), }
+shield2 {T(0,0), T(-31,25), T(15,13), T(-26,19), T(18,7), T(23,-3), T(11,0), T(-8,18), T(39,13), T(0,0), }
 
 Mobility weights
-{T(0,0), T(-36,-2), T(-20,-13), T(-12,-10), T(-14,-4), T(-5,-12), T(30,-18), 
-T(-24,-39), T(-12,0), T(-37,-41), T(-16,-22), }
+{T(0,0), T(28,1), T(20,15), T(13,11), T(14,5), T(5,16), T(-24,22), }
 
 Risk weights
-[0.334 0.629 0.723 1.002 1.118 1.236 1.276 1.145 1.   ]
+[0.327 0.534 0.779 0.932 1.052 1.044 1.054 1.062 1.   ]
 
 Board Weights
-[[ 0.015  0.016 -0.204 -0.269 -0.269 -0.269 -0.813 -1.169]
- [-0.453 -0.542 -0.519 -0.443 -0.475 -0.466 -0.996 -0.81 ]
- [-0.5   -0.544 -0.696 -0.512 -0.576 -0.818 -0.641 -0.546]
- [-0.379 -0.521 -0.441 -0.556 -0.657 -0.551 -0.525 -0.57 ]
- [-0.212 -0.269 -0.41  -0.487 -0.586 -0.35  -0.308 -0.339]
- [-0.032 -0.351 -0.253 -0.425 -0.437 -0.327 -0.466 -0.273]
- [-0.011 -0.37  -0.303 -0.219 -0.251 -0.492 -0.468 -0.134]
- [-0.168 -0.164 -0.146 -0.185 -0.202 -0.213 -0.218  0.052]]
+[[-0.08  -0.129  0.283  0.161  0.452  0.56   0.485  0.785]
+ [ 0.425  0.618  0.505  0.346  0.524  0.541  0.681  0.44 ]
+ [ 0.454  0.52   0.508  0.373  0.538  0.832  0.591  0.296]
+ [ 0.369  0.587  0.395  0.709  0.683  0.467  0.535  0.538]
+ [ 0.219  0.249  0.537  0.72   0.598  0.363  0.354  0.097]
+ [ 0.024  0.312  0.423  0.357  0.488  0.404  0.793  0.157]
+ [ 0.081  0.406  0.417  0.497  0.436  0.635  0.766  0.151]
+ [-0.011  0.146  0.296  0.346  0.367 -0.039  0.131  0.078]]
 ===
 */
 
-var e_material = []int{T(0,0), T(25,73), T(161,292), T(185,298), T(225,541), T(505,1002), T(0,0), }
-var e_passerRank = []int{T(0,0), T(-9,-18), T(-17,-13), T(-16,3), T(-12,28), T(4,93), T(10,145), T(0,0), }
-var e_shield = []int{T(0,0), T(21,3), T(32,4), T(9,10), T(3,8), T(11,8), T(12,11), T(29,6), T(32,-7), T(0,0), }
-var e_tempo int = T(10,10) //T(21,20)
-var e_passerFile = []int{T(0,0), T(25,3), T(7,10), T(-3,26), T(-2,42), T(-10,61), T(-3,49), T(-5,46), }
-var e_restricted = []int{T(0,0), T(0,0), T(-8,-4), T(-4,-1), T(-7,-5), T(-5,1), T(-9,1), }
+var e_material = []int{T(0,0), T(39,82), T(291,298), T(317,321), T(401,618), T(853,1159), T(0,0), }
+var e_passerRank = []int{T(0,0), T(3,0), T(-4,-12), T(-9,9), T(-1,36), T(2,101), T(-8,176), T(0,0), }
+var e_shield = []int{T(0,0), T(17,27), T(53,17), T(2,26), T(20,10), T(31,5), T(28,9), T(8,12), T(69,-4), T(0,0), }
+var e_tempo int = T(10,10) //{T(31,30), }
+var e_passerFile = []int{T(0,0), T(19,8), T(4,7), T(-17,26), T(-18,26), T(-34,27), T(-9,6), T(-75,6), }
+var e_restricted = []int{T(0,0), T(0,0), T(-6,-4), T(-5,0), T(-5,-1), T(-5,1), T(-15,5), }
 
-var e_attacks = []int{
-	T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), 
-	T(0,0), T(0,0), T(44,9), T(41,30), T(56,11), T(58,-21), T(0,0), 
-	T(0,0), T(-8,5), T(0,0), T(16,19), T(44,15), T(32,-12), T(0,0), 
-	T(0,0), T(2,7), T(7,25), T(0,0), T(28,22), T(28,102), T(0,0), 
-	T(0,0), T(-10,10), T(1,16), T(7,11), T(0,0), T(51,19), T(0,0), 
-	T(0,0), T(1,5), T(2,3), T(-1,19), T(4,4), T(0,0), T(0,0), 
-	T(0,0), T(37,20), T(-12,27), T(12,25), T(-41,29), T(-200,-100), T(0,0),
-}
+var e_attacks = []int{T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(48,9), T(60,28), T(68,0), T(59,9), T(96,47), T(0,0), T(-7,12), T(0,0), T(20,45), T(37,39), T(27,15), T(100,1), T(0,0), T(-3,13), T(8,20), T(0,0), T(23,17), T(41,44), T(47,72), T(0,0), T(-15,12), T(-3,12), T(18,12), T(0,0), T(65,-8), T(194,-8), T(0,0), T(-1,6), T(-7,12), T(-1,37), T(2,6), T(0,0), T(62,115), T(0,0), T(29,30), T(6,17), T(-18,24), T(-126,48), T(-358,-92), T(0,0), }
 
-var e_bishopPair int = T(8,45)
+var e_bishopPair int = T(18,39)
 
 // Note mobility only counts current square for pawns
-var e_mobility = []int{T(0,0), T(36,2), T(20,13), T(12,10), T(14,4), T(5,12), T(-30,18), }
-var e_phalanxOpen int = T(24,39)
-var e_phalanxClosed int = T(12,0)
-var e_chainOpen int = T(37,41)
-var e_chainClosed int = T(16,22)
+var e_mobility = []int{T(0,0), T(28,1), T(20,15), T(13,11), T(14,5), T(5,16), T(-24,22) }
+var e_phalanxOpen int = T(6,11)
+var e_phalanxClosed int = T(5,0)
+var e_chainOpen int = T(18,21)
+var e_chainClosed int = T(9,7)
+var e_isolatedOpen int = T(-11,-3)
+var e_isolatedClosed int = T(-1,-5)
+
+var e_unstoppableVertical int = T(-273,117)
+var e_protectedpasser int = T(52,-20)
+var e_unstoppableHorizontal int = T(9,71)
+var e_shield2 = []int{T(0,0), T(-31,25), T(15,13), T(-26,19), T(18,7), T(23,-3), T(11,0), T(-8,18), T(39,13), T(0,0), }
 
 func flip(arr1, arr2 *[128]int, xor int){
 	for i := range(len(arr1)) {
@@ -116,17 +115,17 @@ func flip(arr1, arr2 *[128]int, xor int){
 	}
 }
 
-var e_risk = []int{ 334, 629, 723, 1002, 1118, 1236, 1276, 1145, 1000 }
+var e_risk = []int{ 327, 534, 779, 932, 1052, 1044, 1054, 1062, 1000 }
 var e_table = [2][128]int {
 	{},
-{-15, -16, 204, 269, 269, 269, 813, 1169, 0,0,0,0, 0,0,0,0,
- 453, 542, 519, 443, 475, 466, 996, 810,  0,0,0,0, 0,0,0,0,
- 500, 544, 696, 512, 576, 818, 641, 546,  0,0,0,0, 0,0,0,0,
- 379, 521, 441, 556, 657, 551, 525, 570,  0,0,0,0, 0,0,0,0,
- 212, 269, 410, 487, 586, 350, 308, 339,  0,0,0,0, 0,0,0,0,
-  32, 351, 253, 425, 437, 327, 466, 273,  0,0,0,0, 0,0,0,0,
-  11, 370, 303, 219, 251, 492, 468, 134,  0,0,0,0, 0,0,0,0,
- 168, 164, 146, 185, 202, 213, 218, -52,  0,0,0,0, 0,0,0,0,},
+{-80, -129,  283,  161,  452,  560,  485,  785, 0,0,0,0, 0,0,0,0,
+ 425,  618,  505,  346,  524,  541,  681,  440, 0,0,0,0, 0,0,0,0,
+ 454,  520,  508,  373,  538,  832,  591,  296, 0,0,0,0, 0,0,0,0,
+ 369,  587,  395,  709,  683,  467,  535,  538, 0,0,0,0, 0,0,0,0,
+ 219,  249,  537,  720,  598,  363,  354,   97, 0,0,0,0, 0,0,0,0,
+  24,  312,  423,  357,  488,  404,  793,  157, 0,0,0,0, 0,0,0,0,
+  81,  406,  417,  497,  436,  635,  766,  151, 0,0,0,0, 0,0,0,0,
+ -11,  146,  296,  346,  367,  -39,  131,   78, 0,0,0,0, 0,0,0,0,},
 }
 
 const e_divider = 1000
@@ -261,8 +260,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			continue
 		}
 
-
-		mobValue := attention[i]
+		mobValue := attention[i] * 2
 		if piecetype == 1 {
 			if !capturesOnly && board.squares[i+advance] == 0 {
 				moves = append(moves, Move{int8(i), int8(i + advance)})
@@ -343,7 +341,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		score += e_material[piecetype] * int((board.pieceCount[piecetype * 2 + 1] - board.pieceCount[piecetype * 2]))
 	}
 
-
 	whiterear := [10]int{0,0,0,0,0,0,0,0,0,0,}
 	blackrear := [10]int{7,7,7,7,7,7,7,7,7,7,}
 
@@ -362,15 +359,20 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	wkingfile := (board.kings[1]&7) + 1
 	bkingfile := (board.kings[0]&7) + 1
-	//wkingrank := board.kings[1] >> 4
-	//bkingrank := board.kings[0] >> 4
+	wkingrank := board.kings[1] >> 4
+	bkingrank := board.kings[0] >> 4
 
 	for i := -1; i <= 1; i++ {
 		if whiterear[wkingfile + i] != 0 {
 			score += e_shield[wkingfile + i]
+		} else if blackrear[wkingfile + i] != 7 {
+			score += e_shield[wkingfile + i]
 		}
+
 		if blackrear[bkingfile + i] != 7 {
 			score -= e_shield[bkingfile + i]
+		} else if whiterear[bkingfile + i] != 0 {
+			score -= e_shield2[bkingfile + i]
 		}
 	}
 
@@ -380,6 +382,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	var whitepasser [10]int
 	var blackpasser [10]int
 
+	// Weak pawn evaluation
 	for _, sq := range pawnIndexes {
 		piece := board.squares[sq]
 		npawns[piece & 1] += 1
@@ -393,44 +396,125 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
 				whitepasser[pfile] = max(whitepasser[pfile], 7 - prank)
 			}
+
+			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
+				if semiopen {
+					score += e_phalanxOpen
+				} else {
+					score += e_phalanxClosed
+				}
+			}
+
+			if board.PawnDefends(int(sq), 1) {
+				if semiopen {
+					score += e_chainOpen
+				} else {
+					score += e_chainClosed
+				}
+			}
+
+			if whiterear[pfile-1] == 0 && whiterear[pfile+1] == 0 {
+				if semiopen{
+					score += e_isolatedOpen
+				} else {
+					score += e_isolatedClosed
+				}
+			}
+
 		} else {
 			semiopen = (whiterear[pfile] == 0)
 			if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
 				blackpasser[pfile] = max(blackpasser[pfile], prank)
 			}
+
+			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
+				if semiopen {
+					score -= e_phalanxOpen
+				} else {
+					score -= e_phalanxClosed
+				}
+			}
+
+			if board.PawnDefends(int(sq), 0) {
+				if semiopen {
+					score -= e_chainOpen
+				} else {
+					score -= e_chainClosed
+				}
+			}
+
+			if blackrear[pfile-1] == 7 && blackrear[pfile+1] == 7 {
+				if semiopen{
+					score -= e_isolatedOpen
+				} else {
+					score -= e_isolatedClosed
+				}
+			}
 		}
 
+		/*
 		if piece & 1 == board.sidetomove {
 			
 			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
 				if semiopen {
-					mobility += (decode(e_phalanxOpen, board.phase) * attention[sq]) / e_divider 
+					mobility += decode(e_phalanxOpen, board.phase) 
 				} else {
-					mobility += (decode(e_phalanxClosed, board.phase) * attention[sq]) / e_divider
+					mobility += decode(e_phalanxClosed, board.phase)
 				}
 			}
 
 			if board.PawnDefends(int(sq), board.sidetomove) {
 				if semiopen {
-					mobility += (decode(e_chainOpen, board.phase) * attention[sq]) / e_divider
+					mobility += decode(e_chainOpen, board.phase)
 				} else {
-					mobility += (decode(e_chainClosed, board.phase) * attention[sq]) / e_divider 
+					mobility += decode(e_chainClosed, board.phase) 
 				}
 			}
-		}
+		}*/
 	}
 
+
+	// Passer evaluation
 	for file := range 10 {
+
 		if whitepasser[file] != 0 {
+			sq := ((7-whitepasser[file])*16) + (file - 1)
 			score += e_passerRank[whitepasser[file]]
 			score += e_passerFile[max(file - bkingfile, bkingfile - file)]
+			
+			if board.PawnDefends(sq, 1) {
+				score += e_protectedpasser
+				
+			}
+			
+			if 7-whitepasser[file] < bkingrank - (1-int(board.sidetomove)){
+                score += e_unstoppableVertical
+                
+			}
+            if (7-whitepasser[file] < max(bkingfile-file,file-bkingfile)-(1-int(board.sidetomove))){
+                score += e_unstoppableHorizontal
+            }
+
+
 		}
 		if blackpasser[file] != 0 {
+			sq := (blackpasser[file]*16) + (file - 1)
 			score -= e_passerRank[blackpasser[file]]
-			score -= e_passerRank[max(file - wkingfile, wkingfile - file)]
+			score -= e_passerFile[max(file - wkingfile, wkingfile - file)]
+			if board.PawnDefends(sq, 0) {
+				score -= e_protectedpasser
+			}
+
+			if blackpasser[file] > wkingrank + int(board.sidetomove) {
+                score -= e_unstoppableVertical
+			}
+            if (7-blackpasser[file] < max(wkingfile-file,file-wkingfile)-int(board.sidetomove)){
+                score -= e_unstoppableHorizontal
+            }
 		}
 	}
 
+	// Bishop pair evaluation
 	if board.pieceCount[6] == 2 {
 		score -= e_bishopPair
 	}
@@ -439,6 +523,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		score += e_bishopPair
 	}
 
+	// Tempo evaluation
 	if board.sidetomove == 1 {
 		score += e_tempo
 	} else {
@@ -851,6 +936,8 @@ func parseuci(line string) bool {
 		fmt.Println("uciok")
 	case "isready":
 		fmt.Println("readyok")
+	case "ucinewgame":
+		history = [2][14][128]int{}
 	case "print":
 		uciBoard.print()
 	case "perft":
@@ -959,25 +1046,7 @@ func main() {
 	}
 }
 
-// Eval centered around
-// 1. Material
-//     - static count
-//          - perhaps after a threshold is hit we can change to meme eval
-// 2. Activity
-//     - weighted mobility
-//          - penalize squares with enemy pawn guard
-//          - attacks
-//          - should we flip this based on king sides, perhaps create several distinct maps?
-// 3. King Safety (covered in other areas)
-//     - tbh king safety is not that big a deal for engines, but it leads to more fun attacking games
-// 4. Pawn Structure
-//     - pawn shield
-//     - backwards pawns
-//     - isolated pawns
-//     - passed pawns
-//         - opposite king passer bonus
 
-// Still need to figure out how to reward the queen moreso than other pieces for attacking king ring
 
 
 // Ben finegolds middle name is philip
