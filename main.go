@@ -326,7 +326,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		if whiterear[wkingfile + i] != 0 {
 			score += e_shield[wkingfile + i]
 		} else if blackrear[wkingfile + i] != 7 {
-			score += e_shield[wkingfile + i]
+			score += e_shield2[wkingfile + i]
 		}
 
 		if blackrear[bkingfile + i] != 7 {
