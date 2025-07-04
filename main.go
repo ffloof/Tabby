@@ -45,13 +45,12 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 var e_material = []int{T(0,0), T(39,82), T(291,298), T(317,321), T(401,618), T(853,1159), T(0,0), }
 var e_passerRank = []int{T(0,0), T(3,0), T(-4,-12), T(-9,9), T(-1,36), T(2,101), T(-8,176), T(0,0), }
 var e_shield = []int{T(0,0), T(17,27), T(53,17), T(2,26), T(20,10), T(31,5), T(28,9), T(8,12), T(69,-4), T(0,0), }
-var e_tempo int = T(10,10) //{T(31,30), }
-var e_passerFile = []int{T(0,0), T(19,8), T(4,7), T(-17,26), T(-18,26), T(-34,27), T(-9,6), T(-75,6), }
 var e_restricted = []int{T(0,0), T(0,0), T(-6,-4), T(-5,0), T(-5,-1), T(-5,1), T(-15,5), }
 
+// TODO: I want to simplify attacks further still if possible
 var e_attacks = []int{T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(48,9), T(60,28), T(68,0), T(59,9), T(96,47), T(0,0), T(-7,12), T(0,0), T(20,45), T(37,39), T(27,15), T(100,1), T(0,0), T(-3,13), T(8,20), T(0,0), T(23,17), T(41,44), T(47,72), T(0,0), T(-15,12), T(-3,12), T(18,12), T(0,0), T(65,-8), T(194,-8), T(0,0), T(-1,6), T(-7,12), T(-1,37), T(2,6), T(0,0), T(62,115), T(0,0), T(29,30), T(6,17), T(-18,24), T(-126,48), T(-358,-92), T(0,0), }
 
-var e_bishopPair int = T(18,39)
+var e_bishopPair int = T(18,39) // Bishoppair didnt gain much from testing since engine already prefers bishops to knights, could cut maybe after retune?
 
 // Note mobility only counts current square for pawns
 var e_mobility = []int{T(0,0), T(28,1), T(20,15), T(13,11), T(14,5), T(5,16), T(-24,22) }
@@ -59,13 +58,11 @@ var e_phalanxOpen int = T(6,11)
 var e_phalanxClosed int = T(5,0)
 var e_chainOpen int = T(18,21)
 var e_chainClosed int = T(9,7)
-var e_isolatedOpen int = T(-11,-3)
-var e_isolatedClosed int = T(-1,-5)
 
-var e_unstoppableVertical int = T(-273,117)
-var e_protectedpasser int = T(52,-20)
+// TODO: we should do a retune and see how optimally to address this, it seems 4ku and ice4 just use distance which is reasonable, since deflection matters more
+// I think we should do distance to promotion square since thats usually where the king wants to be to draw
+var e_passerFile = []int{T(0,0), T(19,8), T(4,7), T(-17,26), T(-18,26), T(-34,27), T(-9,6), T(-75,6), }
 var e_unstoppableHorizontal int = T(9,71)
-var e_shield2 = []int{T(0,0), T(-31,25), T(15,13), T(-26,19), T(18,7), T(23,-3), T(11,0), T(-8,18), T(39,13), T(0,0), }
 
 func flip(arr1, arr2 *[128]int, xor int){
 	for i := range(len(arr1)) {
@@ -319,20 +316,16 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	wkingfile := (board.kings[1]&7) + 1
 	bkingfile := (board.kings[0]&7) + 1
-	wkingrank := board.kings[1] >> 4
-	bkingrank := board.kings[0] >> 4
+	//wkingrank := board.kings[1] >> 4
+	//bkingrank := board.kings[0] >> 4
 
 	for i := -1; i <= 1; i++ {
 		if whiterear[wkingfile + i] != 0 {
 			score += e_shield[wkingfile + i]
-		} else if blackrear[wkingfile + i] != 7 {
-			score += e_shield2[wkingfile + i]
 		}
 
 		if blackrear[bkingfile + i] != 7 {
 			score -= e_shield[bkingfile + i]
-		} else if whiterear[bkingfile + i] != 0 {
-			score -= e_shield2[bkingfile + i]
 		}
 	}
 
@@ -372,15 +365,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 					score += e_chainClosed
 				}
 			}
-
-			if whiterear[pfile-1] == 0 && whiterear[pfile+1] == 0 {
-				if semiopen{
-					score += e_isolatedOpen
-				} else {
-					score += e_isolatedClosed
-				}
-			}
-
 		} else {
 			semiopen = (whiterear[pfile] == 0)
 			if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
@@ -400,14 +384,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 					score -= e_chainOpen
 				} else {
 					score -= e_chainClosed
-				}
-			}
-
-			if blackrear[pfile-1] == 7 && blackrear[pfile+1] == 7 {
-				if semiopen{
-					score -= e_isolatedOpen
-				} else {
-					score -= e_isolatedClosed
 				}
 			}
 		}
@@ -438,19 +414,9 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	for file := range 10 {
 
 		if whitepasser[file] != 0 {
-			sq := ((7-whitepasser[file])*16) + (file - 1)
 			score += e_passerRank[whitepasser[file]]
 			score += e_passerFile[max(file - bkingfile, bkingfile - file)]
 			
-			if board.PawnDefends(sq, 1) {
-				score += e_protectedpasser
-				
-			}
-			
-			if 7-whitepasser[file] < bkingrank - (1-int(board.sidetomove)){
-                score += e_unstoppableVertical
-                
-			}
             if (7-whitepasser[file] < max(bkingfile-file,file-bkingfile)-(1-int(board.sidetomove))){
                 score += e_unstoppableHorizontal
             }
@@ -458,16 +424,9 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 		}
 		if blackpasser[file] != 0 {
-			sq := (blackpasser[file]*16) + (file - 1)
 			score -= e_passerRank[blackpasser[file]]
 			score -= e_passerFile[max(file - wkingfile, wkingfile - file)]
-			if board.PawnDefends(sq, 0) {
-				score -= e_protectedpasser
-			}
 
-			if blackpasser[file] > wkingrank + int(board.sidetomove) {
-                score -= e_unstoppableVertical
-			}
             if (7-blackpasser[file] < max(wkingfile-file,file-wkingfile)-int(board.sidetomove)){
                 score -= e_unstoppableHorizontal
             }
@@ -481,13 +440,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	if board.pieceCount[7] == 2 {
 		score += e_bishopPair
-	}
-
-	// Tempo evaluation
-	if board.sidetomove == 1 {
-		score += e_tempo
-	} else {
-		score -= e_tempo
 	}
 
 	score = decode(score, board.phase) 
@@ -681,7 +633,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	nodes += 1
 	bestScore := -9999
 
-
 	hash := board.Hash()
 	tt := &table[hash % hashsize]
 
@@ -742,7 +693,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-
 	// Prunings that return should only happen above this
 	repetition = append(repetition, hash)
 
@@ -758,9 +708,10 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	quietsLeft := ((depth * depth + 1) >> BOOL(!improving)) + 1
 	
 	// Futility pruning
+	/*
 	if (depth <= 5 && staticEval + depth * 100 < alpha) {
 		quietsLeft = 0
-	}
+	}*/
 
 
 	legals := 0
