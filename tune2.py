@@ -73,7 +73,7 @@ patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E
 
 
 for line in tqdm(lines):
-    if len(outputs) >= len(lines):
+    if len(outputs) >= 1_000_000:
         break
 
     packed = line.split("c9")
@@ -124,19 +124,18 @@ for line in tqdm(lines):
     phalanxClosed = np.zeros((2, 1), dtype=np.int8)
     chainOpen = np.zeros((2, 1), dtype=np.int8)
     chainClosed = np.zeros((2, 1), dtype=np.int8) 
-    isolatedOpen = np.zeros((2, 1), dtype=np.int8)
-    isolatedClosed = np.zeros((2, 1), dtype=np.int8)
 
     passerDistance = np.zeros((2,8), dtype=np.int8)
+    passerDistanceOpp = np.zeros((2,8), dtype=np.int8)
     passerRank = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [11,11,11,11,11,11,11,11,11,11],
     ], dtype=np.int8)
 
     shield = np.zeros((2,10), dtype=np.int8)
-    shield2 = np.zeros((2,10), dtype=np.int8)
+    shieldbase = np.zeros((2,10), dtype=np.int8)
 
-    mobtable = np.zeros((2,7,64), dtype=np.int8)
+    mobtable = np.zeros((2,6,64), dtype=np.int8)
 
     kings = [-1, -1]
     rearpawns = [
@@ -159,7 +158,7 @@ for line in tqdm(lines):
         material[piececolor, piecetype] += 1
 
         if piecetype > 0:
-            mobtable[piece&1][piecetype][i] += 2 #1
+            mobtable[piece&1][piecetype-1][i] += 2 #1
 
         if piecetype == 1:
             pfile = mailbox[i] % 10
@@ -216,12 +215,6 @@ for line in tqdm(lines):
                         #mobtable[0][10][inverse[sq]] = 1
                         chainClosed[0] += 1
 
-                if rearpawns[0][pfile-1] == 11 and rearpawns[0][pfile+1] == 11:
-                    if rearpawns[1][pfile] == 0:
-                        isolatedOpen[0] += 1
-                    else:
-                        isolatedClosed[0] += 1
-
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
 
@@ -242,12 +235,6 @@ for line in tqdm(lines):
                         #mobtable[1][10][inverse[sq]] = 1
                         chainClosed[1] += 1
 
-                if rearpawns[1][pfile-1] == 0 and rearpawns[1][pfile+1] == 0:
-                    if rearpawns[0][pfile] == 11:
-                        isolatedOpen[1] += 1
-                    else:
-                        isolatedClosed[1] += 1
-
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
                     passerRank[1][pfile] = min(prank, passerRank[1][pfile])
         
@@ -265,7 +252,7 @@ for line in tqdm(lines):
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
                     pawnDefence = False
                     if piecetype != 1:
-                        mobtable[piece&1][piecetype][inverse[current]] += 1
+                        mobtable[piece&1][piecetype-1][inverse[current]] += 1
 
                         if piece & 1 == 0 and (virtualboard[current+S+W] == 3 or virtualboard[current+S+E] == 3):
                             pawnDefence = True
@@ -285,25 +272,18 @@ for line in tqdm(lines):
 
     for x in [-1,0,1]:
         wspawn = rearpawns[1][wkingfile + x]
-        if wspawn > 0:
+        if wspawn == 8:
+            shieldbase[1][wkingfile + x] = 1
+        elif wspawn > 0:
             shield[1][wkingfile + x] = 1
-        elif rearpawns[0][wkingfile + x] < 10:
-            shield2[1][wkingfile+x] = 1
 
         bspawn = rearpawns[0][bkingfile + x]
-        if bspawn < 10:
+        if bspawn == 3:
+            shieldbase[0][bkingfile + x] = 1
+        elif bspawn < 10:
             shield[0][bkingfile + x] = 1
-        elif rearpawns[1][bkingfile + x] > 0:
-            shield2[0][bkingfile + x] = 1
-
-
-
-
 
     pushers = np.zeros(8, dtype=np.int8)
-    unstoppable = np.zeros((2,1), dtype=np.int8)
-    protectedpasser = np.zeros((2,1), dtype=np.int8)
-    unstoppable2 = np.zeros((2,1), dtype=np.int8)
 
     BTEMPO = 1
     WTEMPO = 0
@@ -320,25 +300,13 @@ for line in tqdm(lines):
 
         if wPass >= 0:
             pushers[wPass] += 1
-            passerDistance[1][abs(i-bkingfile)] += 1
-            if passerRank[1][i] < bkingrank - BTEMPO:
-                unstoppable[1] += 1
-            if (7-wPass < abs(i-bkingfile)-BTEMPO):
-                unstoppable2[1] += 1
+            passerDistance[1][max(abs(i-bkingfile),bkingrank - 2)] = 1
+            passerDistanceOpp[1][max(abs(i-wkingfile),wkingrank - 2)] = 1
 
-            if virtualboard[passerRank[1][i] * 10 + i + S + W] == 3 and virtualboard[passerRank[1][i] * 10 + i + S + E] == 3:
-                protectedpasser[1] += 1
         if bPass >= 0:
             pushers[bPass] -= 1
-            passerDistance[0][abs(i-wkingfile)] += 1
-            if passerRank[0][i] > wkingrank + WTEMPO:
-                unstoppable[0] += 1
-            if (7-bPass < abs(i-wkingfile)-WTEMPO):
-                unstoppable2[0] += 1
-
-
-            if virtualboard[passerRank[1][i] * 10 + i + N + W] == 2 and virtualboard[passerRank[1][i] * 10 + i + N + E] == 2:
-                protectedpasser[0] += 1
+            passerDistance[0][max(abs(i-wkingfile),11 - wkingrank - 2)] = 1
+            passerDistanceOpp[0][max(abs(i-bkingfile),11 - bkingrank - 2)] = 1
 
     sidetomove[0] = sign[turn]
 
@@ -346,13 +314,8 @@ for line in tqdm(lines):
     npawns[0][material[0][1]] = 1 
     npawns[1][material[1][1]] = 1
 
-
-    passerDistance[:,0] = 0
-
     mobtable = mobtable.reshape(2,mobtable.shape[1],8,8)
     mobtable[0] = np.flip(mobtable[0],1)
-
-    #captures[:,:,6] = 0 
 
     bishoppair = np.zeros(1, dtype=np.int8)
 
@@ -363,7 +326,7 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :], sidetomove],
-        [material[1, :] - material[0, :], pushers, shield[1] - shield[0], sidetomove, passerDistance[1] - passerDistance[0], restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), bishoppair, phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], isolatedOpen[1] - isolatedOpen[0], isolatedClosed[1] - isolatedClosed[0], unstoppable[1] - unstoppable[0], protectedpasser[1]-protectedpasser[0], unstoppable2[1]-unstoppable2[0] , shield2[1]-shield2[0]], 
+        [material[1, :] - material[0, :], (shield[1]+shieldbase[1])-(shield[0]+shieldbase[0]), sidetomove, restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], pushers, passerDistance[1]-passerDistance[0]], 
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
         [npawns[0]],
@@ -398,6 +361,8 @@ for line in tqdm(lines):
         #plt.imshow((mobtable[0][8]).reshape((8,8)))
         #plt.show()
 
+        print(shield)
+        print(shieldbase)
         #sys.exit()
 
     finalterms = []
@@ -527,27 +492,18 @@ for epoch in range(epochs):  # Adjust the number of epochs
     model.printfinal(epoch == epochs - 1)
 
 
-# start = 23884
 
-# - isolated 23914     30
-# - phalanx 23920   36
-# - shield2 = 23922    38
-# - horizontal flip 23930 46
-# - bishoppair = 23936  52
-# - unstoppable2 = 23959    75
-# - chain 23980   96
-# - unstoppable = 23985  101
-# - shield = 23998 114
-# - protectedpasser = 24080  196
-# - passer distance = 24102  218
-# - passerFile 24103  219
-# - open/closed 24109  225
-# - restricted 24173  289
-# - phalanx and chain = 24175   291
-# - attacks 24233  349
-# - all phalanx and chain and isolated = 24449  565
-# - tempo = 24619  735
-# - material 35800 11916 
 
-# + checking eval 23725 ~159
-# + TODO: try adding mobtable for weak pawns
+# protected passer doesnt make sense cuz of chain and phalanx (open vs closed)
+# bishop pair might be cuttable since engine already values bishops over knights
+# we should retest tempo after we add incremental updates
+# shield1 vs shield2 
+# blockaded passers?
+# can we simplify attacks?
+# mobtable for weak pawns?
+
+# New baseline       .23907
+# Only shieldbase    .23996 ~89
+# Only shieldnonbase .23977 ~70
+# Only shieldfile    .24071 but pawn broken .24004
+          

@@ -43,27 +43,18 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 
 // 0.23725980257695797
 var e_material = []int{T(0,0), T(39,82), T(291,298), T(317,321), T(401,618), T(853,1159), T(0,0), }
-var e_passerRank = []int{T(0,0), T(3,0), T(-4,-12), T(-9,9), T(-1,36), T(2,101), T(-8,176), T(0,0), }
 var e_shield = []int{T(0,0), T(17,27), T(53,17), T(2,26), T(20,10), T(31,5), T(28,9), T(8,12), T(69,-4), T(0,0), }
 var e_restricted = []int{T(0,0), T(0,0), T(-6,-4), T(-5,0), T(-5,-1), T(-5,1), T(-15,5), }
-
-// TODO: I want to simplify attacks further still if possible
 var e_attacks = []int{T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(48,9), T(60,28), T(68,0), T(59,9), T(96,47), T(0,0), T(-7,12), T(0,0), T(20,45), T(37,39), T(27,15), T(100,1), T(0,0), T(-3,13), T(8,20), T(0,0), T(23,17), T(41,44), T(47,72), T(0,0), T(-15,12), T(-3,12), T(18,12), T(0,0), T(65,-8), T(194,-8), T(0,0), T(-1,6), T(-7,12), T(-1,37), T(2,6), T(0,0), T(62,115), T(0,0), T(29,30), T(6,17), T(-18,24), T(-126,48), T(-358,-92), T(0,0), }
-
-var e_bishopPair int = T(18,39) // Bishoppair didnt gain much from testing since engine already prefers bishops to knights, could cut maybe after retune?
-
-// Note mobility only counts current square for pawns
-var e_mobility = []int{T(0,0), T(28,1), T(20,15), T(13,11), T(14,5), T(5,16), T(-24,22) }
 var e_phalanxOpen int = T(6,11)
 var e_phalanxClosed int = T(5,0)
 var e_chainOpen int = T(18,21)
 var e_chainClosed int = T(9,7)
+var e_passerRank = []int{T(0,0), T(3,0), T(-4,-12), T(-9,9), T(-1,36), T(2,101), T(-8,176), T(0,0), }
+var e_passerKingDistance = []int{T(0,0), T(19,8), T(4,7), T(-17,26), T(-18,26), T(-34,27), T(-9,6), T(-75,6), }
 
-// TODO: we should do a retune and see how optimally to address this, it seems 4ku and ice4 just use distance which is reasonable, since deflection matters more
-// I think we should do distance to promotion square since thats usually where the king wants to be to draw
-var e_passerFile = []int{T(0,0), T(19,8), T(4,7), T(-17,26), T(-18,26), T(-34,27), T(-9,6), T(-75,6), }
-var e_unstoppableHorizontal int = T(9,71)
-
+var e_mobility = []int{T(0,0), T(28,1), T(20,15), T(13,11), T(14,5), T(5,16), T(-24,22) }
+// TODO: inline
 func flip(arr1, arr2 *[128]int, xor int){
 	for i := range(len(arr1)) {
 		arr2[i] = arr1[i^xor]
@@ -316,8 +307,8 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	wkingfile := (board.kings[1]&7) + 1
 	bkingfile := (board.kings[0]&7) + 1
-	//wkingrank := board.kings[1] >> 4
-	//bkingrank := board.kings[0] >> 4
+	wkingrank := board.kings[1] >> 4
+	bkingrank := board.kings[0] >> 4 // TODO: can probably inline these
 
 	for i := -1; i <= 1; i++ {
 		if whiterear[wkingfile + i] != 0 {
@@ -328,7 +319,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			score -= e_shield[bkingfile + i]
 		}
 	}
-
 
 	npawns := [2]int{0,0}
 	
@@ -412,45 +402,22 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	// Passer evaluation
 	for file := range 10 {
-
 		if whitepasser[file] != 0 {
 			score += e_passerRank[whitepasser[file]]
-			score += e_passerFile[max(file - bkingfile, bkingfile - file)]
-			
-            if (7-whitepasser[file] < max(bkingfile-file,file-bkingfile)-(1-int(board.sidetomove))){
-                score += e_unstoppableHorizontal
-            }
-
-
+			score += e_passerKingDistance[max(bkingrank,max(file - bkingfile, bkingfile - file))]
 		}
 		if blackpasser[file] != 0 {
 			score -= e_passerRank[blackpasser[file]]
-			score -= e_passerFile[max(file - wkingfile, wkingfile - file)]
-
-            if (7-blackpasser[file] < max(wkingfile-file,file-wkingfile)-int(board.sidetomove)){
-                score -= e_unstoppableHorizontal
-            }
+			score -= e_passerKingDistance[max(7-wkingrank,max(file - wkingfile, wkingfile - file))]
 		}
-	}
-
-	// Bishop pair evaluation
-	if board.pieceCount[6] == 2 {
-		score -= e_bishopPair
-	}
-
-	if board.pieceCount[7] == 2 {
-		score += e_bishopPair
 	}
 
 	score = decode(score, board.phase) 
 	board.mobilities[board.sidetomove] = mobility
 	score += board.mobilities[1] - board.mobilities[0]
 
-	leadingpawns := board.pieceCount[2]
-	if score >= 0 {
-		leadingpawns = board.pieceCount[3]
-	}
-	
+	leadingpawns := board.pieceCount[2 + BOOL(score >= 0)]
+
 	score = (score * e_risk[leadingpawns]) / e_divider
 
 	if board.sidetomove == 0 {
@@ -859,7 +826,7 @@ func parseuci(line string) bool {
 		start := time.Now().UnixMilli()
 		fmt.Println("total", perft(&uciBoard, 5, 5))
 		fmt.Println("time", time.Now().UnixMilli() - start)
-
+		
 	case "position":
 		uciBoard = FromFen(strings.Join(findAfter("fen", args)[0:4], " "))
 		for _, movestr := range findAfter("moves", args) {
@@ -961,8 +928,5 @@ func main() {
 	}
 }
 
-
-
-
 // Ben finegolds middle name is philip
-// Should make a stream where people vote on best move
+// Should make a stream where people vote on best move4
