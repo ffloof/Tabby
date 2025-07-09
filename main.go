@@ -55,12 +55,6 @@ var e_passerRank = []int{T(0,0), T(-2,6), T(-9,0), T(-13,25), T(-7,59), T(-9,133
 var e_passerKingDistance = []int{T(22,-57), T(23,-40), T(21,-22), T(-3,-2), T(-5,23), T(-29,33), T(-11,30), T(-61,50),}
 
 var e_mobility = []int{T(0,0), T(27,1), T(18,13), T(13,10), T(13,6), T(4,12), T(-22,17), }
-// TODO: inline
-func flip(arr1, arr2 *[128]int, xor int){
-	for i := range(len(arr1)) {
-		arr2[i] = arr1[i^xor]
-	}
-}
 
 var evals [256]int
 
@@ -304,7 +298,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			blackrear[pawnfile] = min(blackrear[pawnfile], pawnrank)
 		}
 	}
-
 
 	wkingfile := (board.kings[1]&7) + 1
 	bkingfile := (board.kings[0]&7) + 1
@@ -657,7 +650,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-	quietsLeft := ((depth * depth + 1) >> BOOL(!improving)) + 1
+	quietsLeft := ((depth * depth) >> BOOL(!improving)) + 1
 	
 	// Futility pruning
 	/*
@@ -812,8 +805,9 @@ func main() {
 		}
 	}
 
-	flip(&e_table[1], &e_table[0], 112)
-	//fmt.Println(e_table)
+	for i := range(128) {
+		e_table[0][i] = e_table[1][i^112]
+	}
 
 	uciBoard = FromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 	reader := bufio.NewReader(os.Stdin)
