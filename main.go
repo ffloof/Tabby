@@ -41,19 +41,20 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 	return 0
 }
 
-// 0.23725980257695797
-var e_material = []int{T(0,0), T(39,82), T(291,298), T(317,321), T(401,618), T(853,1159), T(0,0), }
-var e_shield = []int{T(0,0), T(17,27), T(53,17), T(2,26), T(20,10), T(31,5), T(28,9), T(8,12), T(69,-4), T(0,0), }
-var e_restricted = []int{T(0,0), T(0,0), T(-6,-4), T(-5,0), T(-5,-1), T(-5,1), T(-15,5), }
-var e_attacks = []int{T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(48,9), T(60,28), T(68,0), T(59,9), T(96,47), T(0,0), T(-7,12), T(0,0), T(20,45), T(37,39), T(27,15), T(100,1), T(0,0), T(-3,13), T(8,20), T(0,0), T(23,17), T(41,44), T(47,72), T(0,0), T(-15,12), T(-3,12), T(18,12), T(0,0), T(65,-8), T(194,-8), T(0,0), T(-1,6), T(-7,12), T(-1,37), T(2,6), T(0,0), T(62,115), T(0,0), T(29,30), T(6,17), T(-18,24), T(-126,48), T(-358,-92), T(0,0), }
-var e_phalanxOpen int = T(6,11)
-var e_phalanxClosed int = T(5,0)
-var e_chainOpen int = T(18,21)
-var e_chainClosed int = T(9,7)
-var e_passerRank = []int{T(0,0), T(3,0), T(-4,-12), T(-9,9), T(-1,36), T(2,101), T(-8,176), T(0,0), }
-var e_passerKingDistance = []int{T(0,0), T(19,8), T(4,7), T(-17,26), T(-18,26), T(-34,27), T(-9,6), T(-75,6), }
+// 0.2390323810197559
+var e_material = []int{T(0,0), T(31,66), T(262,249), T(303,275), T(367,522), T(764,984), T(0,0), }
+var e_shield = []int{T(0,0), T(9,30), T(16,27), T(-9,24), T(9,9), T(12,5), T(7,8), T(14,8), T(31,4), T(0,0), }
+var e_shieldbase = []int{T(0,0), T(25,-10), T(47,0), T(21,12), T(10,6), T(16,4), T(31,10), T(13,7), T(30,-9), T(0,0), }
+var e_restricted = []int{T(0,0), T(0,0), T(-7,-6), T(-5,-1), T(-7,-2), T(-5,1), T(-15,8), }
+var e_attacks = []int{T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(45,11), T(61,33), T(72,-5), T(49,4), T(107,43), T(0,0), T(-6,12), T(0,0), T(19,37), T(37,35), T(29,32), T(95,0), T(0,0), T(-2,11), T(8,25), T(0,0), T(22,26), T(35,36), T(50,65), T(0,0), T(-18,14), T(4,13), T(17,15), T(0,0), T(54,-14), T(189,-10), T(0,0), T(1,4), T(-10,8), T(-6,38), T(-5,2), T(0,0), T(53,96), T(0,0), T(37,32), T(4,14), T(-13,26), T(-112,42), T(-317,-84), T(0,0), }
+var e_phalanxOpen int = T(9,12)
+var e_phalanxClosed int = T(5,3)
+var e_chainOpen int = T(23,21)
+var e_chainClosed int = T(9,9)
+var e_passerRank = []int{T(0,0), T(-2,6), T(-9,0), T(-13,25), T(-7,59), T(-9,133), T(-17,213), T(0,0), }
+var e_passerKingDistance = []int{T(22,-57), T(23,-40), T(21,-22), T(-3,-2), T(-5,23), T(-29,33), T(-11,30), T(-61,50),}
 
-var e_mobility = []int{T(0,0), T(28,1), T(20,15), T(13,11), T(14,5), T(5,16), T(-24,22) }
+var e_mobility = []int{T(0,0), T(27,1), T(18,13), T(13,10), T(13,6), T(4,12), T(-22,17), }
 // TODO: inline
 func flip(arr1, arr2 *[128]int, xor int){
 	for i := range(len(arr1)) {
@@ -63,17 +64,17 @@ func flip(arr1, arr2 *[128]int, xor int){
 
 var evals [256]int
 
-var e_risk = []int{ 327, 534, 779, 932, 1052, 1044, 1054, 1062, 1000 }
+var e_risk = []int{ 331, 624, 896, 992, 1148, 1148, 1194, 1103, 1000, }
 var e_table = [2][128]int {
 	{},
-{-80, -129,  283,  161,  452,  560,  485,  785, 0,0,0,0, 0,0,0,0,
- 425,  618,  505,  346,  524,  541,  681,  440, 0,0,0,0, 0,0,0,0,
- 454,  520,  508,  373,  538,  832,  591,  296, 0,0,0,0, 0,0,0,0,
- 369,  587,  395,  709,  683,  467,  535,  538, 0,0,0,0, 0,0,0,0,
- 219,  249,  537,  720,  598,  363,  354,   97, 0,0,0,0, 0,0,0,0,
-  24,  312,  423,  357,  488,  404,  793,  157, 0,0,0,0, 0,0,0,0,
-  81,  406,  417,  497,  436,  635,  766,  151, 0,0,0,0, 0,0,0,0,
- -11,  146,  296,  346,  367,  -39,  131,   78, 0,0,0,0, 0,0,0,0,},
+{-54, -341,  248,  258,  373,  538,  535,  878, 0,0,0,0, 0,0,0,0,
+ 483,  512,  399,  332,  580,  485,  604,  479, 0,0,0,0, 0,0,0,0,
+ 428,  429,  455,  415,  427,  722,  479,  270, 0,0,0,0, 0,0,0,0,
+ 355,  596,  454,  652,  551,  425,  551,  496, 0,0,0,0, 0,0,0,0,
+ 179,  332,  460,  678,  559,  404,  431,  128, 0,0,0,0, 0,0,0,0,
+  35,  295,  363,  327,  480,  378,  792,   57, 0,0,0,0, 0,0,0,0,
+  39,  450,  416,  448,  419,  381,  808,  118, 0,0,0,0, 0,0,0,0,
+ 114,  169,  256,  343,  231,    7,  110,  -40, 0,0,0,0, 0,0,0,0,},
 }
 
 const e_divider = 1000
@@ -156,11 +157,11 @@ func (board *Board) Edit(index int, newpiece int8) {
 	oldpiece := board.squares[index]
 	board.phase += phaseWeights[newpiece]
 	board.phase -= phaseWeights[oldpiece]
-	board.squares[index] = newpiece
 	board.zobrist ^= Zobrist[oldpiece][index]
 	board.zobrist ^= Zobrist[newpiece][index]
 	board.pieceCount[oldpiece] -= 1
 	board.pieceCount[newpiece] += 1
+	board.squares[index] = newpiece
 }
 
 var patterns = [7][]int{
@@ -311,11 +312,15 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	bkingrank := board.kings[0] >> 4 // TODO: can probably inline these
 
 	for i := -1; i <= 1; i++ {
-		if whiterear[wkingfile + i] != 0 {
+		if whiterear[wkingfile + i] == 6 {
+			score += e_shieldbase[wkingfile + i]
+		} else if whiterear[wkingfile + i] != 0 {
 			score += e_shield[wkingfile + i]
 		}
 
-		if blackrear[bkingfile + i] != 7 {
+		if blackrear[bkingfile + i] == 1 {
+			score -= e_shieldbase[bkingfile + i]
+		} else if blackrear[bkingfile + i] != 7 {
 			score -= e_shield[bkingfile + i]
 		}
 	}
@@ -421,7 +426,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	score = (score * e_risk[leadingpawns]) / e_divider
 
 	if board.sidetomove == 0 {
-		return moves, -score
+		score = -score
 	}
 	return moves, score
 }
@@ -551,26 +556,6 @@ func (board *Board) print(){
 
 func (board *Board) Hash() uint64 {
 	return board.zobrist ^ Zobrist[15][board.enpassant] ^ Zobrist[15][120+board.sidetomove]
-}
-
-func perft(perftboard *Board, depth int, maxdepth int) int {
-    if (depth == 0) { return 1 }
-
-    movelist, _ := perftboard.Generate(false)
-    nodes := 0
-
-    for i, move := range movelist {
-        nextBoard := perftboard.Apply(move)
-        if (nextBoard != nil) { 
-        	subnodes := perft(nextBoard, depth - 1, maxdepth) 
-        	nodes += subnodes 
-        	if depth == maxdepth {
-        		fmt.Println(i, move.stringify(nextBoard), subnodes)
-        	}
-        }
-    }
-
-    return nodes
 }
 
 func findAfter(word string, strlist []string) []string {
@@ -706,7 +691,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 
 		if !pv && !board.inCheck && board.squares[nextMove.end] == 0 && legals != 0 {
-			if quietsLeft <= 0 {
+ 			if quietsLeft <= 0 {
 				break
 			}
 			quietsLeft -= 1
@@ -726,7 +711,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		} else {
 			reduction := ((depth+legals)/16)
 			reduction += max(-2,-max(-2, history[BOOL(board.squares[nextMove.end] == 0)][board.squares[nextMove.start]][nextMove.end] / 64))
-			// TODO: test if we should just not reduce captures
 			reduction = max(reduction, 0)
 
 			score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1 - reduction, true)
@@ -804,91 +788,6 @@ func printpv() string {
 	return strings.TrimSpace(pvstr)
 }
 
-func parseuci(line string) bool {
-	args := strings.Fields(line)
-
-	if len(args) == 0 {
-		return false
-	}
-
-	switch string(args[0]) {
-	case "uci":
-		fmt.Println("id name Tabby")
-		fmt.Println("id author ffloof")
-		fmt.Println("uciok")
-	case "isready":
-		fmt.Println("readyok")
-	case "ucinewgame":
-		history = [2][14][128]int{}
-	case "print":
-		uciBoard.print()
-	case "perft":
-		start := time.Now().UnixMilli()
-		fmt.Println("total", perft(&uciBoard, 5, 5))
-		fmt.Println("time", time.Now().UnixMilli() - start)
-		
-	case "position":
-		uciBoard = FromFen(strings.Join(findAfter("fen", args)[0:4], " "))
-		for _, movestr := range findAfter("moves", args) {
-			repetition = append(repetition, (uciBoard.Hash()))
-			uciBoard = *(uciBoard.Apply(Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))}))
-		}
-		uciBoard.ply = 0
-	case "go":
-		timeAlloc := 1000
-		if len(findAfter("movetime", args)) != 0 {
-			timeAlloc, _ = strconv.Atoi(findAfter("movetime", args)[0])
-		}
-
-		if len(findAfter("wtime", args)) != 0 && uciBoard.sidetomove == 1 {
-			timeAlloc, _ = strconv.Atoi(findAfter("wtime", args)[0])
-			timeAlloc /= 10
-		}
-
-		if len(findAfter("btime", args)) != 0 && uciBoard.sidetomove == 0 {
-			timeAlloc, _ = strconv.Atoi(findAfter("btime", args)[0])
-			timeAlloc /= 10
-		}
-
-		nodes = 0
-		start := time.Now().UnixMilli()
-		chosenMove := table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
-		streak := 0
-		for depth := 1; depth <= 100; depth++ {
-			fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, true), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv())
-
-			if chosenMove == table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard) {
-				streak += 1
-			} else {
-				streak = 0
-			}
-			chosenMove = table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
-
-			if time.Now().UnixMilli() - start > int64(float64(timeAlloc) * math.Pow(0.9, float64(streak))) {
-				break
-			}
-		}
-
-		fmt.Println("bestmove", chosenMove)
-	
-	case "eval":
-		uciBoard.sidetomove = 1 - uciBoard.sidetomove
-		uciBoard.Generate(true)
-		uciBoard.sidetomove = 1 - uciBoard.sidetomove
-		_, e := uciBoard.Generate(true)
-
-		fmt.Println("eval", e)
-
-	/*
-	case "null":
-		uciBoard = *uciBoard.Apply(nullmove)
-	*/
-
-	case "quit":
-		return true
-	}
-	return false
-}
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 
@@ -922,8 +821,74 @@ func main() {
 	for {
 		line, _ := reader.ReadString('\n')
 		line = strings.Replace(line, "startpos", "fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 1)
-		if parseuci(line) {
-			break
+		args := strings.Fields(line)
+
+		if len(args) != 0 {
+			switch string(args[0]) {
+			case "uci":
+				fmt.Println("id name Tabby")
+				fmt.Println("id author ffloof")
+				fmt.Println("uciok")
+			case "isready":
+				fmt.Println("readyok")
+			case "ucinewgame":
+				history = [2][14][128]int{}
+			case "print":
+				uciBoard.print()
+			case "position":
+				uciBoard = FromFen(strings.Join(findAfter("fen", args)[0:4], " "))
+				for _, movestr := range findAfter("moves", args) {
+					repetition = append(repetition, (uciBoard.Hash()))
+					uciBoard = *(uciBoard.Apply(Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))}))
+				}
+				uciBoard.ply = 0
+			case "go":
+				timeAlloc := 1000
+				if len(findAfter("movetime", args)) != 0 {
+					timeAlloc, _ = strconv.Atoi(findAfter("movetime", args)[0])
+				}
+
+				if len(findAfter("wtime", args)) != 0 && uciBoard.sidetomove == 1 {
+					timeAlloc, _ = strconv.Atoi(findAfter("wtime", args)[0])
+					timeAlloc /= 10
+				}
+
+				if len(findAfter("btime", args)) != 0 && uciBoard.sidetomove == 0 {
+					timeAlloc, _ = strconv.Atoi(findAfter("btime", args)[0])
+					timeAlloc /= 10
+				}
+
+				nodes = 0
+				start := time.Now().UnixMilli()
+				chosenMove := table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
+				streak := 0
+				for depth := 1; depth <= 100; depth++ {
+					fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, true), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv())
+
+					if chosenMove == table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard) {
+						streak += 1
+					} else {
+						streak = 0
+					}
+					chosenMove = table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
+
+					if time.Now().UnixMilli() - start > int64(float64(timeAlloc) * math.Pow(0.9, float64(streak))) {
+						break
+					}
+				}
+
+				fmt.Println("bestmove", chosenMove)
+			
+			case "eval":
+				uciBoard.sidetomove = 1 - uciBoard.sidetomove
+				uciBoard.Generate(true)
+				uciBoard.sidetomove = 1 - uciBoard.sidetomove
+				_, e := uciBoard.Generate(true)
+
+				fmt.Println("eval", e)
+			case "quit":
+				return
+			}
 		}
 	}
 }

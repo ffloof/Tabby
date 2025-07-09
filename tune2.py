@@ -73,7 +73,7 @@ patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E
 
 
 for line in tqdm(lines):
-    if len(outputs) >= 1_000_000:
+    if len(outputs) >= len(lines):
         break
 
     packed = line.split("c9")
@@ -326,7 +326,7 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :], sidetomove],
-        [material[1, :] - material[0, :], (shield[1]+shieldbase[1])-(shield[0]+shieldbase[0]), sidetomove, restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], pushers, passerDistance[1]-passerDistance[0]], 
+        [material[1, :] - material[0, :], shield[1]-shield[0], shieldbase[1]-shieldbase[0], sidetomove, restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], pushers, passerDistance[1]-passerDistance[0]], 
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
         [npawns[0]],
