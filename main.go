@@ -301,8 +301,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	wkingfile := (board.kings[1]&7) + 1
 	bkingfile := (board.kings[0]&7) + 1
-	wkingrank := board.kings[1] >> 4
-	bkingrank := board.kings[0] >> 4 // TODO: can probably inline these
 
 	for i := -1; i <= 1; i++ {
 		if whiterear[wkingfile + i] == 6 {
@@ -402,11 +400,11 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	for file := range 10 {
 		if whitepasser[file] != 0 {
 			score += e_passerRank[whitepasser[file]]
-			score += e_passerKingDistance[max(bkingrank,max(file - bkingfile, bkingfile - file))]
+			score += e_passerKingDistance[max(board.kings[0] >> 4,max(file - bkingfile, bkingfile - file))]
 		}
 		if blackpasser[file] != 0 {
 			score -= e_passerRank[blackpasser[file]]
-			score -= e_passerKingDistance[max(7-wkingrank,max(file - wkingfile, wkingfile - file))]
+			score -= e_passerKingDistance[max(7-(board.kings[1] >> 4),max(file - wkingfile, wkingfile - file))]
 		}
 	}
 
@@ -530,9 +528,7 @@ func (board *Board) Apply(move Move) *Board {
 	copyBoard.sidetomove = 1 - copyBoard.sidetomove
 	copyBoard.enpassant = newEP
 	copyBoard.inCheck = false
-	copyBoard.ply += 1
-
-	
+	copyBoard.ply += 1	
 
 	return &copyBoard
 }
@@ -612,6 +608,8 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 	if tt.key == hash {
 		staticEval = int(tt.score)
+	} else if (depth > 3) {
+		depth--
 	}
 
 	// standpat
