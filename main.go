@@ -612,8 +612,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		depth--
 	}
 
-	
-
 	// standpat
 	if (depth <= 0) {
 		bestScore = staticEval
@@ -651,7 +649,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-	quietsLeft := ((depth * depth) >> BOOL(!improving)) + 1 // tested the same : ((depth * depth) >> BOOL(!improving)) - depth + 4
+	quietsLeft := ((depth * depth - 2 * depth + 4) >> BOOL(!improving)) + 1 // tested the same : ((depth * depth) >> BOOL(!improving)) - depth + 4
 	// Futility pruning
 	/*
 	if (depth <= 5 && staticEval + depth * 100 < alpha) {
