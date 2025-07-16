@@ -11,9 +11,10 @@ import (
 	"math"
 )
 
+/*
 import ("flag"
 	"runtime/pprof"
-)
+)*/
 
 const N, S, E, W = -16, 16, 1, -1
 const A8, H8, A1, H1 = 0, 7, 112, 119
@@ -47,10 +48,8 @@ var e_shield = []int{T(0,0), T(9,30), T(16,27), T(-9,24), T(9,9), T(12,5), T(7,8
 var e_shieldbase = []int{T(0,0), T(25,-10), T(47,0), T(21,12), T(10,6), T(16,4), T(31,10), T(13,7), T(30,-9), T(0,0), }
 var e_restricted = []int{T(0,0), T(0,0), T(-7,-6), T(-5,-1), T(-7,-2), T(-5,1), T(-15,8), }
 var e_attacks = []int{T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(45,11), T(61,33), T(72,-5), T(49,4), T(107,43), T(0,0), T(-6,12), T(0,0), T(19,37), T(37,35), T(29,32), T(95,0), T(0,0), T(-2,11), T(8,25), T(0,0), T(22,26), T(35,36), T(50,65), T(0,0), T(-18,14), T(4,13), T(17,15), T(0,0), T(54,-14), T(189,-10), T(0,0), T(1,4), T(-10,8), T(-6,38), T(-5,2), T(0,0), T(53,96), T(0,0), T(37,32), T(4,14), T(-13,26), T(-112,42), T(-317,-84), T(0,0), }
-var e_phalanxOpen int = T(9,12)
-var e_phalanxClosed int = T(5,3)
-var e_chainOpen int = T(23,21)
-var e_chainClosed int = T(9,9)
+var e_phalanx = []int{T(5,3),T(9,12)}
+var e_chain = []int{T(9,9),T(23,21)}
 var e_passerRank = []int{T(0,0), T(-2,6), T(-9,0), T(-13,25), T(-7,59), T(-9,133), T(-17,213), T(0,0), }
 var e_passerKingDistance = []int{T(22,-57), T(23,-40), T(21,-22), T(-3,-2), T(-5,23), T(-29,33), T(-11,30), T(-61,50),}
 
@@ -328,49 +327,31 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		pfile := int((sq & 7) + 1)
 		prank := int(sq >> 4)
 
-		semiopen := false
-		
 		if piece & 1 == 1 {
-			semiopen = (blackrear[pfile] == 7)
+			semiopen := BOOL(blackrear[pfile] == 7) // TODO: can probably inline semi open
 			if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
 				whitepasser[pfile] = max(whitepasser[pfile], 7 - prank)
 			}
 
 			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
-				if semiopen {
-					score += e_phalanxOpen
-				} else {
-					score += e_phalanxClosed
-				}
+				score += e_phalanx[semiopen]
 			}
 
 			if board.PawnDefends(int(sq), 1) {
-				if semiopen {
-					score += e_chainOpen
-				} else {
-					score += e_chainClosed
-				}
+				score += e_chain[semiopen]
 			}
 		} else {
-			semiopen = (whiterear[pfile] == 0)
+			semiopen := BOOL(whiterear[pfile] == 0)
 			if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
 				blackpasser[pfile] = max(blackpasser[pfile], prank)
 			}
 
 			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
-				if semiopen {
-					score -= e_phalanxOpen
-				} else {
-					score -= e_phalanxClosed
-				}
+				score -= e_phalanx[semiopen]
 			}
 
 			if board.PawnDefends(int(sq), 0) {
-				if semiopen {
-					score -= e_chainOpen
-				} else {
-					score -= e_chainClosed
-				}
+				score -= e_chain[semiopen]
 			}
 		}
 
@@ -378,23 +359,14 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		if piece & 1 == board.sidetomove {
 			
 			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
-				if semiopen {
-					mobility += decode(e_phalanxOpen, board.phase) 
-				} else {
-					mobility += decode(e_phalanxClosed, board.phase)
-				}
+				mobility += decode(e_phalanx[semiopen], board.phase) 
 			}
 
 			if board.PawnDefends(int(sq), board.sidetomove) {
-				if semiopen {
-					mobility += decode(e_chainOpen, board.phase)
-				} else {
-					mobility += decode(e_chainClosed, board.phase) 
-				}
+				mobility += decode(e_chain[semiopen], board.phase)
 			}
 		}*/
 	}
-
 
 	// Passer evaluation
 	for file := range 10 {
@@ -650,13 +622,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 	}
 
 	quietsLeft := ((depth * depth - 2 * depth + 4) >> BOOL(!improving)) + 1 // tested the same : ((depth * depth) >> BOOL(!improving)) - depth + 4
-	// Futility pruning
-	/*
-	if (depth <= 5 && staticEval + depth * 100 < alpha) {
-		quietsLeft = 0
-	}*/
-
-
 	legals := 0
 	var bestMove Move
 	var boundtype int8 = 1
@@ -747,9 +712,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-	if bestScore < -9000 {
-		bestScore += 1 // Mate distance/delay adjustment
-	}
+	bestScore += BOOL(bestScore < -9000) // Mate distance/delay adjustment
 
 	if bestMove.start != bestMove.end { // Many nodes in Qsearch either have no captures, or (in check) no legal captures, not worth storing them in tt since they are cheap and plentiful
 		table[hash % hashsize] = entry{hash, bestMove, int16(bestScore), int8(depth), boundtype}
@@ -780,9 +743,12 @@ func printpv() string {
 }
 
 
+/*
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+*/
 
 func main() {
+	/*
 	flag.Parse()
     if *cpuprofile != "" {
         f, err := os.Create(*cpuprofile)
@@ -794,7 +760,7 @@ func main() {
             fmt.Println(err) //log.Fatal("could not start CPU profile: ", err)
         }
         defer pprof.StopCPUProfile()
-    }
+    }*/
 
 	fmt.Println("info string Started")
 	for i := range 15 {
