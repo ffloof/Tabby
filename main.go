@@ -621,7 +621,8 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 	}
 
-	quietsLeft := ((depth * depth - 2 * depth + 4) >> BOOL(!improving)) + 1 // tested the same : ((depth * depth) >> BOOL(!improving)) - depth + 4
+	quietsLeft := ((depth * depth - 2 * depth + 4) >> BOOL(!improving)) + 1
+
 	legals := 0
 	var bestMove Move
 	var boundtype int8 = 1
@@ -665,9 +666,9 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		if ((legals == 1 || depth <= 0)){
 			score = -alphabeta(nextBoard, -beta, -alpha, depth - 1, true)
 		} else {
-			reduction := ((depth+legals)/16)
-			reduction += max(-2,-max(-2, history[BOOL(board.squares[nextMove.end] == 0)][board.squares[nextMove.start]][nextMove.end] / 64))
-			reduction = max(reduction, 0)
+			reduction := (depth+legals)/16
+			reduction += -history[BOOL(board.squares[nextMove.end] == 0)][board.squares[nextMove.start]][nextMove.end] / 64  // default 64
+			reduction = max(min(reduction,1+depth/3), 0) // 1 + depth/3 gained like 2 elo
 
 			score = -alphabeta(nextBoard, -alpha-1, -alpha, depth - 1 - reduction, true)
 			if score > alpha && reduction > 0 {
