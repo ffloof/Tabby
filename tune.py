@@ -120,6 +120,8 @@ for line in tqdm(lines):
     sidetomove = np.zeros(1, dtype=np.int8)
 
 
+    baseMob = np.zeros((2,7), dtype=np.int8)
+
     phalanxOpen = np.zeros((2, 1), dtype=np.int8)
     phalanxClosed = np.zeros((2, 1), dtype=np.int8)
     chainOpen = np.zeros((2, 1), dtype=np.int8)
@@ -159,6 +161,7 @@ for line in tqdm(lines):
 
         if piecetype > 0:
             mobtable[piece&1][piecetype-1][i] += 2 #1
+            baseMob[piece&1][piecetype-1] += 1
 
         if piecetype == 1:
             pfile = mailbox[i] % 10
@@ -252,6 +255,7 @@ for line in tqdm(lines):
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
                     pawnDefence = False
                     if piecetype != 1:
+                        baseMob[piece&1][piecetype-1] += 1
                         mobtable[piece&1][piecetype-1][inverse[current]] += 1
 
                         if piece & 1 == 0 and (virtualboard[current+S+W] == 3 or virtualboard[current+S+E] == 3):
@@ -326,7 +330,7 @@ for line in tqdm(lines):
 
     terms = [
         [material[0, :] + material[1, :], sidetomove],
-        [material[1, :] - material[0, :], shield[1]-shield[0], shieldbase[1]-shieldbase[0], sidetomove, restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], pushers, passerDistance[1]-passerDistance[0]], 
+        [material[1, :] - material[0, :], baseMob[1] - baseMob[0], shield[1]-shield[0], shieldbase[1]-shieldbase[0], sidetomove, restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], pushers, passerDistance[1]-passerDistance[0]], 
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
         [npawns[0]],

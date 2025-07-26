@@ -597,7 +597,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 	if depth > 0 && !pv && !board.inCheck {
 		// Reverse futility pruning RFP
-		if (staticEval - ((depth * 50) + (5 * depth * depth)) > beta) { 
+		if (staticEval - ((15 * depth * depth) + 40) > beta) { 
 			return staticEval
 		}
 
