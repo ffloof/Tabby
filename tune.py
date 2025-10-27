@@ -71,6 +71,7 @@ first = True
 rays = [ False, False, False, True, True, True, False]
 patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E,S+W,S+E], [N,S,E,W], [N,S,E,W,N+W,N+E,S+W,S+E], [N,S,E,W,N+W,N+E,S+W,S+E]]
 
+lines = lines[:500_000]
 
 for line in tqdm(lines):
     if len(outputs) >= len(lines):
@@ -160,8 +161,7 @@ for line in tqdm(lines):
         material[piececolor, piecetype] += 1
 
         if piecetype > 0:
-            mobtable[piece&1][piecetype-1][i] += 2 #1
-            baseMob[piece&1][piecetype-1] += 1
+            mobtable[piece&1][piecetype-1][i] += 1
 
         if piecetype == 1:
             pfile = mailbox[i] % 10
@@ -255,7 +255,7 @@ for line in tqdm(lines):
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
                     pawnDefence = False
                     if piecetype != 1:
-                        baseMob[piece&1][piecetype-1] += 1
+                        baseMob[piece&1][piecetype] += 1
                         mobtable[piece&1][piecetype-1][inverse[current]] += 1
 
                         if piece & 1 == 0 and (virtualboard[current+S+W] == 3 or virtualboard[current+S+E] == 3):
@@ -328,11 +328,24 @@ for line in tqdm(lines):
     if material[1,3] == 2:
         bishoppair += 1
 
+    oppCastle = np.zeros(1, dtype=np.int8)
+    oppCastle[0] = int((wkingfile >= 5) != (bkingfile >= 5))
+
+    pieceCount = np.zeros(1, dtype=np.int8)
+    pieceCount[0] = np.sum(material[1,2:]) - np.sum(material[0,2:])
+
     terms = [
-        [material[0, :] + material[1, :], sidetomove],
-        [material[1, :] - material[0, :], baseMob[1] - baseMob[0], shield[1]-shield[0], shieldbase[1]-shieldbase[0], sidetomove, restricted[1] - restricted[0], (captures[1] - captures[0]).flatten(), phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], pushers, passerDistance[1]-passerDistance[0]], 
+        # TODO: decide where restricted belongs 
+
+        # Weighting
+        [material[0, :] + material[1, :], oppCastle],
+        # Statics
+        [material[1, :] - material[0, :], baseMob[1]-baseMob[0], sidetomove, restricted[1] - restricted[0], phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], pushers], 
+        # Dynamics
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
+        [shield[1]-shield[0], shieldbase[1]-shieldbase[0]],
+        # Drawishness heuristic
         [npawns[0]],
         [npawns[1]],
     ]
@@ -350,6 +363,7 @@ for line in tqdm(lines):
         #print(starts, sizes)
 
         print("\nfen " + fen)
+        print(oppCastle)
         #for a in range(2):
         #    plt.imshow(kwhite[1].reshape((8,8)))
         #    plt.show()
@@ -365,8 +379,8 @@ for line in tqdm(lines):
         #plt.imshow((mobtable[0][8]).reshape((8,8)))
         #plt.show()
 
-        print(shield)
-        print(shieldbase)
+        #print(shield)
+        #print(shieldbase)
         #sys.exit()
 
     finalterms = []
@@ -385,18 +399,15 @@ from torch.utils.data import DataLoader, TensorDataset
 class HCE(torch.nn.Module):
     def __init__(self):
         super().__init__()
-
-        self.terms = torch.nn.Parameter(torch.randn(starts[2]-starts[1]))
-        self.taperterms = torch.nn.Parameter(torch.randn(starts[2]-starts[1]))
-
-        self.mobilitytable = torch.nn.Parameter(torch.randn(64))
-        self.tapermobilitytable = torch.nn.Parameter(torch.randn(64))
-
         self.npieces = (starts[3] - starts[2]) // 64
-        self.piecemobility = torch.nn.Parameter(torch.randn(self.npieces))
-        self.taperpiecemobility = torch.nn.Parameter(torch.randn(self.npieces))
 
-        self.risk = torch.nn.Parameter(torch.randn(starts[5]-starts[4]))
+        self.static_terms = torch.nn.Parameter(torch.randn(starts[2]-starts[1]))
+        self.dynamic_terms = torch.nn.Parameter(torch.randn(starts[5]-starts[4]))
+        self.mobilitytable = torch.nn.Parameter(torch.randn(64))
+        self.piecemobility = torch.nn.Parameter(torch.randn(self.npieces))
+
+        self.phase = torch.nn.Parameter(torch.abs(torch.randn(starts[1])))
+        self.risk = torch.nn.Parameter(torch.randn(starts[6]-starts[5]))
 
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
@@ -405,49 +416,54 @@ class HCE(torch.nn.Module):
         whiteattention = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64), self.mobilitytable)
 
         netmobility = torch.matmul(whiteattention, self.piecemobility) - torch.matmul(blackattention, self.piecemobility)
-        netmobility2 = torch.matmul(whiteattention, self.taperpiecemobility) - torch.matmul(blackattention, self.taperpiecemobility)
 
-        score = torch.matmul(x[:,starts[1]:starts[2]], self.terms)
-        score2 = torch.matmul(x[:,starts[1]:starts[2]], self.taperterms)
+        statics = torch.matmul(x[:,starts[1]:starts[2]], self.static_terms)
+        dynamics = netmobility + torch.matmul(x[:,starts[4]:starts[5]], self.dynamic_terms)
+        
+        dynamics_weight = torch.clamp(torch.matmul(x[:,starts[0]:starts[1]], self.phase), min=0) #phase
 
-        midscore = ((score + netmobility) * phase)
-        endscore = ((score2 + netmobility2) * (1-phase))
+        # TODO: replace phase with self.phase once we get backprop working properly
+        score = statics + dynamics * dynamics_weight
+        
+        pawnscalar = torch.sign(torch.clamp(score, min=0)) * torch.matmul(x[:,starts[6]:starts[7]], self.risk) + torch.sign(torch.clamp(-(score), min=0)) * torch.matmul(x[:,starts[5]:starts[6]], self.risk)
+        drawishness_weight = torch.clamp(pawnscalar, min=0)
 
-        finalscore = midscore + endscore
-        scalew = torch.clamp(finalscore, min=0) * torch.matmul(x[:,starts[5]:starts[6]], self.risk)
-        scaleb = torch.clamp(-(finalscore), min=0) * torch.matmul(x[:,starts[4]:starts[5]], self.risk)
+        finalscore = score / (1 + dynamics_weight + drawishness_weight)
 
-        return torch.tanh(finalscore + (scalew - scaleb)) 
+        return torch.tanh(finalscore) 
 
     def printfinal(self, finalEpoch=False):
         #print((self.risk.detach().numpy()))
 
         m = 100 / 0.54319 # For tanh this represents the "50%" winning chance
-        riskNormalizer = self.risk.detach().numpy()[8] + 1
 
-        def printparams(regular, tapered, shape, forgrid=True):
+        def printparams(regular, shape, forgrid=True):
             offset = 0
             for size in shape:
                 if size >= 64 and forgrid:
                     size = size//64
-                a = np.around(regular[offset:offset+size].detach().numpy() * m * riskNormalizer, decimals=0)
-                b = np.around(tapered[offset:offset+size].detach().numpy() * m * riskNormalizer , decimals=0)
+                a = np.around(regular[offset:offset+size].detach().numpy() * m, decimals=0)
                 
                 finalstr = "{"
                 for i in range(len(a)):
-                    finalstr += "T(" + str(int(a[i])) + "," + str(int(b[i])) + "), "
+                    finalstr += str(int(a[i])) + ", "
                 finalstr += "}"
                 print(finalstr)
                 offset += size
         
         print("\nLinear terms")
-        printparams(self.terms, self.taperterms, sizes[1])
+        printparams(self.static_terms, sizes[1])
+        print("Pt2")
+        printparams(self.dynamic_terms, sizes[4])
 
         print("\nMobility weights")
-        printparams(self.piecemobility, self.taperpiecemobility, sizes[2])
+        printparams(self.piecemobility, sizes[2])
 
         print("\nRisk weights")
-        print(np.around((1+self.risk.detach().numpy())/riskNormalizer , decimals=3))
+        print(np.around((self.risk.detach().numpy()) , decimals=3))
+
+        print("\nPhase weights")
+        print(np.around((self.phase.detach().numpy()) , decimals=3))
 
         if finalEpoch or True:
             print("\nBoard Weights")
@@ -510,4 +526,14 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # Only shieldbase    .23996 ~89
 # Only shieldnonbase .23977 ~70
 # Only shieldfile    .24071 but pawn broken .24004
-          
+
+# Material
+# Endgame
+# Piece Activity
+# King Safety
+# Trade pieces when you're up material
+# Don't trade off too many pawns (drawishness)
+# When down material play for attack/iniative, versa dont allow counterplay when up material
+# Spend more time in positions where there are multiple possible moves, i.e. decision nodes
+# Should be more or less linear/logistic regression, with easily interpretable values
+# The  evaluation should represent the practical chances of a position rather than the true value
