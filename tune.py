@@ -71,7 +71,7 @@ first = True
 rays = [ False, False, False, True, True, True, False]
 patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E,S+W,S+E], [N,S,E,W], [N,S,E,W,N+W,N+E,S+W,S+E], [N,S,E,W,N+W,N+E,S+W,S+E]]
 
-lines = lines[:500_000]
+lines = lines[:5_000_000]
 
 for line in tqdm(lines):
     if len(outputs) >= len(lines):
@@ -128,8 +128,17 @@ for line in tqdm(lines):
     chainOpen = np.zeros((2, 1), dtype=np.int8)
     chainClosed = np.zeros((2, 1), dtype=np.int8) 
 
+    #blockadedPasser = np.zeros((2, 1), dtype=np.int8) 
+    #unprotectedPasser = np.zeros((2,8), dtype=np.int8)
+    #securePieces = np.zeros((2,7), dtype=np.int8)
+    #rooksemiopen = np.zeros((2,1), dtype=np.int8)
+
+    #virtualkingmob = np.zeros((2,1), dtype=np.int8)
+    #tropism = np.zeros((2,8), dtype=np.int8)
+    #pawntropism = np.zeros((2,8), dtype=np.int8)
+
     passerDistance = np.zeros((2,8), dtype=np.int8)
-    passerDistanceOpp = np.zeros((2,8), dtype=np.int8)
+    passerDistanceSupport = np.zeros((2,8), dtype=np.int8)
     passerRank = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [11,11,11,11,11,11,11,11,11,11],
@@ -190,9 +199,52 @@ for line in tqdm(lines):
         isray = rays[piecetype]
         pattern = patterns[piecetype]
 
+        defended = (piece & 1 == 0 and (virtualboard[sq+N+W] == 2 or virtualboard[sq+N+E] == 2)) or (piece & 1 == 1 and (virtualboard[sq+S+W] == 3 or virtualboard[sq+S+E] == 3))
+        #if defended and piece > 3:
+        #    securePieces[piece&1][piecetype] += 1
+
+        #if piecetype == 1:
+        #    if piece & 1 == 0:
+        #        pawntropism[0][max(abs(wkingfile-(sq%10)), abs(wkingrank-(sq//10)))] += 1
+        #    else:
+        #        pawntropism[1][max(abs(bkingfile-(sq%10)), abs(bkingrank-(sq//10)))] += 1
+
+        #if piecetype == 4:
+        #    if piece & 1 == 0:
+        #        if rearpawns[0][sq%10] == 11:
+        #            rooksemiopen[0] += 1
+        #    else:
+        #        if rearpawns[1][sq%10] == 0:
+        #            rooksemiopen[1] += 1
+
+        #if piecetype == 5:
+        #    if piece & 1 == 0:
+        #        tropism[0][max(abs(wkingfile-(sq%10)), abs(wkingrank-(sq//10)))] = 1
+        #    else:
+        #        tropism[1][max(abs(bkingfile-(sq%10)), abs(bkingrank-(sq//10)))] = 1
+
+        #if piecetype == 6:
+        #    area = 0
+
+        #    patternrays = []
+        #    if piece & 1 == 1:
+        #        patternrays = [N+W,N,N+E]
+        #    else:
+        #        patternrays = [S+W,S,S+E]
+
+        #    for direction in patternrays:
+        #        current = sq
+        #        for i in range(1,8):
+        #            current += direction
+        #            if virtualboard[current] != 0:
+        #                break
+        #            area += 1
+        #    virtualkingmob[piece&1] = area
+
         if piecetype == 1:
             if piece == 2:
                 pattern = [S+W, S+E]
+
             if piece == 3:
                 pattern = [N+W, N+E]
 
@@ -204,42 +256,42 @@ for line in tqdm(lines):
             if piece & 1 == 0:
                 if virtualboard[sq + W] == 2 or virtualboard[sq + E] == 2:
                     if rearpawns[1][pfile] == 0:
-                        #mobtable[0][7][inverse[sq]] = 1
                         phalanxOpen[0] += 1
                     else:
-                        #mobtable[0][8][inverse[sq]] = 1
                         phalanxClosed[0] += 1
 
                 if virtualboard[sq + W + N] == 2 or virtualboard[sq + E + N] == 2:
                     if rearpawns[1][pfile] == 0:
-                        #mobtable[0][9][inverse[sq]] = 1
                         chainOpen[0] += 1
                     else:
-                        #mobtable[0][10][inverse[sq]] = 1
                         chainClosed[0] += 1
 
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
+                    #if not defended:
+                    #    unprotectedPasser[0][9-prank] += 1
+                    #if virtualboard[sq+S] != 0:
+                    #    blockadedPasser[0] += 1
 
             else:
                 if virtualboard[sq + W] == 3 or virtualboard[sq + E] == 3:
                     if rearpawns[0][pfile] == 11:
-                        #mobtable[1][7][inverse[sq]] = 1
                         phalanxOpen[1] += 1
                     else:
-                        #mobtable[1][8][inverse[sq]] = 1
                         phalanxClosed[1] += 1
 
                 if virtualboard[sq + W + S] == 3 or virtualboard[sq + E + S] == 3:
                     if rearpawns[0][pfile] == 11:
-                        #mobtable[1][9][inverse[sq]] = 1
                         chainOpen[1] += 1
                     else:
-                        #mobtable[1][10][inverse[sq]] = 1
                         chainClosed[1] += 1
 
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
                     passerRank[1][pfile] = min(prank, passerRank[1][pfile])
+                    #if not defended:
+                    #    unprotectedPasser[1][prank-2] += 1
+                    #if virtualboard[sq+N] != 0:
+                    #    blockadedPasser[1] += 1
         
         
         
@@ -255,21 +307,22 @@ for line in tqdm(lines):
                 if virtualboard[current] == 0 or ((virtualboard[current] & 1) != (piece & 1)):
                     pawnDefence = False
                     if piecetype != 1:
-                        baseMob[piece&1][piecetype] += 1
-                        mobtable[piece&1][piecetype-1][inverse[current]] += 1
+
 
                         if piece & 1 == 0 and (virtualboard[current+S+W] == 3 or virtualboard[current+S+E] == 3):
                             pawnDefence = True
                         elif piece & 1 == 1 and (virtualboard[current+N+W] == 2 or virtualboard[current+N+E] == 2):
                             pawnDefence = True
+                        
+                        if not pawnDefence:
+                            baseMob[piece&1][piecetype] += 1
+                            mobtable[piece&1][piecetype-1][inverse[current]] += 1
 
-                    if pawnDefence:
-                        restricted[piece & 1][piecetype] += 1
+                    #if pawnDefence:
+                    #    restricted[piece & 1][piecetype] += 1
 
                     if virtualboard[current] != 0 and ((virtualboard[current] & 1) != (piece & 1)):
                         captures[piece & 1][piecetype][virtualboard[current] // 2] += 1
-
-
 
                 if virtualboard[current] != 0 or (not isray):
                     break
@@ -278,13 +331,13 @@ for line in tqdm(lines):
         wspawn = rearpawns[1][wkingfile + x]
         if wspawn == 8:
             shieldbase[1][wkingfile + x] = 1
-        elif wspawn > 0:
+        if wspawn > 0:
             shield[1][wkingfile + x] = 1
 
         bspawn = rearpawns[0][bkingfile + x]
         if bspawn == 3:
             shieldbase[0][bkingfile + x] = 1
-        elif bspawn < 10:
+        if bspawn < 10:
             shield[0][bkingfile + x] = 1
 
     pushers = np.zeros(8, dtype=np.int8)
@@ -305,12 +358,12 @@ for line in tqdm(lines):
         if wPass >= 0:
             pushers[wPass] += 1
             passerDistance[1][max(abs(i-bkingfile),bkingrank - 2)] = 1
-            passerDistanceOpp[1][max(abs(i-wkingfile),wkingrank - 2)] = 1
+            passerDistanceSupport[1][max(abs(i-wkingfile),wkingrank - 2)] = 1
 
         if bPass >= 0:
             pushers[bPass] -= 1
             passerDistance[0][max(abs(i-wkingfile),11 - wkingrank - 2)] = 1
-            passerDistanceOpp[0][max(abs(i-bkingfile),11 - bkingrank - 2)] = 1
+            passerDistanceSupport[0][max(abs(i-bkingfile),11 - bkingrank - 2)] = 1
 
     sidetomove[0] = sign[turn]
 
@@ -328,26 +381,39 @@ for line in tqdm(lines):
     if material[1,3] == 2:
         bishoppair += 1
 
-    oppCastle = np.zeros(1, dtype=np.int8)
-    oppCastle[0] = int((wkingfile >= 5) != (bkingfile >= 5))
+    #oppCastle = np.zeros(1, dtype=np.int8)
+    #oppCastle[0] = int((wkingfile >= 5) != (bkingfile >= 5))
+    #differentCastle = np.zeros(1, dtype=np.int8)
+    #differentCastle[0] = int((wkingfile >= bkingfile-1) and (bkingfile+1 >= wkingfile))
+    #shieldsum = np.zeros(1, dtype=np.int8)
+    #shieldsum[0] = np.sum(shield)
+    #shieldbasesum = np.zeros(1, dtype=np.int8)
+    #shieldbasesum[0] = np.sum(shieldbase)
 
-    pieceCount = np.zeros(1, dtype=np.int8)
-    pieceCount[0] = np.sum(material[1,2:]) - np.sum(material[0,2:])
+    #pieceCount = np.zeros(1, dtype=np.int8)
+    #pieceCount[0] = np.sum(material[1,2:]) - np.sum(material[0,2:])
+
+    kingPawnEndgame = np.zeros(1, dtype=np.int8)
+    kingPawnEndgame[0] = (np.sum(material[1,2:6]) == 0) or (np.sum(material[0,2:6]) == 0)
+
+    #pawnCaptures = captures[:,1,:6]
+    #nonPawnCaptures = np.sum(captures[:,2:,:6],axis=1)
+
+    npawns[:,6] = 0
 
     terms = [
         # TODO: decide where restricted belongs 
-
         # Weighting
-        [material[0, :] + material[1, :], oppCastle],
+        [material[0, :] + material[1, :]], #differentCastle oppCastle, shieldsum, shieldbasesum
         # Statics
-        [material[1, :] - material[0, :], baseMob[1]-baseMob[0], sidetomove, restricted[1] - restricted[0], phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], pushers], 
+        [material[1, :] - material[0, :], bishoppair, restricted[1]-restricted[0], sidetomove, baseMob[1]-baseMob[0], pushers, phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], passerDistance[1]-passerDistance[0], passerDistanceSupport[1]-passerDistanceSupport[0]],# 
         # Dynamics
         [mobtable[0].flatten()],
         [mobtable[1].flatten()],
         [shield[1]-shield[0], shieldbase[1]-shieldbase[0]],
         # Drawishness heuristic
-        [npawns[0]],
-        [npawns[1]],
+        [npawns[0],kingPawnEndgame],
+        [npawns[1],kingPawnEndgame],
     ]
 
     if first:
@@ -363,7 +429,6 @@ for line in tqdm(lines):
         #print(starts, sizes)
 
         print("\nfen " + fen)
-        print(oppCastle)
         #for a in range(2):
         #    plt.imshow(kwhite[1].reshape((8,8)))
         #    plt.show()
@@ -371,7 +436,7 @@ for line in tqdm(lines):
         #    plt.show()
         #    plt.imshow((kwhite+qwhite)[1].reshape((8,8)))
         #    plt.show()
-        #    plt.imshow(mobtable[1][1].reshape((8,8)))
+        #    plt.imshow(mobtable[a][6].reshape((8,8)))
         #    plt.show()
         #    break
         #    ...
@@ -408,6 +473,8 @@ class HCE(torch.nn.Module):
 
         self.phase = torch.nn.Parameter(torch.abs(torch.randn(starts[1])))
         self.risk = torch.nn.Parameter(torch.randn(starts[6]-starts[5]))
+
+        self.multip = torch.nn.Parameter(torch.randn(1))
 
     def forward(self, x):
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
@@ -511,17 +578,6 @@ for epoch in range(epochs):  # Adjust the number of epochs
     print(epoch, total/size)
     model.printfinal(epoch == epochs - 1)
 
-
-
-
-# protected passer doesnt make sense cuz of chain and phalanx (open vs closed)
-# bishop pair might be cuttable since engine already values bishops over knights
-# we should retest tempo after we add incremental updates
-# shield1 vs shield2 
-# blockaded passers?
-# can we simplify attacks?
-# mobtable for weak pawns?
-
 # New baseline       .23907
 # Only shieldbase    .23996 ~89
 # Only shieldnonbase .23977 ~70
@@ -536,4 +592,46 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # When down material play for attack/iniative, versa dont allow counterplay when up material
 # Spend more time in positions where there are multiple possible moves, i.e. decision nodes
 # Should be more or less linear/logistic regression, with easily interpretable values
-# The  evaluation should represent the practical chances of a position rather than the true value
+# The evaluation should represent the practical chances of a position rather than the true value
+
+
+# Term ideas:
+#   bishop pair
+#   unprotected passer
+#   simple attacks
+#   blockaded passer?, 
+#   king rays
+#   queen tropism 
+#   defended by pawn bonus
+#   king pawn endgame scaling
+# rammed pawns/closed positions?
+#   rook on semi open file
+#   pawn mobility
+
+
+# 
+#.4824 5M ALL
+#.4816 5M BISHOP PAIR
+#.4850 5M -restricted -pawn structure
+#.4842 5M +restricted
+#.4818 5M +pawn structure +defended pieces x2
+#.4815 5M -defended pieces +unprotected passer x2
+#.4820 5M -unprotected passer -king pawn endgame scaling
+#.4812. 5M +king pawn endgame scaling +rooks on semi open files
+#.4818 -rooks on semi open files +pawn mobility
+#.4811 -pawn mobility +blockaded passers
+#.4817 -blockaded passer +king rays
+#.4793 -king rays +complex attacks
+#.4815 -complex attacks +tropism
+#.4811 -tropism +pawn tropism
+#.4821 -pawn tropism -tempo
+#.4803 +tempo +simplish attacks
+#.4808 simplish attacks but only in static
+#.4814 simplish attacks but only in dynamic
+#.4825 -simplish attacks -shieldbase
+#.4834 -base mobility
+#.4815 +base mobility +enemy passer king distance
+#.4811 +friendly passer king distance
+#.4814 -passer distance -friendly passser distance, restricted cuts out of base mobility
+#.4812 restricted cuts out of main mobility not base
+#.4817 restricted cuts out both
