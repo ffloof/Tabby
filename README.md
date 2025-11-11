@@ -6,7 +6,13 @@ It should be compatible with any standard UCI chess interface.
 
 It has beaten a strong National Master at my local chess club with help from a robotic arm and some computer vision that I implmented to help it play over the board.
 
-# Evaluation
+# Game
+
+
+
+# Chess Engine Internals 
+
+## Evaluation
 
 todo: cut cut cut
 The idea behind static evaluation is that chess is a game far too complex to search all the way to the end of the game tree. So we have to have a heuristic way that evaluates how likely a position is to be won/drawn/lost for a given side. Its job is to understand positional patterns that will determine the game well beyond the confines of the chess engines search horizon. 
@@ -50,7 +56,7 @@ Current evaluation outline:
 
 Still need to figure out how to reward the queen moreso than other pieces for attacking king ring
 
-# Search
+## Search
 
 todo: write basic explanation of minmax and qsearch
 

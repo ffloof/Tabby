@@ -25,16 +25,6 @@ const RANK = "87654321"
 const FILE = "abcdefgh"
 var ADVANCES = [...]int{S,N}
 
-func T(a,b int) int{
-	return (a + (b * 0x100000000))
-}
-
-func decode(eval, phase int) int {
-	eg := (eval + 0x80000000) >> 32;
-	mg := int(int16(eval))
-	return ((mg * phase) + (eg * (24-phase)))/24
-}
-
 func BOOL(b bool) int { // golang for reasons unknown to me has no native way to convert a boolean to an integer
 	if b {
 		return 1
@@ -42,42 +32,51 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 	return 0
 }
 
-// 0.2390323810197559
-var e_material = []int{T(0,0), T(31,66), T(262,249), T(303,275), T(367,522), T(764,984), T(0,0), }
-var e_shield = []int{T(0,0), T(9,30), T(16,27), T(-9,24), T(9,9), T(12,5), T(7,8), T(14,8), T(31,4), T(0,0), }
-var e_shieldbase = []int{T(0,0), T(25,-10), T(47,0), T(21,12), T(10,6), T(16,4), T(31,10), T(13,7), T(30,-9), T(0,0), }
-var e_restricted = []int{T(0,0), T(0,0), T(-7,-6), T(-5,-1), T(-7,-2), T(-5,1), T(-15,8), }
-var e_attacks = []int{T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(0,0), T(45,11), T(61,33), T(72,-5), T(49,4), T(107,43), T(0,0), T(-6,12), T(0,0), T(19,37), T(37,35), T(29,32), T(95,0), T(0,0), T(-2,11), T(8,25), T(0,0), T(22,26), T(35,36), T(50,65), T(0,0), T(-18,14), T(4,13), T(17,15), T(0,0), T(54,-14), T(189,-10), T(0,0), T(1,4), T(-10,8), T(-6,38), T(-5,2), T(0,0), T(53,96), T(0,0), T(37,32), T(4,14), T(-13,26), T(-112,42), T(-317,-84), T(0,0), }
-var e_phalanx = []int{T(5,3),T(9,12)}
-var e_chain = []int{T(9,9),T(23,21)}
-var e_passerRank = []int{T(0,0), T(-2,6), T(-9,0), T(-13,25), T(-7,59), T(-9,133), T(-17,213), T(0,0), }
-var e_passerKingDistance = []int{T(22,-57), T(23,-40), T(21,-22), T(-3,-2), T(-5,23), T(-29,33), T(-11,30), T(-61,50),}
+// We're gonna have to retune anyway since I forgot to copy phase weights over
+// On the chopping block are blockaded, and bishop pair, and maybe king distance to passer
+var e_material = []int{0, 112, 485, 533, 869, 1794, 0, }
+var e_bishopPair = 78
+var e_tempo = 17
+var e_passerRank = []int{0, -77, -61, -36, 20, 107, 188, 0, }
+var e_phalanx = []int{4,25}
+var e_chain = []int{21,42}
+var e_baseMobility = []int{0, 0, 12, 6, 8, 1, 12, }
+var e_egKingFile = []int{-40, -26, -12, 13, 0, -7, -33, -55, }
+var e_egKingRank = []int{22, 72, 89, 92, 70, 48, 19, 0, }
+var e_passerKingDistance = []int{0, -7, 42, 58, 79, 87, 84, 94, 0, }
+var e_blockaded = -36
 
-var e_mobility = []int{T(0,0), T(27,1), T(18,13), T(13,10), T(13,6), T(4,12), T(-22,17), }
+var e_mobility = []int{0, 46, 25, 18, 14, 10, -13,}
 
-var evals [256]int
+var e_shield = []int{0, 80, 76, 35, 17, 31, 11, 31, 21, 0, }
+var e_shieldbase = []int{0, -17, 23, 24, 8, -8, 14, 4, 5, 0, }
+var e_mgKingFile = []int{-5, -44, -32, -49, 0, -4, 68, 93, }
+var e_mgKingRank = []int{-8, 11, 2, -98, -110, -80, -31, 0, }
 
-var e_risk = []int{ 331, 624, 896, 992, 1148, 1148, 1194, 1103, 1000, }
+var e_risk = []int{ 3876, 1946, 962, 452, 192, -26, 0, 0,  290 }
 var e_table = [2][128]int {
 	{},
-{-54, -341,  248,  258,  373,  538,  535,  878, 0,0,0,0, 0,0,0,0,
- 483,  512,  399,  332,  580,  485,  604,  479, 0,0,0,0, 0,0,0,0,
- 428,  429,  455,  415,  427,  722,  479,  270, 0,0,0,0, 0,0,0,0,
- 355,  596,  454,  652,  551,  425,  551,  496, 0,0,0,0, 0,0,0,0,
- 179,  332,  460,  678,  559,  404,  431,  128, 0,0,0,0, 0,0,0,0,
-  35,  295,  363,  327,  480,  378,  792,   57, 0,0,0,0, 0,0,0,0,
-  39,  450,  416,  448,  419,  381,  808,  118, 0,0,0,0, 0,0,0,0,
- 114,  169,  256,  343,  231,    7,  110,  -40, 0,0,0,0, 0,0,0,0,},
+{-19,  -652, 95, 276, 106, 268, 260, 1149,    0,0,0,0, 0,0,0,0,
+ 269, 740, 542, 246, 471, 367, 1001, 675,     0,0,0,0, 0,0,0,0,
+ 212, 645, 682, 328, 834, 1234, 1274, 692,    0,0,0,0, 0,0,0,0,
+ 249, 389, 435, 600, 699, 608, 440, 392,      0,0,0,0, 0,0,0,0,
+ 113, 205, 303, 417, 477, 332, 233, 100,      0,0,0,0, 0,0,0,0,
+ -207,  10,  -12, 145, 232, 238, 400, -52,    0,0,0,0, 0,0,0,0,
+ -193,  -12,  -19,  -19, 110,  403, 448, -140,0,0,0,0, 0,0,0,0,
+  50,   -38,  -7,  -50,  2, 209,  -128, 139,  0,0,0,0, 0,0,0,0,
+},
 }
+
+
 
 const e_divider = 1000
 
-var phaseWeights = [14]int{0,0,0,0,1,1,1,1,2,2,4,4,0,0}
+var phaseWeights = [14]int{0, 0, 39, 47, 110, 402, 19,}
 
 var Zobrist [16][128]uint64
-
 var nodes int = 0
 const MAX_HISTORY = 256
+var evals [256]int
 
 type Board struct {
 	squares    [128]int8
@@ -85,7 +84,7 @@ type Board struct {
 	kings      [2]int
 	enpassant  int
 	zobrist    uint64
-	mobilities [2]int
+	mobilities [2][2]int
 	phase int
 	sidetomove int8
 	inCheck bool
@@ -148,8 +147,8 @@ func FromFen(fen string) Board {
 
 func (board *Board) Edit(index int, newpiece int8) {
 	oldpiece := board.squares[index]
-	board.phase += phaseWeights[newpiece]
-	board.phase -= phaseWeights[oldpiece]
+	board.phase += phaseWeights[newpiece/2]
+	board.phase -= phaseWeights[oldpiece/2]
 	board.zobrist ^= Zobrist[oldpiece][index]
 	board.zobrist ^= Zobrist[newpiece][index]
 	board.pieceCount[oldpiece] -= 1
@@ -184,7 +183,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	moves := []Move{}
 
 	advance := ADVANCES[board.sidetomove]
-	mobility := 0
+	baseMobility, dynamicMobility := 0, 0
 	pawnIndexes := make([]int8, 0, 16)
 
 	for i, piece := range board.squares {
@@ -202,7 +201,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			continue
 		}
 
-		mobValue := attention[i] * 2
+		mobValue := attention[i]
 		if piecetype == 1 {
 			if !capturesOnly && board.squares[i+advance] == 0 {
 				moves = append(moves, Move{int8(i), int8(i + advance)})
@@ -216,7 +215,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 					victim := board.squares[pawnCapture]
 					if victim != 0 && (victim&1 != piece&1) {
 						moves = append(moves, Move{int8(i), int8(pawnCapture)})
-						mobility += decode(e_attacks[piecetype * 7 + (victim/2)], board.phase)
+						//smobility += decode(e_attacks[piecetype * 7 + (victim/2)], board.phase)
 					}
 				}
 			}
@@ -227,20 +226,14 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			for _, dir := range pattern {
 				for end := i + dir; (end & 0x88) == 0; end += dir {
 					victim := board.squares[end]
-
-					if board.PawnDefends(end, 1-board.sidetomove) {
-						mobility += decode(e_restricted[piecetype], board.phase)
-					}
+					baseMobility += e_baseMobility[piecetype]
 					
-					if victim != 0 {
-						if victim&1 != piece&1 {
+					if victim == 0 || victim&1 != piece&1 {
+						if !board.PawnDefends(end, 1-board.sidetomove) {
 							mobValue += attention[end]
-							mobility += decode(e_attacks[piecetype * 7 + (victim/2)], board.phase)
-							moves = append(moves, Move{int8(i), int8(end)})
 						}
-					} else {
-						mobValue += attention[end]
-						if !capturesOnly {
+
+						if !capturesOnly || victim != 0 {
 							moves = append(moves, Move{int8(i), int8(end)})
 						}
 					}
@@ -251,7 +244,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 				}
 			}
 		}
-		mobility += (decode(e_mobility[piecetype],board.phase) * mobValue) / e_divider
+		dynamicMobility += (e_mobility[piecetype] * mobValue) / e_divider
 	}
 
 	if board.enpassant != 0 {
@@ -276,11 +269,20 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		}
 	}
 
-
-	score := 0
+	score, dynamic_score, dynamics_weight := 0,0,0
 
 	for piecetype := range 7 {
 		score += e_material[piecetype] * int((board.pieceCount[piecetype * 2 + 1] - board.pieceCount[piecetype * 2]))
+		dynamics_weight += phaseWeights[piecetype]* int((board.pieceCount[piecetype * 2 + 1] + board.pieceCount[piecetype * 2]))
+	}
+
+	// TODO: CONDENSE USING BOOLS
+	if board.pieceCount[6] == 2 {
+		score -= e_bishopPair
+	}
+
+	if board.pieceCount[7] == 2{
+		score += e_bishopPair
 	}
 
 	whiterear := [10]int{0,0,0,0,0,0,0,0,0,0,}
@@ -298,20 +300,27 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		}
 	}
 
+	score += e_egKingFile[board.kings[1]&7] + e_egKingRank[board.kings[1]>>4]
+	score -= e_egKingFile[board.kings[0]&7] + e_egKingRank[7-(board.kings[0]>>4)]
+	dynamic_score += e_mgKingFile[board.kings[1]&7] + e_mgKingRank[board.kings[1]>>4]
+	dynamic_score -= e_mgKingFile[board.kings[0]&7] + e_mgKingRank[7-(board.kings[0]>>4)]
+
 	wkingfile := (board.kings[1]&7) + 1
 	bkingfile := (board.kings[0]&7) + 1
 
 	for i := -1; i <= 1; i++ {
 		if whiterear[wkingfile + i] == 6 {
-			score += e_shieldbase[wkingfile + i]
-		} else if whiterear[wkingfile + i] != 0 {
-			score += e_shield[wkingfile + i]
+			dynamic_score += e_shieldbase[wkingfile + i]
+		}
+		if whiterear[wkingfile + i] != 0 {
+			dynamic_score += e_shield[wkingfile + i]
 		}
 
 		if blackrear[bkingfile + i] == 1 {
-			score -= e_shieldbase[bkingfile + i]
-		} else if blackrear[bkingfile + i] != 7 {
-			score -= e_shield[bkingfile + i]
+			dynamic_score -= e_shieldbase[bkingfile + i]
+		}
+		if blackrear[bkingfile + i] != 7 {
+			dynamic_score -= e_shield[bkingfile + i]
 		}
 	}
 
@@ -331,6 +340,9 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			semiopen := BOOL(blackrear[pfile] == 7) // TODO: can probably inline semi open
 			if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
 				whitepasser[pfile] = max(whitepasser[pfile], 7 - prank)
+				if board.squares[sq+N] != 0 && board.squares[sq+N]&1 == 0 {
+					score += e_blockaded
+				}
 			}
 
 			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
@@ -344,6 +356,9 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			semiopen := BOOL(whiterear[pfile] == 0)
 			if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
 				blackpasser[pfile] = max(blackpasser[pfile], prank)
+				if board.squares[sq+S] != 0 && board.squares[sq+S]&1 == 1 {
+					score -= e_blockaded
+				}
 			}
 
 			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
@@ -354,44 +369,38 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 				score -= e_chain[semiopen]
 			}
 		}
-
-		/*
-		if piece & 1 == board.sidetomove {
-			
-			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
-				mobility += decode(e_phalanx[semiopen], board.phase) 
-			}
-
-			if board.PawnDefends(int(sq), board.sidetomove) {
-				mobility += decode(e_chain[semiopen], board.phase)
-			}
-		}*/
 	}
 
 	// Passer evaluation
 	for file := range 10 {
 		if whitepasser[file] != 0 {
 			score += e_passerRank[whitepasser[file]]
-			score += e_passerKingDistance[max(board.kings[0] >> 4,max(file - bkingfile, bkingfile - file))]
+			score += e_passerKingDistance[max(max((board.kings[0] >> 4)-whitepasser[file],whitepasser[file]-(board.kings[0] >> 4)),max(file - bkingfile, bkingfile - file))]
 		}
 		if blackpasser[file] != 0 {
 			score -= e_passerRank[blackpasser[file]]
-			score -= e_passerKingDistance[max(7-(board.kings[1] >> 4),max(file - wkingfile, wkingfile - file))]
+			score -= e_passerKingDistance[max(max((board.kings[1] >> 4)-blackpasser[file],blackpasser[file]-(board.kings[1] >> 4)),max(file - wkingfile, wkingfile - file))]
 		}
 	}
 
-	score = decode(score, board.phase) 
-	board.mobilities[board.sidetomove] = mobility
-	score += board.mobilities[1] - board.mobilities[0]
+	board.mobilities[board.sidetomove][0] = baseMobility
+	board.mobilities[board.sidetomove][1] = dynamicMobility
+	
+	score += board.mobilities[1][0] - board.mobilities[0][0]
+	dynamic_score += board.mobilities[1][1] - board.mobilities[0][1]
 
-	leadingpawns := board.pieceCount[2 + BOOL(score >= 0)]
+	final_score := score + (dynamic_score * dynamics_weight) / e_divider
 
-	score = (score * e_risk[leadingpawns]) / e_divider
+	leadingpawns := board.pieceCount[2 + BOOL(final_score >= 0)]
+
+	drawishness_weight := e_risk[leadingpawns]
+	final_score = (final_score * e_divider) / (e_divider + dynamics_weight + drawishness_weight) 
+	
 
 	if board.sidetomove == 0 {
-		score = -score
+		final_score = -final_score
 	}
-	return moves, score
+	return moves, final_score + e_tempo // TODO: maybe we should properly address tempo in tuning
 }
 
 func (board *Board) attacked(start int, attacker int8) bool {
@@ -597,12 +606,12 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 	if depth > 0 && !pv && !board.inCheck {
 		// Reverse futility pruning RFP
-		if (staticEval - ((15 * depth * depth) + 40) > beta) { 
+		if (staticEval - ((20 * depth * depth) + 50) > beta) { 
 			return staticEval
 		}
 
 		// Null move pruning NMP
-		if staticEval >= beta && nullallowed && depth >= 3 && board.phase > 4 {
+		if staticEval >= beta && nullallowed && depth >= 3 && board.phase > 200 {
 			if -alphabeta(board.Apply(Move{9,9}), -beta, -alpha, ((depth - 4) - (depth / 5)) - ((staticEval - beta)/200), false) >= beta {
 				return beta
 			}
@@ -642,7 +651,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		moves[i], moves[besti] = moves[besti], moves[i]
 
 		if depth <= 0 && !pv && !board.inCheck { // Delta pruning
-			if staticEval + decode(e_material[board.squares[nextMove.end]/2], board.phase) + 75 < alpha {
+			if staticEval + e_material[board.squares[nextMove.end]/2] + 25 < alpha {
 				break
 			}
 		}
@@ -854,3 +863,4 @@ func main() {
 
 // Ben finegolds middle name is philip
 // Should make a stream where people vote on best move4
+// Blockaded 360/399/324
