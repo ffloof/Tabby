@@ -33,18 +33,17 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 }
 
 // We're gonna have to retune anyway since I forgot to copy phase weights over
-// On the chopping block are blockaded, and bishop pair, and maybe king distance to passer
+// On the chopping block are bishop pair, and maybe king distance to passer
 var e_material = []int{0, 112, 485, 533, 869, 1794, 0, }
 var e_bishopPair = 78
 var e_tempo = 17
-var e_passerRank = []int{0, -77, -61, -36, 20, 107, 188, 0, }
+var e_passerRank = []int{0, -11, -8, 14, 53, 125, 197, 0, }
 var e_phalanx = []int{4,25}
 var e_chain = []int{21,42}
 var e_baseMobility = []int{0, 0, 12, 6, 8, 1, 12, }
 var e_egKingFile = []int{-40, -26, -12, 13, 0, -7, -33, -55, }
 var e_egKingRank = []int{22, 72, 89, 92, 70, 48, 19, 0, }
-var e_passerKingDistance = []int{0, -7, 42, 58, 79, 87, 84, 94, 0, }
-var e_blockaded = -36
+var e_passerKingDistance = []int{-36, -1, 3, 5, 18, 38, 38, 27, 86, }
 
 var e_mobility = []int{0, 46, 25, 18, 14, 10, -13,}
 
@@ -340,9 +339,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			semiopen := BOOL(blackrear[pfile] == 7) // TODO: can probably inline semi open
 			if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
 				whitepasser[pfile] = max(whitepasser[pfile], 7 - prank)
-				if board.squares[sq+N] != 0 && board.squares[sq+N]&1 == 0 {
-					score += e_blockaded
-				}
 			}
 
 			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
@@ -356,9 +352,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			semiopen := BOOL(whiterear[pfile] == 0)
 			if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
 				blackpasser[pfile] = max(blackpasser[pfile], prank)
-				if board.squares[sq+S] != 0 && board.squares[sq+S]&1 == 1 {
-					score -= e_blockaded
-				}
 			}
 
 			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
@@ -375,11 +368,11 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	for file := range 10 {
 		if whitepasser[file] != 0 {
 			score += e_passerRank[whitepasser[file]]
-			score += e_passerKingDistance[max(max((board.kings[0] >> 4)-whitepasser[file],whitepasser[file]-(board.kings[0] >> 4)),max(file - bkingfile, bkingfile - file))]
+			score += e_passerKingDistance[max(8*BOOL(whitepasser[file]<(board.kings[0] >> 4)),max(file - bkingfile, bkingfile - file))]
 		}
 		if blackpasser[file] != 0 {
 			score -= e_passerRank[blackpasser[file]]
-			score -= e_passerKingDistance[max(max((board.kings[1] >> 4)-blackpasser[file],blackpasser[file]-(board.kings[1] >> 4)),max(file - wkingfile, wkingfile - file))]
+			score -= e_passerKingDistance[max(8*BOOL(blackpasser[file]>(board.kings[1] >> 4)),max(file - wkingfile, wkingfile - file))]
 		}
 	}
 
@@ -806,8 +799,10 @@ func main() {
 			case "position":
 				uciBoard = FromFen(strings.Join(findAfter("fen", args)[0:4], " "))
 				for _, movestr := range findAfter("moves", args) {
-					repetition = append(repetition, (uciBoard.Hash()))
-					uciBoard = *(uciBoard.Apply(Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))}))
+					uciMove := Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))}
+					//table[uciBoard.Hash() % hashsize] = entry{uciBoard.Hash(), uciMove, 0, 100,0}
+					//repetition = append(repetition, (uciBoard.Hash()))
+					uciBoard = *(uciBoard.Apply(uciMove))
 				}
 				uciBoard.ply = 0
 			case "go":
@@ -863,4 +858,3 @@ func main() {
 
 // Ben finegolds middle name is philip
 // Should make a stream where people vote on best move4
-// Blockaded 360/399/324

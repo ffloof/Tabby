@@ -71,7 +71,7 @@ first = True
 rays = [ False, False, False, True, True, True, False]
 patterns = [ [], [], [N+N+W,N+N+E,S+S+W,S+S+E,W+W+N,W+W+S,E+E+N,E+E+S], [N+W,N+E,S+W,S+E], [N,S,E,W], [N,S,E,W,N+W,N+E,S+W,S+E], [N,S,E,W,N+W,N+E,S+W,S+E]]
 
-lines = lines[:1_000_000]
+lines = lines[:2_000_000]
 
 for line in tqdm(lines):
     if len(outputs) >= len(lines):
@@ -187,6 +187,9 @@ for line in tqdm(lines):
     bkingrank = kings[0] // 10
 
     oppcolor = [[False,False],[False,False]]
+    
+    blocked = 0
+    blockedSpots = np.zeros(10, dtype=np.int8)
 
     for sq in range(len(virtualboard)):
         piece = virtualboard[sq]
@@ -212,14 +215,18 @@ for line in tqdm(lines):
             oppcolor[piece&1][sq&1] = True
 
         if piecetype == 1:
+            pfile = sq % 10
+            prank = sq // 10
+            
             if piece == 2:
                 pattern = [S+W, S+E]
+                if virtualboard[sq+S] == 3:
+                    blocked += 1
+                    blockedSpots[pfile] += 1
 
             if piece == 3:
                 pattern = [N+W, N+E]
 
-            pfile = sq % 10
-            prank = sq // 10
 
             j = inverse[sq]
 
@@ -287,7 +294,7 @@ for line in tqdm(lines):
                         elif piece & 1 == 1 and (virtualboard[current+N+W] == 2 or virtualboard[current+N+E] == 2):
                             pawnDefence = True
                         
-                        if not pawnDefence: #or virtualboard[current] > 3:
+                        if not pawnDefence or virtualboard[current] > 3:
                             mobtable[piece&1][piecetype-1][inverse[current]] += 1
 
                     if virtualboard[current] != 0 and ((virtualboard[current] & 1) != (piece & 1)):
@@ -327,12 +334,12 @@ for line in tqdm(lines):
         if wPass >= 0:
             pushers[wPass] += 1
             #passerDistance[1][max(abs(i-bkingfile),bkingrank - 2)] += 1
-            passerDistance[1][max(abs(i-bkingfile),abs(passerRank[1][i]-bkingrank))] += 1
+            passerDistance[1][max(abs(i-bkingfile),8*int(passerRank[1][i]<bkingrank))] += 1
 
         if bPass >= 0:
             pushers[bPass] -= 1
             #passerDistance[0][max(abs(i-wkingfile),11 - wkingrank - 2)] += 1
-            passerDistance[0][max(abs(i-wkingfile),abs(passerRank[0][i]-wkingrank))] += 1
+            passerDistance[0][max(abs(i-wkingfile),8*int(passerRank[0][i]>wkingrank))] += 1
 
     sidetomove[0] = sign[turn]
 
@@ -350,10 +357,10 @@ for line in tqdm(lines):
     if material[1,3] == 2:
         bishoppair += 1
 
-    #oppCastle = np.zeros(1, dtype=np.int8)
-    #oppCastle[0] = int((wkingfile >= 5) != (bkingfile >= 5))
-    #differentCastle = np.zeros(1, dtype=np.int8)
-    #differentCastle[0] = int((wkingfile >= bkingfile-1) and (bkingfile+1 >= wkingfile))
+    oppCastle = np.zeros(1, dtype=np.int8)
+    oppCastle[0] = int((wkingfile >= 5) != (bkingfile >= 5))
+    differentCastle = np.zeros(1, dtype=np.int8)
+    differentCastle[0] = int((wkingfile >= bkingfile-1) and (bkingfile+1 >= wkingfile))
     #shieldsum = np.zeros(1, dtype=np.int8)
     #shieldsum[0] = np.sum(shield)
     #shieldbasesum = np.zeros(1, dtype=np.int8)
@@ -411,18 +418,23 @@ for line in tqdm(lines):
     #pawntropism[:,7] = 0
     #pawntropismfriend[:,7] = 0
 
+    blockedSpots = np.sum(np.clip(blockedSpots[1:-1] + blockedSpots[:-2] + blockedSpots[2:], max=1))
+
+    closed = np.zeros(9, dtype=np.int8)
+    closed[blocked] = 1
+
     terms = [
         # Weighting
-        [material[0, :] + material[1, :]], #differentCastle oppCastle, shieldsum, shieldbasesum
+        [material[0, :] + material[1, :],], #differentCastle oppCastle, shieldsum, shieldbasesum
         # Statics
-        [material[1, :] - material[0, :], bishoppair, sidetomove, pushers, phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], baseMob[1]-baseMob[0], kingFile, kingRank,  passerDistance[1]-passerDistance[0], blockadedPasser[1]-blockadedPasser[0]],
+        [material[1, :] - material[0, :], sidetomove, bishoppair, pushers, phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], baseMob[1]-baseMob[0], kingFile, kingRank, passerDistance[1]-passerDistance[0]],
         # Dynamics
-        [mobtable[0].flatten()],
-        [mobtable[1].flatten()],
+        [mobtable[0].flatten(), ],
+        [mobtable[1].flatten(), ],
         [shield[1]-shield[0], shieldbase[1]-shieldbase[0], kingFile, kingRank],
         # Drawishness heuristic
-        [npawns[0],],#oppBishopEndgame
-        [npawns[1],],#oppBishopEndgame
+        [npawns[0]],#oppBishopEndgame
+        [npawns[1]],#oppBishopEndgame
     ]
 
     if first:
@@ -438,7 +450,8 @@ for line in tqdm(lines):
         #print(starts, sizes)
 
         print("\nfen " + fen)
-        print(oppBishopEndgame)
+        #print(blocked, blockedSpots)
+        #print(oppBishopEndgame)
         #for a in range(2):
         #    plt.imshow(kwhite[1].reshape((8,8)))
         #    plt.show()
@@ -484,7 +497,7 @@ class HCE(torch.nn.Module):
         self.phase = torch.nn.Parameter(torch.abs(torch.randn(starts[1])))
         self.risk = torch.nn.Parameter(torch.randn(starts[6]-starts[5]))
 
-    def forward(self, x):
+    def forward(self, x):     
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
         blackattention = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64), self.mobilitytable)
@@ -495,7 +508,7 @@ class HCE(torch.nn.Module):
         statics = torch.matmul(x[:,starts[1]:starts[2]], self.static_terms)
         dynamics = netmobility + torch.matmul(x[:,starts[4]:starts[5]], self.dynamic_terms)
         
-        dynamics_weight = torch.clamp(torch.matmul(x[:,starts[0]:starts[1]], torch.abs(self.phase)), min=0) #phase
+        dynamics_weight = torch.clamp(torch.matmul(x[:,starts[0]:starts[1]], self.phase), min=0) #phase
 
         # TODO: replace phase with self.phase once we get backprop working properly
         score = statics + dynamics * dynamics_weight
@@ -642,3 +655,15 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # 4776 ^ this but modifier to add restricted squares which had piece on them
 # 4783 no attacks at all
 # 4774 only attacks on pieces
+
+
+#.4783 current (pawn defended squares are counted if an actual piece is sitting on them)
+#.4788 remove middle game king position
+#.4773 simple blocked as part of game state
+#.4784 -blockaded passer
+
+#.3065 baseline lichessbig
+#.3067 no scaling besides phase
+#.3084 - passer distance
+#.3095 - bishop pair
+#.3067 +bp +pd, change passer distance to reflect king in front/behind pawn
