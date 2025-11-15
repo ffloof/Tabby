@@ -32,45 +32,44 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 	return 0
 }
 
+var e_contempt = 0
 // We're gonna have to retune anyway since I forgot to copy phase weights over
-// On the chopping block are bishop pair, and maybe king distance to passer
-var e_material = []int{0, 112, 485, 533, 869, 1794, 0, }
-var e_bishopPair = 78
-var e_tempo = 17
-var e_passerRank = []int{0, -11, -8, 14, 53, 125, 197, 0, }
-var e_phalanx = []int{4,25}
-var e_chain = []int{21,42}
-var e_baseMobility = []int{0, 0, 12, 6, 8, 1, 12, }
-var e_egKingFile = []int{-40, -26, -12, 13, 0, -7, -33, -55, }
-var e_egKingRank = []int{22, 72, 89, 92, 70, 48, 19, 0, }
-var e_passerKingDistance = []int{-36, -1, 3, 5, 18, 38, 38, 27, 86, }
+var e_material = []int{0, 116, 486, 554, 897, 1876, 0, }
+var e_tempo = 15
+var e_bishopPair = 72
+var e_passerRank = []int{0, 20, 28, 59, 99, 185, 252, 0, }
+var e_phalanx = []int{6,26}
+var e_chain = []int{22,45}
+var e_baseMobility = []int{0, 0, 14, 7, 6, -1, -2, }
+var e_passerKingDistance = []int{-81, -40, -35, -35, -17, 0, 5, -6, 46, }
+var e_egKingFile = []int{-91, -38, -7, 11, 0, -4, -48, -101, }
+var e_egKingRank = []int{53, 150, 167, 167, 123, 90, 50, 0, }
 
-var e_mobility = []int{0, 46, 25, 18, 14, 10, -13,}
+var e_mobility = []int{0, 40, 39, 28, 26, 18, -13, }
 
-var e_shield = []int{0, 80, 76, 35, 17, 31, 11, 31, 21, 0, }
-var e_shieldbase = []int{0, -17, 23, 24, 8, -8, 14, 4, 5, 0, }
-var e_mgKingFile = []int{-5, -44, -32, -49, 0, -4, 68, 93, }
-var e_mgKingRank = []int{-8, 11, 2, -98, -110, -80, -31, 0, }
+var e_shield = []int{0, 57, 68, 30, 12, 26, 18, 40, 14, 0, }
+var e_shieldbase = []int{0, -21, 7, 27, -1, -3, 20, 4, -2, 0, }
+var e_mgKingFile = []int{46, 3, 4, -32, 0, -10, 63, 101, }
+var e_mgKingRank = []int{27, -40, -51, -86, -120, -86, -36, 0, }
+var e_pawnattacked = 108 // Also try 62 if this doesnt gell well
 
-var e_risk = []int{ 3876, 1946, 962, 452, 192, -26, 0, 0,  290 }
-var e_table = [2][128]int {
-	{},
-{-19,  -652, 95, 276, 106, 268, 260, 1149,    0,0,0,0, 0,0,0,0,
- 269, 740, 542, 246, 471, 367, 1001, 675,     0,0,0,0, 0,0,0,0,
- 212, 645, 682, 328, 834, 1234, 1274, 692,    0,0,0,0, 0,0,0,0,
- 249, 389, 435, 600, 699, 608, 440, 392,      0,0,0,0, 0,0,0,0,
- 113, 205, 303, 417, 477, 332, 233, 100,      0,0,0,0, 0,0,0,0,
- -207,  10,  -12, 145, 232, 238, 400, -52,    0,0,0,0, 0,0,0,0,
- -193,  -12,  -19,  -19, 110,  403, 448, -140,0,0,0,0, 0,0,0,0,
-  50,   -38,  -7,  -50,  2, 209,  -128, 139,  0,0,0,0, 0,0,0,0,
-},
-}
+var e_risk = []int{3656, 1851, 981, 536, 330, 160, 0, 144, 428,}
 
+var e_table = [128]int {
+ -326, -435, -133,  -62,  188,  351,  669,  383,   0,0,0,0, 0,0,0,0,   
+   43,  261,  349,  221,  298,  336,  963,  665,   0,0,0,0, 0,0,0,0,
+   69,  383,  346,  191,  737,  792,  210,  694,   0,0,0,0, 0,0,0,0,
+  260,  204,  270,  429,  443,  493,  330,  465,   0,0,0,0, 0,0,0,0,
+  259,  118,  366,  388,  475,  323,  219,   78,   0,0,0,0, 0,0,0,0,
+ -140,   53,  193,  314,  223,  333,  388,   46,   0,0,0,0, 0,0,0,0,
+ -118,   53,  164,   75,   24,  336,  368,  -35,   0,0,0,0, 0,0,0,0,
+   -3,  -76,  -46,  -76,   12,  160, -131,  194,   0,0,0,0, 0,0,0,0,}
 
+var weight_table = [2][4][128]int{}
 
 const e_divider = 1000
 
-var phaseWeights = [14]int{0, 0, 39, 47, 110, 402, 19,}
+var phaseWeights = [14]int{0, -24, 68, 78, 109, 477, 110 }
 
 var Zobrist [16][128]uint64
 var nodes int = 0
@@ -84,7 +83,6 @@ type Board struct {
 	enpassant  int
 	zobrist    uint64
 	mobilities [2][2]int
-	phase int
 	sidetomove int8
 	inCheck bool
 	ply int
@@ -146,8 +144,6 @@ func FromFen(fen string) Board {
 
 func (board *Board) Edit(index int, newpiece int8) {
 	oldpiece := board.squares[index]
-	board.phase += phaseWeights[newpiece/2]
-	board.phase -= phaseWeights[oldpiece/2]
 	board.zobrist ^= Zobrist[oldpiece][index]
 	board.zobrist ^= Zobrist[newpiece][index]
 	board.pieceCount[oldpiece] -= 1
@@ -177,7 +173,7 @@ func (board *Board) PawnDefends(sq int, attacker int8) bool {
 }
 
 func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
-	attention := &e_table[board.sidetomove]
+	attention := &weight_table[board.sidetomove][(board.kings[1-board.sidetomove]%8)/2]
 
 	moves := []Move{}
 
@@ -214,7 +210,9 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 					victim := board.squares[pawnCapture]
 					if victim != 0 && (victim&1 != piece&1) {
 						moves = append(moves, Move{int8(i), int8(pawnCapture)})
-						//smobility += decode(e_attacks[piecetype * 7 + (victim/2)], board.phase)
+						if victim > 3 {
+							dynamicMobility += e_pawnattacked
+						}
 					}
 				}
 			}
@@ -269,6 +267,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	}
 
 	score, dynamic_score, dynamics_weight := 0,0,0
+	dynamic_score += (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 1)) - (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 0))  
 
 	for piecetype := range 7 {
 		score += e_material[piecetype] * int((board.pieceCount[piecetype * 2 + 1] - board.pieceCount[piecetype * 2]))
@@ -604,7 +603,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 		}
 
 		// Null move pruning NMP
-		if staticEval >= beta && nullallowed && depth >= 3 && board.phase > 200 {
+		if staticEval >= beta && nullallowed && depth >= 3 && (0 < board.pieceCount[4+board.sidetomove] + board.pieceCount[6+board.sidetomove] + board.pieceCount[8+board.sidetomove] + board.pieceCount[10+board.sidetomove]) {
 			if -alphabeta(board.Apply(Move{9,9}), -beta, -alpha, ((depth - 4) - (depth / 5)) - ((staticEval - beta)/200), false) >= beta {
 				return beta
 			}
@@ -772,8 +771,11 @@ func main() {
 		}
 	}
 
-	for i := range(128) {
-		e_table[0][i] = e_table[1][i^112]
+	for a := range e_table {
+		for b := range 4 {
+			weight_table[0][b][a] = (b * e_table[a^112] + (3-b) * e_table[a^112^7]) / 3
+			weight_table[1][b][a] = (b * e_table[a]     + (3-b) * e_table[a^7])     / 3
+		}
 	}
 
 	uciBoard = FromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
@@ -800,8 +802,6 @@ func main() {
 				uciBoard = FromFen(strings.Join(findAfter("fen", args)[0:4], " "))
 				for _, movestr := range findAfter("moves", args) {
 					uciMove := Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))}
-					//table[uciBoard.Hash() % hashsize] = entry{uciBoard.Hash(), uciMove, 0, 100,0}
-					//repetition = append(repetition, (uciBoard.Hash()))
 					uciBoard = *(uciBoard.Apply(uciMove))
 				}
 				uciBoard.ply = 0
@@ -856,5 +856,4 @@ func main() {
 	}
 }
 
-// Ben finegolds middle name is philip
 // Should make a stream where people vote on best move4

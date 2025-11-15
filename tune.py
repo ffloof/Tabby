@@ -145,7 +145,8 @@ for line in tqdm(lines):
     shield = np.zeros((2,10), dtype=np.int8)
     shieldbase = np.zeros((2,10), dtype=np.int8)
 
-    mobtable = np.zeros((2,6,64), dtype=np.int8)
+    mobtable = np.zeros((2,7,64), dtype=np.int8)
+    othertable = np.zeros((2,1,64), dtype=np.int8)
 
     kings = [-1, -1]
     rearpawns = [
@@ -167,6 +168,10 @@ for line in tqdm(lines):
         material[piececolor, piecetype] += 1
 
         if piecetype > 0:
+            #if piecetype == 6:
+            #    mobtable[piece&1][6][i] += 1
+            #    othertable[piece&1][0][i] += 1
+            
             mobtable[piece&1][piecetype-1][i] += 1
 
         if piecetype == 1:
@@ -349,6 +354,16 @@ for line in tqdm(lines):
 
     mobtable = mobtable.reshape(2,mobtable.shape[1],8,8)
     mobtable[0] = np.flip(mobtable[0],1)
+    othertable = othertable.reshape(2,othertable.shape[1],8,8)
+    othertable[0] = np.flip(othertable[0],1)
+
+    interpw = (wkingfile - 1) // 2
+    interpb = (bkingfile - 1) // 2
+
+    mobtable[0] = interpw * mobtable[0] + (3-interpw) * np.flip(mobtable[0],2)
+    mobtable[1] = interpb * mobtable[1] + (3-interpb) * np.flip(mobtable[1],2)
+    othertable[0] = interpw * othertable[0] + (3-interpw) * np.flip(othertable[0],2)
+    othertable[1] = interpb * othertable[1] + (3-interpb) * np.flip(othertable[1],2)
 
     bishoppair = np.zeros(1, dtype=np.int8)
 
@@ -401,12 +416,10 @@ for line in tqdm(lines):
     capturesPawn = captures[:,:,1]
     capturesPiece = np.sum(captures[:,:,2:],axis=2)
 
-
     npawns[:,6] = 0
 
     kingFile = np.zeros((8), dtype=np.int8)
     kingRank = np.zeros((8), dtype=np.int8)
-
 
     kingFile[wkingfile-1] += 1
     kingRank[wkingrank-2] += 1
@@ -415,23 +428,24 @@ for line in tqdm(lines):
     
     kingFile[4] = 0
     kingRank[7] = 0
+    
     #pawntropism[:,7] = 0
     #pawntropismfriend[:,7] = 0
 
-    blockedSpots = np.sum(np.clip(blockedSpots[1:-1] + blockedSpots[:-2] + blockedSpots[2:], max=1))
+    #blockedSpots = np.sum(np.clip(blockedSpots[1:-1] + blockedSpots[:-2] + blockedSpots[2:], max=1))
 
-    closed = np.zeros(9, dtype=np.int8)
-    closed[blocked] = 1
+    #closed = np.zeros(9, dtype=np.int8)
+    #closed[blocked] = 1
 
     terms = [
         # Weighting
-        [material[0, :] + material[1, :],], #differentCastle oppCastle, shieldsum, shieldbasesum
+        [material[0, :] + material[1, :], differentCastle], #differentCastle oppCastle, shieldsum, shieldbasesum
         # Statics
-        [material[1, :] - material[0, :], sidetomove, bishoppair, pushers, phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], baseMob[1]-baseMob[0], kingFile, kingRank, passerDistance[1]-passerDistance[0]],
+        [material[1, :] - material[0, :], sidetomove, bishoppair, pushers, phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], baseMob[1]-baseMob[0], passerDistance[1]-passerDistance[0], kingFile, kingRank],
         # Dynamics
-        [mobtable[0].flatten(), ],
-        [mobtable[1].flatten(), ],
-        [shield[1]-shield[0], shieldbase[1]-shieldbase[0], kingFile, kingRank],
+        [mobtable[1].flatten()-mobtable[0].flatten(), ],
+        [othertable[1].flatten()-othertable[0].flatten(), ],
+        [shield[1]-shield[0], shieldbase[1]-shieldbase[0], kingFile, kingRank, tempoCaptures],
         # Drawishness heuristic
         [npawns[0]],#oppBishopEndgame
         [npawns[1]],#oppBishopEndgame
@@ -488,11 +502,13 @@ class HCE(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.npieces = (starts[3] - starts[2]) // 64
+        self.nspecial = (starts[4] - starts[3]) // 64
 
         self.static_terms = torch.nn.Parameter(torch.randn(starts[2]-starts[1]))
         self.dynamic_terms = torch.nn.Parameter(torch.randn(starts[5]-starts[4]))
         self.mobilitytable = torch.nn.Parameter(torch.randn(64))
         self.piecemobility = torch.nn.Parameter(torch.randn(self.npieces))
+        self.special = torch.nn.Parameter(torch.randn(self.nspecial))
 
         self.phase = torch.nn.Parameter(torch.abs(torch.randn(starts[1])))
         self.risk = torch.nn.Parameter(torch.randn(starts[6]-starts[5]))
@@ -500,13 +516,11 @@ class HCE(torch.nn.Module):
     def forward(self, x):     
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
-        blackattention = torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64), self.mobilitytable)
-        whiteattention = torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64), self.mobilitytable)
+        mobilityMg = torch.matmul(torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64), self.mobilitytable), self.piecemobility) / 3
+        mobilityEg = torch.matmul(torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.nspecial,64), self.mobilitytable), self.special) / 3
 
-        netmobility = torch.matmul(whiteattention, self.piecemobility) - torch.matmul(blackattention, self.piecemobility)
-
-        statics = torch.matmul(x[:,starts[1]:starts[2]], self.static_terms)
-        dynamics = netmobility + torch.matmul(x[:,starts[4]:starts[5]], self.dynamic_terms)
+        statics = mobilityEg + torch.matmul(x[:,starts[1]:starts[2]], self.static_terms)
+        dynamics = mobilityMg + torch.matmul(x[:,starts[4]:starts[5]], self.dynamic_terms)
         
         dynamics_weight = torch.clamp(torch.matmul(x[:,starts[0]:starts[1]], self.phase), min=0) #phase
 
@@ -543,8 +557,9 @@ class HCE(torch.nn.Module):
         print("\nLinear terms")
         printparams(self.static_terms, sizes[1])
         print("Pt2")
+        printparams(self.special, sizes[3])
+        print("Pt3")
         printparams(self.dynamic_terms, sizes[4])
-
         print("\nMobility weights")
         printparams(self.piecemobility, sizes[2])
 
@@ -667,3 +682,4 @@ for epoch in range(epochs):  # Adjust the number of epochs
 #.3084 - passer distance
 #.3095 - bishop pair
 #.3067 +bp +pd, change passer distance to reflect king in front/behind pawn
+#.3062 + pawn captures + different castling scalar + mobility king interpolation
