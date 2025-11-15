@@ -445,7 +445,7 @@ for line in tqdm(lines):
         # Dynamics
         [mobtable[1].flatten()-mobtable[0].flatten(), ],
         [othertable[1].flatten()-othertable[0].flatten(), ],
-        [shield[1]-shield[0], shieldbase[1]-shieldbase[0], kingFile, kingRank, tempoCaptures],
+        [material[1] - material[0], shield[1]-shield[0], shieldbase[1]-shieldbase[0], kingFile, kingRank, tempoCaptures],
         # Drawishness heuristic
         [npawns[0]],#oppBishopEndgame
         [npawns[1]],#oppBishopEndgame
@@ -564,14 +564,14 @@ class HCE(torch.nn.Module):
         printparams(self.piecemobility, sizes[2])
 
         print("\nRisk weights")
-        print(np.around((self.risk.detach().numpy()) , decimals=3))
+        print(np.around((self.risk.detach().numpy()) * 1000).astype(np.int32))
 
         print("\nPhase weights")
-        print(np.around((self.phase.detach().numpy()) , decimals=3))
+        print(np.around((self.phase.detach().numpy()) * 1000).astype(np.int32))
 
         if finalEpoch or True:
             print("\nBoard Weights")
-            print(np.around(self.mobilitytable.detach().numpy().reshape((8,8)), decimals=3))
+            print(np.around(self.mobilitytable.detach().numpy().reshape((8,8)) * 1000).astype(np.int32))
 
         print("===")
         if finalEpoch:
@@ -683,3 +683,5 @@ for epoch in range(epochs):  # Adjust the number of epochs
 #.3095 - bishop pair
 #.3067 +bp +pd, change passer distance to reflect king in front/behind pawn
 #.3062 + pawn captures + different castling scalar + mobility king interpolation
+#.3052 - different castling scalar + material in middlegame
+# ^ produces varying scores ive seen as low as .3039

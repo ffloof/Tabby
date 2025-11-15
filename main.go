@@ -34,42 +34,43 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 
 var e_contempt = 0
 // We're gonna have to retune anyway since I forgot to copy phase weights over
-var e_material = []int{0, 116, 486, 554, 897, 1876, 0, }
-var e_tempo = 15
-var e_bishopPair = 72
-var e_passerRank = []int{0, 20, 28, 59, 99, 185, 252, 0, }
-var e_phalanx = []int{6,26}
-var e_chain = []int{22,45}
-var e_baseMobility = []int{0, 0, 14, 7, 6, -1, -2, }
-var e_passerKingDistance = []int{-81, -40, -35, -35, -17, 0, 5, -6, 46, }
-var e_egKingFile = []int{-91, -38, -7, 11, 0, -4, -48, -101, }
-var e_egKingRank = []int{53, 150, 167, 167, 123, 90, 50, 0, }
+var e_material = []int{0, 125, 436, 482, 900, 1824, 0, }
+var e_tempo = 16
+var e_bishopPair = 65
+var e_passerRank = []int{0, 37, 35, 63, 103, 177, 253, 0, }
+var e_phalanx = []int{7,32}
+var e_chain = []int{22,51}
+var e_baseMobility = []int{0, 0, 12, 9, 5, 0, 2, }
+var e_passerKingDistance = []int{-86, -57, -52, -30, -17, -11, 5, -5, 46, }
+var e_egKingFile = []int{-90, -31, -22, 5, 0, 0, -42, -97, }
+var e_egKingRank = []int{55, 159, 165, 167, 137, 90, 65, 0, }
 
-var e_mobility = []int{0, 40, 39, 28, 26, 18, -13, }
+var e_mobility = []int{0, 67, 34, 20, 23, 17, -20, }
 
-var e_shield = []int{0, 57, 68, 30, 12, 26, 18, 40, 14, 0, }
-var e_shieldbase = []int{0, -21, 7, 27, -1, -3, 20, 4, -2, 0, }
-var e_mgKingFile = []int{46, 3, 4, -32, 0, -10, 63, 101, }
-var e_mgKingRank = []int{27, -40, -51, -86, -120, -86, -36, 0, }
-var e_pawnattacked = 108 // Also try 62 if this doesnt gell well
+var e_altmaterial = []int{0, -14, 75, 93, 46, 112, 0, }
+var e_shield = []int{0, 63, 66, 33, 11, 25, 13, 42, 35, 0, }
+var e_shieldbase = []int{0, -16, 6, 17, -3, 4, 27, 10, -2, 0, }
+var e_mgKingFile = []int{19, -19, -12, -31, 0, -17, 33, 86, }
+var e_mgKingRank = []int{-6, -20, 0, -90, -103, -74, -34, 0, }
+var e_pawnattacked = 94
 
-var e_risk = []int{3656, 1851, 981, 536, 330, 160, 0, 144, 428,}
+var e_risk = []int{3423, 1799,  949,  549,  323,  155,    0,  124,  328}
 
-var e_table = [128]int {
- -326, -435, -133,  -62,  188,  351,  669,  383,   0,0,0,0, 0,0,0,0,   
-   43,  261,  349,  221,  298,  336,  963,  665,   0,0,0,0, 0,0,0,0,
-   69,  383,  346,  191,  737,  792,  210,  694,   0,0,0,0, 0,0,0,0,
-  260,  204,  270,  429,  443,  493,  330,  465,   0,0,0,0, 0,0,0,0,
-  259,  118,  366,  388,  475,  323,  219,   78,   0,0,0,0, 0,0,0,0,
- -140,   53,  193,  314,  223,  333,  388,   46,   0,0,0,0, 0,0,0,0,
- -118,   53,  164,   75,   24,  336,  368,  -35,   0,0,0,0, 0,0,0,0,
-   -3,  -76,  -46,  -76,   12,  160, -131,  194,   0,0,0,0, 0,0,0,0,}
+var e_table = [128]int { 
+	-233,  -782,   -94,   163,   219,   425,   718,  1858,   0,0,0,0, 0,0,0,0, 
+   194,   466,   503,   380,   401,   309,  1181,   590,   0,0,0,0, 0,0,0,0, 
+   192,   541,   465,   396,   792,  1066,  1365,   794,   0,0,0,0, 0,0,0,0, 
+   156,   326,   357,   457,   576,   582,   451,   340,   0,0,0,0, 0,0,0,0, 
+    45,   174,   237,   391,   434,   280,   200,    43,   0,0,0,0, 0,0,0,0, 
+   -86,    69,    49,   219,   240,   208,   324,   -58,   0,0,0,0, 0,0,0,0, 
+  -125,    76,   184,    39,   134,   353,   248,   -84,   0,0,0,0, 0,0,0,0, 
+     7,   -50,    30,   -43,    17,   208,  -116,   156,   0,0,0,0, 0,0,0,0, }
 
 var weight_table = [2][4][128]int{}
 
 const e_divider = 1000
 
-var phaseWeights = [14]int{0, -24, 68, 78, 109, 477, 110 }
+var phaseWeights = [14]int{0, -19, 69, 107, 140, 463, 66, }
 
 var Zobrist [16][128]uint64
 var nodes int = 0
@@ -269,8 +270,10 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	score, dynamic_score, dynamics_weight := 0,0,0
 	dynamic_score += (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 1)) - (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 0))  
 
+
 	for piecetype := range 7 {
 		score += e_material[piecetype] * int((board.pieceCount[piecetype * 2 + 1] - board.pieceCount[piecetype * 2]))
+		dynamic_score += e_altmaterial[piecetype] * int((board.pieceCount[piecetype * 2 + 1] - board.pieceCount[piecetype * 2]))
 		dynamics_weight += phaseWeights[piecetype]* int((board.pieceCount[piecetype * 2 + 1] + board.pieceCount[piecetype * 2]))
 	}
 
@@ -381,7 +384,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	score += board.mobilities[1][0] - board.mobilities[0][0]
 	dynamic_score += board.mobilities[1][1] - board.mobilities[0][1]
 
-	final_score := score + (dynamic_score * dynamics_weight) / e_divider
+	final_score := score + (dynamic_score * max(0,dynamics_weight)) / e_divider
 
 	leadingpawns := board.pieceCount[2 + BOOL(final_score >= 0)]
 
