@@ -117,26 +117,13 @@ for line in tqdm(lines):
         print("Error:", err)
 
     material = np.zeros((2, 7), dtype=np.int8)
-
     sidetomove = np.zeros(1, dtype=np.int8)
-
-
     baseMob = np.zeros((2,7), dtype=np.int8)
-
-    phalanxOpen = np.zeros((2, 1), dtype=np.int8)
-    phalanxClosed = np.zeros((2, 1), dtype=np.int8)
-    chainOpen = np.zeros((2, 1), dtype=np.int8)
-    chainClosed = np.zeros((2, 1), dtype=np.int8) 
-
-    blockadedPasser = np.zeros((2, 1), dtype=np.int8) 
-    #unprotectedPasser = np.zeros((2,8), dtype=np.int8)
-
-    virtualkingmob = np.zeros((2,1), dtype=np.int8)
-    #tropism = np.zeros((2,8), dtype=np.int8)
-    pawntropism = np.zeros((2,8), dtype=np.int8)
-    pawntropismfriend = np.zeros((2,8), dtype=np.int8)
-
-    passerDistance = np.zeros((2,9), dtype=np.int8)
+    phalanx = np.zeros(2, dtype=np.int8)
+    chain = np.zeros(2, dtype=np.int8)
+    passerDistance = np.zeros(9, dtype=np.int8)
+    passerSupportDistance = np.zeros(9, dtype=np.int8)
+    
     passerRank = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [11,11,11,11,11,11,11,11,11,11],
@@ -145,7 +132,7 @@ for line in tqdm(lines):
     shield = np.zeros((2,10), dtype=np.int8)
     shieldbase = np.zeros((2,10), dtype=np.int8)
 
-    mobtable = np.zeros((2,7,64), dtype=np.int8)
+    mobtable = np.zeros((2,6,64), dtype=np.int8)
     othertable = np.zeros((2,1,64), dtype=np.int8)
 
     kings = [-1, -1]
@@ -168,10 +155,6 @@ for line in tqdm(lines):
         material[piececolor, piecetype] += 1
 
         if piecetype > 0:
-            #if piecetype == 6:
-            #    mobtable[piece&1][6][i] += 1
-            #    othertable[piece&1][0][i] += 1
-            
             mobtable[piece&1][piecetype-1][i] += 1
 
         if piecetype == 1:
@@ -193,9 +176,6 @@ for line in tqdm(lines):
 
     oppcolor = [[False,False],[False,False]]
     
-    blocked = 0
-    blockedSpots = np.zeros(10, dtype=np.int8)
-
     for sq in range(len(virtualboard)):
         piece = virtualboard[sq]
 
@@ -208,14 +188,6 @@ for line in tqdm(lines):
 
         defended = (piece & 1 == 0 and (virtualboard[sq+N+W] == 2 or virtualboard[sq+N+E] == 2)) or (piece & 1 == 1 and (virtualboard[sq+S+W] == 3 or virtualboard[sq+S+E] == 3))
 
-        #if piecetype == 1:
-        #    if piece & 1 == 0:
-        #        pawntropism[0][max(abs(wkingfile-(sq%10)), abs(wkingrank-(sq//10)))] += 1
-        #        pawntropismfriend[0][max(abs(bkingfile-(sq%10)), abs(bkingrank-(sq//10)))] += 1
-        #    else:
-        #        pawntropism[1][max(abs(bkingfile-(sq%10)), abs(bkingrank-(sq//10)))] += 1
-        #        pawntropismfriend[1][max(abs(wkingfile-(sq%10)), abs(wkingrank-(sq//10)))] += 1
-
         if piecetype == 3:
             oppcolor[piece&1][sq&1] = True
 
@@ -225,9 +197,6 @@ for line in tqdm(lines):
             
             if piece == 2:
                 pattern = [S+W, S+E]
-                if virtualboard[sq+S] == 3:
-                    blocked += 1
-                    blockedSpots[pfile] += 1
 
             if piece == 3:
                 pattern = [N+W, N+E]
@@ -238,43 +207,34 @@ for line in tqdm(lines):
             if piece & 1 == 0:
                 if virtualboard[sq + W] == 2 or virtualboard[sq + E] == 2:
                     if rearpawns[1][pfile] == 0:
-                        phalanxOpen[0] += 1
+                        phalanx[1] -= 1
                     else:
-                        phalanxClosed[0] += 1
+                        phalanx[0] -= 1
 
                 if virtualboard[sq + W + N] == 2 or virtualboard[sq + E + N] == 2:
                     if rearpawns[1][pfile] == 0:
-                        chainOpen[0] += 1
+                        chain[1] -= 1
                     else:
-                        chainClosed[0] += 1
+                        chain[0] -= 1
 
                 if rearpawns[1][pfile - 1] <= prank and rearpawns[1][pfile] <= prank and rearpawns[1][pfile + 1] <= prank:
                     passerRank[0][pfile] = max(prank, passerRank[0][pfile])
-                    #if not defended:
-                    #    unprotectedPasser[0][9-prank] += 1
-                    if virtualboard[sq+S] != 0: #and virtualboard[sq+S] & 1 == 1:
-                        blockadedPasser[0] += 1
 
             else:
                 if virtualboard[sq + W] == 3 or virtualboard[sq + E] == 3:
                     if rearpawns[0][pfile] == 11:
-                        phalanxOpen[1] += 1
+                        phalanx[1] += 1
                     else:
-                        phalanxClosed[1] += 1
+                        phalanx[0] += 1
 
                 if virtualboard[sq + W + S] == 3 or virtualboard[sq + E + S] == 3:
                     if rearpawns[0][pfile] == 11:
-                        chainOpen[1] += 1
+                        chain[1] += 1
                     else:
-                        chainClosed[1] += 1
+                        chain[0] += 1
 
                 if rearpawns[0][pfile - 1] >= prank and rearpawns[0][pfile] >= prank and rearpawns[0][pfile + 1] >= prank:
                     passerRank[1][pfile] = min(prank, passerRank[1][pfile])
-                    #if not defended:
-                    #    unprotectedPasser[1][prank-2] += 1
-                    if virtualboard[sq+N] != 0: #and virtualboard[sq+N] & 1 == 0:
-                        blockadedPasser[1] += 1
-                    #for 
         
         
         
@@ -299,11 +259,12 @@ for line in tqdm(lines):
                         elif piece & 1 == 1 and (virtualboard[current+N+W] == 2 or virtualboard[current+N+E] == 2):
                             pawnDefence = True
                         
-                        if not pawnDefence or virtualboard[current] > 3:
+                        if not pawnDefence:
                             mobtable[piece&1][piecetype-1][inverse[current]] += 1
 
                     if virtualboard[current] != 0 and ((virtualboard[current] & 1) != (piece & 1)):
-                        captures[piece & 1][piecetype][virtualboard[current] // 2] += 1
+                        if virtualboard[current] // 2 > 1 or not pawnDefence:
+                            captures[piece & 1][piecetype][virtualboard[current] // 2] += 1
 
                 if virtualboard[current] != 0 or (not isray):
                     break
@@ -338,13 +299,13 @@ for line in tqdm(lines):
 
         if wPass >= 0:
             pushers[wPass] += 1
-            #passerDistance[1][max(abs(i-bkingfile),bkingrank - 2)] += 1
-            passerDistance[1][max(abs(i-bkingfile),8*int(passerRank[1][i]<bkingrank))] += 1
+            passerDistance[max(abs(i-bkingfile),8*int(passerRank[1][i]<bkingrank))] += 1
+            passerSupportDistance[max(abs(i-wkingfile),8*int(passerRank[1][i]<wkingrank))] += 1
 
         if bPass >= 0:
             pushers[bPass] -= 1
-            #passerDistance[0][max(abs(i-wkingfile),11 - wkingrank - 2)] += 1
-            passerDistance[0][max(abs(i-wkingfile),8*int(passerRank[0][i]>wkingrank))] += 1
+            passerDistance[max(abs(i-wkingfile),8*int(passerRank[0][i]>wkingrank))] -= 1
+            passerSupportDistance[max(abs(i-bkingfile),8*int(passerRank[0][i]>bkingrank))] -= 1
 
     sidetomove[0] = sign[turn]
 
@@ -400,7 +361,6 @@ for line in tqdm(lines):
 
 
     pawnCaptures = captures[:,1,:6]
-
     tempoCaptures = np.zeros(2, dtype=np.int8)
 
     if turn:
@@ -409,12 +369,6 @@ for line in tqdm(lines):
     else:
         tempoCaptures[0] += np.sum(pawnCaptures[1,2:])
         tempoCaptures[1] -= np.sum(pawnCaptures[0,2:])
-
-
-    nonPawnCaptures = np.sum(captures[:,2:,:6],axis=1)
-
-    capturesPawn = captures[:,:,1]
-    capturesPiece = np.sum(captures[:,:,2:],axis=2)
 
     npawns[:,6] = 0
 
@@ -426,22 +380,18 @@ for line in tqdm(lines):
     kingFile[bkingfile-1] -= 1
     kingRank[9-bkingrank] -= 1 
     
+    # Create a base case for terms creates more consistent and faster tuning
     kingFile[4] = 0
     kingRank[7] = 0
-    
-    #pawntropism[:,7] = 0
-    #pawntropismfriend[:,7] = 0
+    passerDistance[4] = 0
+    passerSupportDistance[4] = 0
 
-    #blockedSpots = np.sum(np.clip(blockedSpots[1:-1] + blockedSpots[:-2] + blockedSpots[2:], max=1))
-
-    #closed = np.zeros(9, dtype=np.int8)
-    #closed[blocked] = 1
 
     terms = [
         # Weighting
         [material[0, :] + material[1, :], differentCastle], #differentCastle oppCastle, shieldsum, shieldbasesum
         # Statics
-        [material[1, :] - material[0, :], sidetomove, bishoppair, pushers, phalanxOpen[1]-phalanxOpen[0], phalanxClosed[1] - phalanxClosed[0], chainOpen[1] - chainOpen[0], chainClosed[1] - chainClosed[0], baseMob[1]-baseMob[0], passerDistance[1]-passerDistance[0], kingFile, kingRank],
+        [material[1] - material[0], sidetomove, pushers, phalanx, chain, baseMob[1]-baseMob[0], passerDistance, passerSupportDistance, bishoppair, kingFile, kingRank],
         # Dynamics
         [mobtable[1].flatten()-mobtable[0].flatten(), ],
         [othertable[1].flatten()-othertable[0].flatten(), ],
@@ -464,7 +414,6 @@ for line in tqdm(lines):
         #print(starts, sizes)
 
         print("\nfen " + fen)
-        #print(blocked, blockedSpots)
         #print(oppBishopEndgame)
         #for a in range(2):
         #    plt.imshow(kwhite[1].reshape((8,8)))
@@ -684,4 +633,11 @@ for epoch in range(epochs):  # Adjust the number of epochs
 #.3067 +bp +pd, change passer distance to reflect king in front/behind pawn
 #.3062 + pawn captures + different castling scalar + mobility king interpolation
 #.3052 - different castling scalar + material in middlegame
-# ^ produces varying scores ive seen as low as .3039
+#^ produces varying scores ive seen as low as .3039
+#.3038 with passers in dynamic (probably not worth the headache imo)
+#.3039 tried doing psqt for each piece based on attention map (both mg and eg)
+
+# ideas left to try:
+# - scaling dynamics terms in various ways
+# - try adding pieces/other stuff to mobtable?, should try kings again since tables r getting flipped now hmmmm
+# - friendly king passer escort

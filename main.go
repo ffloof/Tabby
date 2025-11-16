@@ -33,15 +33,15 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 }
 
 var e_contempt = 0
-// We're gonna have to retune anyway since I forgot to copy phase weights over
 var e_material = []int{0, 125, 436, 482, 900, 1824, 0, }
 var e_tempo = 16
-var e_bishopPair = 65
-var e_passerRank = []int{0, 37, 35, 63, 103, 177, 253, 0, }
+var e_passerRank = []int{0, 5, 16, 42, 90, 170, 250, 0, }
 var e_phalanx = []int{7,32}
 var e_chain = []int{22,51}
 var e_baseMobility = []int{0, 0, 12, 9, 5, 0, 2, }
-var e_passerKingDistance = []int{-86, -57, -52, -30, -17, -11, 5, -5, 46, }
+var e_passerKingDistance = []int{-79, -37, -22, -20, 0, 8, 25, 14, 66, }
+var e_passerSupportDistance = []int{38, 43, 29, 4, 0, -3, 5, -17, -3,}
+var e_bishopPair = 65
 var e_egKingFile = []int{-90, -31, -22, 5, 0, 0, -42, -97, }
 var e_egKingRank = []int{55, 159, 165, 167, 137, 90, 65, 0, }
 
@@ -57,7 +57,7 @@ var e_pawnattacked = 94
 var e_risk = []int{3423, 1799,  949,  549,  323,  155,    0,  124,  328}
 
 var e_table = [128]int { 
-	-233,  -782,   -94,   163,   219,   425,   718,  1858,   0,0,0,0, 0,0,0,0, 
+  -233,  -782,   -94,   163,   219,   425,   718,  1858,   0,0,0,0, 0,0,0,0, 
    194,   466,   503,   380,   401,   309,  1181,   590,   0,0,0,0, 0,0,0,0, 
    192,   541,   465,   396,   792,  1066,  1365,   794,   0,0,0,0, 0,0,0,0, 
    156,   326,   357,   457,   576,   582,   451,   340,   0,0,0,0, 0,0,0,0, 
@@ -211,9 +211,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 					victim := board.squares[pawnCapture]
 					if victim != 0 && (victim&1 != piece&1) {
 						moves = append(moves, Move{int8(i), int8(pawnCapture)})
-						if victim > 3 {
-							dynamicMobility += e_pawnattacked
-						}
+						dynamicMobility += e_pawnattacked * BOOL(victim > 3)
 					}
 				}
 			}
@@ -277,14 +275,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		dynamics_weight += phaseWeights[piecetype]* int((board.pieceCount[piecetype * 2 + 1] + board.pieceCount[piecetype * 2]))
 	}
 
-	// TODO: CONDENSE USING BOOLS
-	if board.pieceCount[6] == 2 {
-		score -= e_bishopPair
-	}
-
-	if board.pieceCount[7] == 2{
-		score += e_bishopPair
-	}
+	score += e_bishopPair * (BOOL(board.pieceCount[7] == 2) - BOOL(board.pieceCount[6] == 2))
 
 	whiterear := [10]int{0,0,0,0,0,0,0,0,0,0,}
 	blackrear := [10]int{7,7,7,7,7,7,7,7,7,7,}
@@ -371,10 +362,12 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		if whitepasser[file] != 0 {
 			score += e_passerRank[whitepasser[file]]
 			score += e_passerKingDistance[max(8*BOOL(whitepasser[file]<(board.kings[0] >> 4)),max(file - bkingfile, bkingfile - file))]
+			score += e_passerSupportDistance[max(8*BOOL(whitepasser[file]<(board.kings[1] >> 4)),max(file - wkingfile, wkingfile - file))]
 		}
 		if blackpasser[file] != 0 {
 			score -= e_passerRank[blackpasser[file]]
 			score -= e_passerKingDistance[max(8*BOOL(blackpasser[file]>(board.kings[1] >> 4)),max(file - wkingfile, wkingfile - file))]
+			score -= e_passerSupportDistance[max(8*BOOL(blackpasser[file]>(board.kings[0] >> 4)),max(file - bkingfile, bkingfile - file))]
 		}
 	}
 
