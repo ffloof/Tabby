@@ -386,16 +386,18 @@ for line in tqdm(lines):
     passerDistance[4] = 0
     passerSupportDistance[4] = 0
 
+    altmaterial = material[1] - material[0]
+    altmaterial[2:] = 0
 
     terms = [
         # Weighting
-        [material[0, :] + material[1, :], differentCastle], #differentCastle oppCastle, shieldsum, shieldbasesum
+        [material[1] + material[0]], #differentCastle oppCastle, shieldsum, shieldbasesum
         # Statics
         [material[1] - material[0], sidetomove, pushers, phalanx, chain, baseMob[1]-baseMob[0], passerDistance, passerSupportDistance, bishoppair, kingFile, kingRank],
         # Dynamics
         [mobtable[1].flatten()-mobtable[0].flatten(), ],
         [othertable[1].flatten()-othertable[0].flatten(), ],
-        [material[1] - material[0], shield[1]-shield[0], shieldbase[1]-shieldbase[0], kingFile, kingRank, tempoCaptures],
+        [altmaterial, shield[1]-shield[0], shieldbase[1]-shieldbase[0], kingFile, kingRank, tempoCaptures],
         # Drawishness heuristic
         [npawns[0]],#oppBishopEndgame
         [npawns[1]],#oppBishopEndgame
@@ -503,6 +505,11 @@ class HCE(torch.nn.Module):
                 print(finalstr)
                 offset += size
         
+        mobilitysign = 1
+        if np.mean(self.mobilitytable.detach().numpy()) < 0:
+            mobilitysign = -1
+
+
         print("\nLinear terms")
         printparams(self.static_terms, sizes[1])
         print("Pt2")
@@ -518,9 +525,9 @@ class HCE(torch.nn.Module):
         print("\nPhase weights")
         print(np.around((self.phase.detach().numpy()) * 1000).astype(np.int32))
 
-        if finalEpoch or True:
-            print("\nBoard Weights")
-            print(np.around(self.mobilitytable.detach().numpy().reshape((8,8)) * 1000).astype(np.int32))
+        
+        print("\nBoard Weights")
+        print(np.around(self.mobilitytable.detach().numpy().reshape((8,8)) * 1000).astype(np.int32) * mobilitysign)
 
         print("===")
         if finalEpoch:
@@ -639,5 +646,7 @@ for epoch in range(epochs):  # Adjust the number of epochs
 
 # ideas left to try:
 # - scaling dynamics terms in various ways
-# - try adding pieces/other stuff to mobtable?, should try kings again since tables r getting flipped now hmmmm
-# - friendly king passer escort
+# - try adding pieces/other stuff to mobtable?
+# - how can we simplify this more
+# - try taking into account the squares a pawn controls instead of the square its on
+# - could try some weird schenanigans with "psqt" generated at program runtime for each piece based on attention map

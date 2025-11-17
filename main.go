@@ -8,13 +8,7 @@ import (
 	"os"
 	"time"
 	"math/rand"
-	"math"
 )
-
-/*
-import ("flag"
-	"runtime/pprof"
-)*/
 
 const N, S, E, W = -16, 16, 1, -1
 const A8, H8, A1, H1 = 0, 7, 112, 119
@@ -33,44 +27,44 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 }
 
 var e_contempt = 0
-var e_material = []int{0, 125, 436, 482, 900, 1824, 0, }
-var e_tempo = 16
-var e_passerRank = []int{0, 5, 16, 42, 90, 170, 250, 0, }
-var e_phalanx = []int{7,32}
-var e_chain = []int{22,51}
-var e_baseMobility = []int{0, 0, 12, 9, 5, 0, 2, }
-var e_passerKingDistance = []int{-79, -37, -22, -20, 0, 8, 25, 14, 66, }
-var e_passerSupportDistance = []int{38, 43, 29, 4, 0, -3, 5, -17, -3,}
-var e_bishopPair = 65
-var e_egKingFile = []int{-90, -31, -22, 5, 0, 0, -42, -97, }
-var e_egKingRank = []int{55, 159, 165, 167, 137, 90, 65, 0, }
+var e_material = []int{0, 125, 482, 533, 863, 1819, 0, }
+var e_tempo = 17
+var e_passerRank = []int{0, 18, 7, 44, 87, 165, 218, 0, }
+var e_phalanx = []int{1, 28,}
+var e_chain = []int{21, 48,}
+var e_baseMobility = []int{0, 0, 12, 4, 6, -2, -2, }
+var e_passerKingDistance = []int{-73, -35, -22, -9, 0, 18, 31, 3, 62, }
+var e_passerSupportDistance = []int{25, 36, 31, 6, 0, -19, -41, -28, -8, }
+var e_bishopPair = 76
+var e_egKingFile = []int{-90, -36, -12, 12, 0, -5, -39, -93, }
+var e_egKingRank = []int{63, 135, 154, 147, 119, 92, 64, 0, }
 
-var e_mobility = []int{0, 67, 34, 20, 23, 17, -20, }
+var e_mobility = []int{0, 69, 34, 24, 15, 16, -17, }
 
-var e_altmaterial = []int{0, -14, 75, 93, 46, 112, 0, }
-var e_shield = []int{0, 63, 66, 33, 11, 25, 13, 42, 35, 0, }
-var e_shieldbase = []int{0, -16, 6, 17, -3, 4, 27, 10, -2, 0, }
-var e_mgKingFile = []int{19, -19, -12, -31, 0, -17, 33, 86, }
-var e_mgKingRank = []int{-6, -20, 0, -90, -103, -74, -34, 0, }
-var e_pawnattacked = 94
+var e_altmaterial = []int{0, -28, 0, 0, 0, 0, 0, }
+var e_shield = []int{0, 74, 80, 28, 13, 27, 12, 56, 41, 0, }
+var e_shieldbase = []int{0, -17, 15, 24, 16, 5, 30, 3, 2, 0, }
+var e_mgKingFile = []int{61, -19, -12, -36, 0, -15, 45, 93, }
+var e_mgKingRank = []int{-20, -36, -44, -95, -130, -99, -34, 0, }
+var e_pawnattacked = 82
 
-var e_risk = []int{3423, 1799,  949,  549,  323,  155,    0,  124,  328}
+var e_risk = []int{3395, 1785, 1014,  602,  318,  171,    0,   72,  312}
+var phaseWeights = [14]int{0, -18,  45,  84,  84, 358,  94 }
 
 var e_table = [128]int { 
-  -233,  -782,   -94,   163,   219,   425,   718,  1858,   0,0,0,0, 0,0,0,0, 
-   194,   466,   503,   380,   401,   309,  1181,   590,   0,0,0,0, 0,0,0,0, 
-   192,   541,   465,   396,   792,  1066,  1365,   794,   0,0,0,0, 0,0,0,0, 
-   156,   326,   357,   457,   576,   582,   451,   340,   0,0,0,0, 0,0,0,0, 
-    45,   174,   237,   391,   434,   280,   200,    43,   0,0,0,0, 0,0,0,0, 
-   -86,    69,    49,   219,   240,   208,   324,   -58,   0,0,0,0, 0,0,0,0, 
-  -125,    76,   184,    39,   134,   353,   248,   -84,   0,0,0,0, 0,0,0,0, 
-     7,   -50,    30,   -43,    17,   208,  -116,   156,   0,0,0,0, 0,0,0,0, }
+  -301,  -607,   -99,   176,    69,   419,   760,  1800,   0,0,0,0, 0,0,0,0, 
+    64,   343,   511,   255,   367,   368,  1182,   632,   0,0,0,0, 0,0,0,0, 
+   167,   411,   462,   265,   799,  1346,  1618,   688,   0,0,0,0, 0,0,0,0, 
+   180,   364,   371,   443,   622,   536,   400,   384,   0,0,0,0, 0,0,0,0, 
+    27,   177,   268,   378,   481,   356,   185,     2,   0,0,0,0, 0,0,0,0, 
+   -42,   153,   130,   228,   273,   275,   351,    -8,   0,0,0,0, 0,0,0,0, 
+   -59,   193,   159,    -6,   101,   316,   276,   -93,   0,0,0,0, 0,0,0,0, 
+   -92,   -26,    -5,  -154,    12,   225,  -160,   197,   0,0,0,0, 0,0,0,0, }
+
 
 var weight_table = [2][4][128]int{}
 
 const e_divider = 1000
-
-var phaseWeights = [14]int{0, -19, 69, 107, 140, 463, 66, }
 
 var Zobrist [16][128]uint64
 var nodes int = 0
@@ -267,7 +261,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	score, dynamic_score, dynamics_weight := 0,0,0
 	dynamic_score += (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 1)) - (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 0))  
-
 
 	for piecetype := range 7 {
 		score += e_material[piecetype] * int((board.pieceCount[piecetype * 2 + 1] - board.pieceCount[piecetype * 2]))
@@ -721,6 +714,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 var uciBoard Board
 var repetition []uint64 = []uint64{}
+var openingBook = map[uint64]string{}
    
 func printpv() string {
 	pvstr := ""
@@ -740,25 +734,8 @@ func printpv() string {
 	return strings.TrimSpace(pvstr)
 }
 
-
-/*
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
-*/
-
 func main() {
-	/*
-	flag.Parse()
-    if *cpuprofile != "" {
-        f, err := os.Create(*cpuprofile)
-		if err != nil {
-            fmt.Println(err)//log.Fatal("could not create CPU profile: ", err)
-        }
-        defer f.Close() // error handling omitted for example
-        if err := pprof.StartCPUProfile(f); err != nil {
-            fmt.Println(err) //log.Fatal("could not start CPU profile: ", err)
-        }
-        defer pprof.StopCPUProfile()
-    }*/
+	
 
 	fmt.Println("info string Started")
 	for i := range 15 {
@@ -773,6 +750,25 @@ func main() {
 			weight_table[1][b][a] = (b * e_table[a]     + (3-b) * e_table[a^7])     / 3
 		}
 	}
+
+	file, err := os.Open("book.txt")
+    if err == nil {
+    	scanner := bufio.NewScanner(file)
+        for scanner.Scan() {
+        	text := string(scanner.Text()) 
+        	if len(text) > 2 && (string(text[0:2]) == "w " || string(text[0:2]) == "b ") {
+				bookBoard := FromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+		    	for i, movestr := range strings.Fields(text)[1:] {
+		    		if i % 2 == BOOL(string(text[0]) == "b") {
+		    			openingBook[bookBoard.Hash()] = movestr
+		    		}
+		    		bookBoard = *bookBoard.Apply(Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))})
+		    	}
+		    	fmt.Println(string(text[0]), openingBook)
+        	}
+        }
+    }
+    file.Close()
 
 	uciBoard = FromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 	reader := bufio.NewReader(os.Stdin)
@@ -797,11 +793,16 @@ func main() {
 			case "position":
 				uciBoard = FromFen(strings.Join(findAfter("fen", args)[0:4], " "))
 				for _, movestr := range findAfter("moves", args) {
-					uciMove := Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))}
-					uciBoard = *(uciBoard.Apply(uciMove))
+					uciBoard = *(uciBoard.Apply(Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))}))
 				}
 				uciBoard.ply = 0
 			case "go":
+				bookmove, inbook := openingBook[uciBoard.Hash()] // TODO: is it worth it to merge chosenmove and bookmove to save a line?
+				if inbook{
+					fmt.Println("bestmove", bookmove)
+					continue
+				}
+
 				timeAlloc := 1000
 				if len(findAfter("movetime", args)) != 0 {
 					timeAlloc, _ = strconv.Atoi(findAfter("movetime", args)[0])
@@ -820,18 +821,18 @@ func main() {
 				nodes = 0
 				start := time.Now().UnixMilli()
 				chosenMove := table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
-				streak := 0
+				
+				streak := 1.0
 				for depth := 1; depth <= 100; depth++ {
 					fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, true), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv())
 
-					if chosenMove == table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard) {
-						streak += 1
-					} else {
-						streak = 0
+					streak *= 0.9
+					if chosenMove != table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard) {
+						streak = 1.0
 					}
 					chosenMove = table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
 
-					if time.Now().UnixMilli() - start > int64(float64(timeAlloc) * math.Pow(0.9, float64(streak))) {
+					if time.Now().UnixMilli() - start > int64(float64(timeAlloc) * streak) {
 						break
 					}
 				}
@@ -853,3 +854,10 @@ func main() {
 }
 
 // Should make a stream where people vote on best move4
+// TODO: opening book
+// TODO: simplify eval even more? merge some features?
+// - for example having one pawn shield term would be nice
+// - similarly not having 4 terms for king position would be nice, in addition to two passer distance terms
+// - ^ srsly like half the eval terms are this
+// - mobility is somewhat duplicated with base mobility
+// TODO: spsa tune search params
