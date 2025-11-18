@@ -30,7 +30,7 @@ var e_contempt = 0
 var e_material = []int{0, 125, 482, 533, 863, 1819, 0, }
 var e_tempo = 17
 var e_passerRank = []int{0, 18, 7, 44, 87, 165, 218, 0, }
-var e_phalanx = []int{1, 28,}
+var e_phalanx = []int{5, 28,}                    // OVERNIGHT TEST IS PHALANX MG UNDERVALUED? IF SO MAYBE A FUN PROJECT WOULD BE TO SPSA TUNE ENTIRE EVAL IT ISNT THAT BIG
 var e_chain = []int{21, 48,}
 var e_baseMobility = []int{0, 0, 12, 4, 6, -2, -2, }
 var e_passerKingDistance = []int{-73, -35, -22, -9, 0, 18, 31, 3, 62, }
@@ -294,7 +294,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	bkingfile := (board.kings[0]&7) + 1
 
 	for i := -1; i <= 1; i++ {
-		if whiterear[wkingfile + i] == 6 {
+		if whiterear[wkingfile + i] == 6 { // TODO: again we can use the BOOL trick to save 8 lines here
 			dynamic_score += e_shieldbase[wkingfile + i]
 		}
 		if whiterear[wkingfile + i] != 0 {
@@ -308,8 +308,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			dynamic_score -= e_shield[bkingfile + i]
 		}
 	}
-
-	npawns := [2]int{0,0}
 	
 	var whitepasser [10]int
 	var blackpasser [10]int
@@ -317,7 +315,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	// Weak pawn evaluation
 	for _, sq := range pawnIndexes {
 		piece := board.squares[sq]
-		npawns[piece & 1] += 1
 		pfile := int((sq & 7) + 1)
 		prank := int(sq >> 4)
 
@@ -735,8 +732,6 @@ func printpv() string {
 }
 
 func main() {
-	
-
 	fmt.Println("info string Started")
 	for i := range 15 {
 		for j := range 128 {
@@ -764,7 +759,6 @@ func main() {
 		    		}
 		    		bookBoard = *bookBoard.Apply(Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))})
 		    	}
-		    	fmt.Println(string(text[0]), openingBook)
         	}
         }
     }
@@ -854,10 +848,9 @@ func main() {
 }
 
 // Should make a stream where people vote on best move4
-// TODO: opening book
 // TODO: simplify eval even more? merge some features?
 // - for example having one pawn shield term would be nice
 // - similarly not having 4 terms for king position would be nice, in addition to two passer distance terms
 // - ^ srsly like half the eval terms are this
 // - mobility is somewhat duplicated with base mobility
-// TODO: spsa tune search params
+// TODO: spsa tune search params (make sure to get time usage as well)

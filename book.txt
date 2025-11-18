@@ -3,7 +3,7 @@ Gambit Book
 As White 1. e4 ...
 Against e5 we play the danish gambit
 
-w e2e4 e7e5 d2d4
+w e2e4 e7e5 d2d4 e5d4 c2c3 d4c3 f1c4
 
 Against the sicilian we play the smith morra
 
@@ -15,5 +15,4 @@ As Black
 Against e4 we play the sicilian
 b e2e4 c7c5
 
-Against d4 we try to play the KID
-b d2d4 g8f6 c2c4 g7g6 b1c3 f8g7 e2e4 d7d6
+Against d4 we play benoni/benko gambits/and similar lines with 1.c5
