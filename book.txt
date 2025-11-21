@@ -1,18 +1,50 @@
 Gambit Book
 
-As White 1. e4 ...
-Against e5 we play the danish gambit
-
+Danish gambit
 w e2e4 e7e5 d2d4 e5d4 c2c3 d4c3 f1c4
 
-Against the sicilian we play the smith morra
+Kings gambit
+w e2e4 e7e5 f2f4 e5f4 g1f3
+w e2e4 e7e5 f2f4 e5f4 f1c4
 
+Scotch gambit
+w e2e4 e7e5 g1f3 b8c6 d2d4 e5d4 f1c4
+
+Smith Morra
 w e2e4 c7c5 d2d4 c5d4 c2c3
+
+
 
 
 As Black
 
-Against e4 we play the sicilian
-b e2e4 c7c5
+Froms Gambit
+b f2f4 e7e5 f4e5 d7d6 e5d6 f8d6
 
-Against d4 we play benoni/benko gambits/and similar lines with 1.c5
+Stafford Gambit
+b e2e4 e7e5 g1f3 g8f6 f3e5 b8c6 e5c6 d7c6 e4e5 f6e4
+b e2e4 e7e5 g1f3 g8f6 f3e5 b8c6 e5c6 d7c6 d2d3 f8c5
+b e2e4 e7e5 g1f3 g8f6 f3e5 b8c6 e5c6 d7c6 b1c3 f8c5 d2d3 f6g4
+
+b e2e4 e7e5 g1f3 g8f6 f3e5 b8c6 e5c6 d7c6 b1c3 f8c5 f1e2 h7h5 h2h3 d8d4 e1g1 f6g4 h3g4 h5g4 g2g3 d4e5 g1g2 c5f2
+b e2e4 e7e5 g1f3 g8f6 f3e5 b8c6 e5c6 d7c6 b1c3 f8c5 f1e2 h7h5 h2h3 d8d4 e1g1 f6g4 e2g4
+
+Elephant Gambit
+#b e2e4 e7e5 g1f3 d7d5
+
+Against d4 we play benoni/benko gambits/and similar lines with c5 structure
+Usually though we want to delay the immediate c5 to avoid boring positions until he commits his q bishop or c pawn
+
+
+
+Benko 
+b d2d4 g8f6 c2c4 c7c5 d4d5 b7b5 c4b5 a7a6
+
+Modern benoni
+b d2d4 g8f6 c2c4 c7c5 d4d5 e7e6
+
+Other benonis
+b d2d4 g8f6 c1f4 c7c5 e2e3 d8b6 
+b d2d4 g8f6 g1f3 g7g6 c2c4 c7c5
+b d2d4 g8f6 e2e3 g7g6
+b d2d4 g8f6 c2c3 g7g6

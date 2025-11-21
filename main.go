@@ -30,7 +30,7 @@ var e_contempt = 0
 var e_material = []int{0, 125, 482, 533, 863, 1819, 0, }
 var e_tempo = 17
 var e_passerRank = []int{0, 18, 7, 44, 87, 165, 218, 0, }
-var e_phalanx = []int{5, 28,}                    // OVERNIGHT TEST IS PHALANX MG UNDERVALUED? IF SO MAYBE A FUN PROJECT WOULD BE TO SPSA TUNE ENTIRE EVAL IT ISNT THAT BIG
+var e_phalanx = []int{5, 28,}
 var e_chain = []int{21, 48,}
 var e_baseMobility = []int{0, 0, 12, 4, 6, -2, -2, }
 var e_passerKingDistance = []int{-73, -35, -22, -9, 0, 18, 31, 3, 62, }
@@ -205,7 +205,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 					victim := board.squares[pawnCapture]
 					if victim != 0 && (victim&1 != piece&1) {
 						moves = append(moves, Move{int8(i), int8(pawnCapture)})
-						dynamicMobility += e_pawnattacked * BOOL(victim > 3)
+						dynamicMobility += e_pawnattacked * e_divider * BOOL(victim > 3)
 					}
 				}
 			}
@@ -234,7 +234,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 				}
 			}
 		}
-		dynamicMobility += (e_mobility[piecetype] * mobValue) / e_divider
+		dynamicMobility += (e_mobility[piecetype] * mobValue)
 	}
 
 	if board.enpassant != 0 {
@@ -259,7 +259,9 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		}
 	}
 
-	score, dynamic_score, dynamics_weight := 0,0,0
+	board.mobilities[board.sidetomove][0] = baseMobility
+	board.mobilities[board.sidetomove][1] = dynamicMobility / e_divider
+	score, dynamic_score, dynamics_weight := board.mobilities[1][0] - board.mobilities[0][0],board.mobilities[1][1] - board.mobilities[0][1],0
 	dynamic_score += (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 1)) - (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 0))  
 
 	for piecetype := range 7 {
@@ -294,19 +296,10 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	bkingfile := (board.kings[0]&7) + 1
 
 	for i := -1; i <= 1; i++ {
-		if whiterear[wkingfile + i] == 6 { // TODO: again we can use the BOOL trick to save 8 lines here
-			dynamic_score += e_shieldbase[wkingfile + i]
-		}
-		if whiterear[wkingfile + i] != 0 {
-			dynamic_score += e_shield[wkingfile + i]
-		}
-
-		if blackrear[bkingfile + i] == 1 {
-			dynamic_score -= e_shieldbase[bkingfile + i]
-		}
-		if blackrear[bkingfile + i] != 7 {
-			dynamic_score -= e_shield[bkingfile + i]
-		}
+		dynamic_score += e_shieldbase[wkingfile + i] * BOOL(whiterear[wkingfile + i] == 6)
+		dynamic_score += e_shield[wkingfile + i]     * BOOL(whiterear[wkingfile + i] != 0)
+		dynamic_score -= e_shieldbase[bkingfile + i] * BOOL(blackrear[bkingfile + i] == 1)
+		dynamic_score -= e_shield[bkingfile + i]     * BOOL(blackrear[bkingfile + i] != 7)
 	}
 	
 	var whitepasser [10]int
@@ -324,26 +317,16 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 				whitepasser[pfile] = max(whitepasser[pfile], 7 - prank)
 			}
 
-			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
-				score += e_phalanx[semiopen]
-			}
-
-			if board.PawnDefends(int(sq), 1) {
-				score += e_chain[semiopen]
-			}
+			score += e_phalanx[semiopen] * BOOL(piece == board.squares[sq+W] || piece == board.squares[sq+E])
+			score += e_chain[semiopen] * BOOL(board.PawnDefends(int(sq), 1))
 		} else {
 			semiopen := BOOL(whiterear[pfile] == 0)
 			if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
 				blackpasser[pfile] = max(blackpasser[pfile], prank)
 			}
 
-			if piece == board.squares[sq+W] || piece == board.squares[sq+E] {
-				score -= e_phalanx[semiopen]
-			}
-
-			if board.PawnDefends(int(sq), 0) {
-				score -= e_chain[semiopen]
-			}
+			score -= e_phalanx[semiopen] * BOOL(piece == board.squares[sq+W] || piece == board.squares[sq+E])
+			score -= e_chain[semiopen] * BOOL(board.PawnDefends(int(sq), 0))
 		}
 	}
 
@@ -360,12 +343,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			score -= e_passerSupportDistance[max(8*BOOL(blackpasser[file]>(board.kings[0] >> 4)),max(file - bkingfile, bkingfile - file))]
 		}
 	}
-
-	board.mobilities[board.sidetomove][0] = baseMobility
-	board.mobilities[board.sidetomove][1] = dynamicMobility
-	
-	score += board.mobilities[1][0] - board.mobilities[0][0]
-	dynamic_score += board.mobilities[1][1] - board.mobilities[0][1]
 
 	final_score := score + (dynamic_score * max(0,dynamics_weight)) / e_divider
 
@@ -694,10 +671,8 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 	repetition = repetition[:len(repetition)-1]
 
-	if legals == 0 && depth > 0 {
-		if !board.inCheck {
-			return 0
-		}
+	if legals == 0 && depth > 0 && !board.inCheck {
+		return 0
 	}
 
 	bestScore += BOOL(bestScore < -9000) // Mate distance/delay adjustment
@@ -711,7 +686,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 var uciBoard Board
 var repetition []uint64 = []uint64{}
-var openingBook = map[uint64]string{}
+var openingBook = map[uint64][]string{}
    
 func printpv() string {
 	pvstr := ""
@@ -755,7 +730,7 @@ func main() {
 				bookBoard := FromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 		    	for i, movestr := range strings.Fields(text)[1:] {
 		    		if i % 2 == BOOL(string(text[0]) == "b") {
-		    			openingBook[bookBoard.Hash()] = movestr
+		    			openingBook[bookBoard.Hash()] = append(openingBook[bookBoard.Hash()], movestr) // Isnt it beautiful that golangs datastructure are useful even with zero values *chefs kiss*
 		    		}
 		    		bookBoard = *bookBoard.Apply(Move{int8(Parse(movestr[0:2])), int8(Parse(movestr[2:4]))})
 		    	}
@@ -775,9 +750,7 @@ func main() {
 		if len(args) != 0 {
 			switch string(args[0]) {
 			case "uci":
-				fmt.Println("id name Tabby")
-				fmt.Println("id author ffloof")
-				fmt.Println("uciok")
+				fmt.Println("id name Tabby\nid author ffloof\nuciok")
 			case "isready":
 				fmt.Println("readyok")
 			case "ucinewgame":
@@ -791,9 +764,9 @@ func main() {
 				}
 				uciBoard.ply = 0
 			case "go":
-				bookmove, inbook := openingBook[uciBoard.Hash()] // TODO: is it worth it to merge chosenmove and bookmove to save a line?
+				bookmoves, inbook := openingBook[uciBoard.Hash()]
 				if inbook{
-					fmt.Println("bestmove", bookmove)
+					fmt.Println("bestmove", bookmoves[rand.Intn(len(bookmoves))])
 					continue
 				}
 
