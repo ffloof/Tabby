@@ -384,7 +384,7 @@ for line in tqdm(lines):
     kingFile[4] = 0
     kingRank[7] = 0
     passerDistance[4] = 0
-    passerSupportDistance[4] = 0
+    passerSupportDistance[8] = 0
 
     altmaterial = material[1] - material[0]
     altmaterial[2:] = 0

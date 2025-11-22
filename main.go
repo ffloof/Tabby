@@ -10,13 +10,12 @@ import (
 	"math/rand"
 )
 
-const N, S, E, W = -16, 16, 1, -1
-const A8, H8, A1, H1 = 0, 7, 112, 119
-const E8, E1 = 4, 116
-const CASTLE = E * 8
+const N, S, E, W = -10, 10, 1, -1
+const A8, H8, A1, H1 = 21, 28, 91, 98
+const E8, E1 = 25, 95
 const PIECE = " .pPnNbBrRqQkK"
-const RANK = "87654321"
-const FILE = "abcdefgh"
+const RANK = "  87654321  "
+const FILE = " abcdefgh "
 var ADVANCES = [...]int{S,N}
 
 func BOOL(b bool) int { // golang for reasons unknown to me has no native way to convert a boolean to an integer
@@ -36,48 +35,49 @@ var e_baseMobility = []int{0, 0, 12, 4, 6, -2, -2, }
 var e_passerKingDistance = []int{-73, -35, -22, -9, 0, 18, 31, 3, 62, }
 var e_passerSupportDistance = []int{25, 36, 31, 6, 0, -19, -41, -28, -8, }
 var e_bishopPair = 76
-var e_egKingFile = []int{-90, -36, -12, 12, 0, -5, -39, -93, }
-var e_egKingRank = []int{63, 135, 154, 147, 119, 92, 64, 0, }
+var e_egKingFile = []int{0, -90, -36, -12, 12, 0, -5, -39, -93, 0}
+var e_egKingRank = []int{63, 135, 154, 147, 119, 92, 64, 0 }
 
 var e_mobility = []int{0, 69, 34, 24, 15, 16, -17, }
 
 var e_altmaterial = []int{0, -28, 0, 0, 0, 0, 0, }
 var e_shield = []int{0, 74, 80, 28, 13, 27, 12, 56, 41, 0, }
 var e_shieldbase = []int{0, -17, 15, 24, 16, 5, 30, 3, 2, 0, }
-var e_mgKingFile = []int{61, -19, -12, -36, 0, -15, 45, 93, }
+var e_mgKingFile = []int{0, 61, -19, -12, -36, 0, -15, 45, 93, 0}
 var e_mgKingRank = []int{-20, -36, -44, -95, -130, -99, -34, 0, }
 var e_pawnattacked = 82
 
 var e_risk = []int{3395, 1785, 1014,  602,  318,  171,    0,   72,  312}
 var phaseWeights = [14]int{0, -18,  45,  84,  84, 358,  94 }
 
-var e_table = [128]int { 
-  -301,  -607,   -99,   176,    69,   419,   760,  1800,   0,0,0,0, 0,0,0,0, 
-    64,   343,   511,   255,   367,   368,  1182,   632,   0,0,0,0, 0,0,0,0, 
-   167,   411,   462,   265,   799,  1346,  1618,   688,   0,0,0,0, 0,0,0,0, 
-   180,   364,   371,   443,   622,   536,   400,   384,   0,0,0,0, 0,0,0,0, 
-    27,   177,   268,   378,   481,   356,   185,     2,   0,0,0,0, 0,0,0,0, 
-   -42,   153,   130,   228,   273,   275,   351,    -8,   0,0,0,0, 0,0,0,0, 
-   -59,   193,   159,    -6,   101,   316,   276,   -93,   0,0,0,0, 0,0,0,0, 
-   -92,   -26,    -5,  -154,    12,   225,  -160,   197,   0,0,0,0, 0,0,0,0, }
+var e_table = [64]int { 
+  -301,  -607,   -99,   176,    69,   419,   760,  1800,  
+    64,   343,   511,   255,   367,   368,  1182,   632,   
+   167,   411,   462,   265,   799,  1346,  1618,   688,   
+   180,   364,   371,   443,   622,   536,   400,   384,   
+    27,   177,   268,   378,   481,   356,   185,     2,   
+   -42,   153,   130,   228,   273,   275,   351,    -8,   
+   -59,   193,   159,    -6,   101,   316,   276,   -93,   
+   -92,   -26,    -5,  -154,    12,   225,  -160,   197,}
 
 
-var weight_table = [2][4][128]int{}
+var weight_table = [2][4][120]int{}
 
 const e_divider = 1000
 
-var Zobrist [16][128]uint64
+var Zobrist [16][120]uint64
 var nodes int = 0
 const MAX_HISTORY = 256
 var evals [256]int
 
 type Board struct {
-	squares    [128]int8
+	squares    [120]int8
 	pieceCount [16]int8
 	kings      [2]int
 	enpassant  int
 	zobrist    uint64
 	mobilities [2][2]int
+	castleRights [2][2]bool
 	sidetomove int8
 	inCheck bool
 	ply int
@@ -91,44 +91,50 @@ type Move struct {
 func (move Move) stringify(board *Board) string {
 	if board != nil {
 		if (board.squares[move.start] / 2) == 1 && (move.end < A8+S || move.end > H1+N) {
-			return string(FILE[move.start&7]) + string(RANK[move.start>>4]) + string(FILE[move.end&7]) + string(RANK[move.end>>4]) + "q"
+			return string(FILE[move.start%10]) + string(RANK[move.start/10]) + string(FILE[move.end%10]) + string(RANK[move.end/10]) + "q"
 		}
 	}
-	return string(FILE[move.start&7]) + string(RANK[move.start>>4]) + string(FILE[move.end&7]) + string(RANK[move.end>>4])
+	return string(FILE[move.start%10]) + string(RANK[move.start/10]) + string(FILE[move.end%10]) + string(RANK[move.end/10])
 }
 
 func Parse(sqstr string) int {
-	return strings.Index(FILE, sqstr[0:1]) + ((strings.Index(RANK, sqstr[1:2])) * 16)
+	return strings.Index(FILE, sqstr[0:1]) + strings.Index(RANK, sqstr[1:2]) * 10
 }
 
 func FromFen(fen string) Board {
-	fenparts := strings.Split(fen, " ")
 	board := Board{}
-	i := 0
-	for n := range fenparts[0] {
-		char := fenparts[0][n : n+1]
-		piece := int8(strings.Index(PIECE, char))
-		if piece >= 0 {
-			board.Edit(i, piece)
-			if piece == 12 {
-				board.kings[0] = i
-			} else if piece == 13 {
-				board.kings[1] = i 
+	fenparts := strings.Split(fen, " ")
+
+	// TODO: for morning I had this crazy idea, what if we just spam replaces to create the board via string and then convert it all in one loop
+	// wicked
+	nextStop := A8
+	for i := range 120 {
+		board.Edit(i,int8(BOOL(i % 10 == 0 || i % 10 == 9 || i < A8 || i > H1)))
+		if i == nextStop && nextStop <= H1 {
+			char := fenparts[0][0:1]
+			fenparts[0] = fenparts[0][1:]
+			piece := int8(strings.Index(PIECE, char))
+			nextStop += 1
+
+			if piece >= 0 {
+				board.Edit(i, piece)
+				if piece >= 12 {
+					board.kings[piece & 1] = i
+				}
+			} else if char == "/" {
+				nextStop += 1
+			} else {
+				nextStop += 9 - strings.Index(RANK, char)
 			}
-		} else if char == "/" {
-			i += 7
-		} else {
-			i += 7 - strings.Index(RANK, char)
-		}
-		i += 1
+		} 
 	}
 
 	board.sidetomove = int8(BOOL(fenparts[1] == "w"))
 
-	board.Edit(H8+CASTLE, int8(BOOL(strings.Index(fenparts[2], "k") > -1)))
-	board.Edit(A8+CASTLE, int8(BOOL(strings.Index(fenparts[2], "q") > -1)))
-	board.Edit(H1+CASTLE, int8(BOOL(strings.Index(fenparts[2], "K") > -1)))
-	board.Edit(A1+CASTLE, int8(BOOL(strings.Index(fenparts[2], "Q") > -1)))
+	board.castleRights[0][0] = strings.Index(fenparts[2], "q") > -1
+	board.castleRights[0][1] = strings.Index(fenparts[2], "k") > -1
+	board.castleRights[1][0] = strings.Index(fenparts[2], "Q") > -1
+	board.castleRights[1][1] = strings.Index(fenparts[2], "K") > -1
 
 	if fenparts[3] != "-" {
 		board.enpassant = Parse(fenparts[3])
@@ -158,17 +164,15 @@ var patterns = [7][]int{
 
 func (board *Board) PawnDefends(sq int, attacker int8) bool {
 	for _, dir := range []int{W - ADVANCES[attacker], E - ADVANCES[attacker]} {
-		if ((sq + dir) & 0x88) == 0 {
-			if (board.squares[sq + dir] == 2 + attacker) {
-				return true
-			}
+		if (board.squares[sq + dir] == 2 + attacker) {
+			return true
 		}
 	}
 	return false
 }
 
 func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
-	attention := &weight_table[board.sidetomove][(board.kings[1-board.sidetomove]%8)/2]
+	attention := &weight_table[board.sidetomove][(board.kings[1-board.sidetomove]%10-1)/2]
 
 	moves := []Move{}
 
@@ -176,7 +180,8 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	baseMobility, dynamicMobility := 0, 0
 	pawnIndexes := make([]int8, 0, 16)
 
-	for i, piece := range board.squares {
+	for i:=A8;i<=H1;i++ {
+		piece := board.squares[i]
 		if piece < 2 {
 			continue
 		}
@@ -201,12 +206,10 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			}
 
 			for _, pawnCapture := range []int{i + advance + W, i + advance + E} {
-				if pawnCapture&0x88 == 0 {
-					victim := board.squares[pawnCapture]
-					if victim != 0 && (victim&1 != piece&1) {
-						moves = append(moves, Move{int8(i), int8(pawnCapture)})
-						dynamicMobility += e_pawnattacked * e_divider * BOOL(victim > 3)
-					}
+				victim := board.squares[pawnCapture]
+				if victim > 1 && (victim&1 != piece&1) {
+					moves = append(moves, Move{int8(i), int8(pawnCapture)})
+					dynamicMobility += e_pawnattacked * e_divider * BOOL(victim > 3)
 				}
 			}
 		} else {
@@ -214,11 +217,13 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			pattern := patterns[piecetype]
 			
 			for _, dir := range pattern {
-				for end := i + dir; (end & 0x88) == 0; end += dir {
+				for end := i + dir;; end += dir {
 					victim := board.squares[end]
-					baseMobility += e_baseMobility[piecetype]
-					
-					if victim == 0 || victim&1 != piece&1 {
+					if victim != 1 {
+						baseMobility += e_baseMobility[piecetype]
+					}
+
+					if victim == 0 || (victim > 1 && victim&1 != piece&1) {
 						if !board.PawnDefends(end, 1-board.sidetomove) {
 							mobValue += attention[end]
 						}
@@ -245,16 +250,14 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		}
 	}
 
-
-	kingIndex := board.kings[board.sidetomove]
-
 	// TODO: we could save a lot of time if we moved the incheck inside of the capturesOnly clause since we dont yet use it in eval, and its worthless in qsearch
+	kingIndex := board.kings[board.sidetomove]
 	board.inCheck = board.attacked(kingIndex, 1-board.sidetomove)
 	if !capturesOnly && (kingIndex == E8 || kingIndex == E1) && !board.inCheck {
-		if board.squares[kingIndex+E+E+E+CASTLE] == 1 && board.squares[kingIndex+E+E] == 0 && board.squares[kingIndex+E] == 0 {
+		if board.castleRights[board.sidetomove][1] && board.squares[kingIndex+E+E] == 0 && board.squares[kingIndex+E] == 0 {
 			moves = append(moves, Move{int8(kingIndex), int8(kingIndex+E+E)})
 		} 
-		if board.squares[kingIndex+W+W+W+W+CASTLE] == 1 && board.squares[kingIndex+W+W+W] == 0 && board.squares[kingIndex+W+W] == 0 && board.squares[kingIndex+W] == 0 {
+		if board.castleRights[board.sidetomove][0] && board.squares[kingIndex+W+W+W] == 0 && board.squares[kingIndex+W+W] == 0 && board.squares[kingIndex+W] == 0 {
 			moves = append(moves, Move{int8(kingIndex), int8(kingIndex+W+W)})
 		}
 	}
@@ -263,6 +266,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	board.mobilities[board.sidetomove][1] = dynamicMobility / e_divider
 	score, dynamic_score, dynamics_weight := board.mobilities[1][0] - board.mobilities[0][0],board.mobilities[1][1] - board.mobilities[0][1],0
 	dynamic_score += (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 1)) - (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 0))  
+
 
 	for piecetype := range 7 {
 		score += e_material[piecetype] * int((board.pieceCount[piecetype * 2 + 1] - board.pieceCount[piecetype * 2]))
@@ -277,8 +281,8 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	for _, sq := range pawnIndexes {
 		piece := board.squares[sq]
-		pawnfile := (sq & 7) + 1
-		pawnrank := int(sq >> 4)
+		pawnfile := int(sq) % 10
+		pawnrank := (int(sq) / 10) - 2
 
 		if (piece & 1) == 1 {
 			whiterear[pawnfile] = max(whiterear[pawnfile], pawnrank)
@@ -287,13 +291,13 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		}
 	}
 
-	score += e_egKingFile[board.kings[1]&7] + e_egKingRank[board.kings[1]>>4]
-	score -= e_egKingFile[board.kings[0]&7] + e_egKingRank[7-(board.kings[0]>>4)]
-	dynamic_score += e_mgKingFile[board.kings[1]&7] + e_mgKingRank[board.kings[1]>>4]
-	dynamic_score -= e_mgKingFile[board.kings[0]&7] + e_mgKingRank[7-(board.kings[0]>>4)]
+	score += e_egKingFile[board.kings[1]%10] + e_egKingRank[board.kings[1]/10-2]
+	score -= e_egKingFile[board.kings[0]%10] + e_egKingRank[7-(board.kings[0]/10-2)]
+	dynamic_score += e_mgKingFile[board.kings[1]%10] + e_mgKingRank[board.kings[1]/10-2]
+	dynamic_score -= e_mgKingFile[board.kings[0]%10] + e_mgKingRank[7-(board.kings[0]/10-2)]
 
-	wkingfile := (board.kings[1]&7) + 1
-	bkingfile := (board.kings[0]&7) + 1
+	wkingfile := board.kings[1] % 10
+	bkingfile := board.kings[0] % 10
 
 	for i := -1; i <= 1; i++ {
 		dynamic_score += e_shieldbase[wkingfile + i] * BOOL(whiterear[wkingfile + i] == 6)
@@ -308,13 +312,13 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	// Weak pawn evaluation
 	for _, sq := range pawnIndexes {
 		piece := board.squares[sq]
-		pfile := int((sq & 7) + 1)
-		prank := int(sq >> 4)
+		pfile := int(sq) % 10
+		prank := int(sq) / 10 - 2
 
 		if piece & 1 == 1 {
 			semiopen := BOOL(blackrear[pfile] == 7) // TODO: can probably inline semi open
 			if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
-				whitepasser[pfile] = max(whitepasser[pfile], 7 - prank)
+				whitepasser[pfile] = max(whitepasser[pfile], 7-prank)
 			}
 
 			score += e_phalanx[semiopen] * BOOL(piece == board.squares[sq+W] || piece == board.squares[sq+E])
@@ -334,13 +338,13 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	for file := range 10 {
 		if whitepasser[file] != 0 {
 			score += e_passerRank[whitepasser[file]]
-			score += e_passerKingDistance[max(8*BOOL(whitepasser[file]<(board.kings[0] >> 4)),max(file - bkingfile, bkingfile - file))]
-			score += e_passerSupportDistance[max(8*BOOL(whitepasser[file]<(board.kings[1] >> 4)),max(file - wkingfile, wkingfile - file))]
+			score += e_passerKingDistance[max(8*BOOL(7-whitepasser[file]<((board.kings[0]/10) - 2)),max(file - bkingfile, bkingfile - file))]
+			score += e_passerSupportDistance[max(8*BOOL(7-whitepasser[file]<((board.kings[1]/10) - 2)),max(file - wkingfile, wkingfile - file))]
 		}
 		if blackpasser[file] != 0 {
 			score -= e_passerRank[blackpasser[file]]
-			score -= e_passerKingDistance[max(8*BOOL(blackpasser[file]>(board.kings[1] >> 4)),max(file - wkingfile, wkingfile - file))]
-			score -= e_passerSupportDistance[max(8*BOOL(blackpasser[file]>(board.kings[0] >> 4)),max(file - bkingfile, bkingfile - file))]
+			score -= e_passerKingDistance[max(8*BOOL(blackpasser[file]>((board.kings[1]/10) - 2)),max(file - wkingfile, wkingfile - file))]
+			score -= e_passerSupportDistance[max(8*BOOL(blackpasser[file]>((board.kings[0]/10) - 2)),max(file - bkingfile, bkingfile - file))]
 		}
 	}
 
@@ -350,8 +354,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	drawishness_weight := e_risk[leadingpawns]
 	final_score = (final_score * e_divider) / (e_divider + dynamics_weight + drawishness_weight) 
-	
-
 	if board.sidetomove == 0 {
 		final_score = -final_score
 	}
@@ -364,7 +366,7 @@ func (board *Board) attacked(start int, attacker int8) bool {
 	}
 
 	for i, dir := range []int{N,S,E,W,N+W,N+E,S+E,S+W} {
-		for sq := start + dir; (0x88 & sq) == 0; sq += dir {
+		for sq := start + dir;; sq += dir {
 			piece := board.squares[sq]
 			if piece != 0 {
 				if (i < 4 && (piece == 10 + attacker  || piece == 8 + attacker)) || (i >= 4 && (piece == 10 + attacker || piece == 6 + attacker)) {
@@ -376,9 +378,6 @@ func (board *Board) attacked(start int, attacker int8) bool {
 	}
 
 	for i, dir := range []int{N,S,E,W,N+W,N+E,S+E,S+W, N + N + W, N + N + E, S + S + W, S + S + E, E + E + N, E + E + S, W + W + N, W + W + S} {
-		if ((start + dir) & 0x88) != 0 {
-			continue
-		}
 		piece := board.squares[start + dir]
 
 		if (i >= 8 && (piece == 4 + attacker)) || (i < 8 && (piece == 12 + attacker)) {
@@ -438,23 +437,14 @@ func (board *Board) Apply(move Move) *Board {
 			}
 
 			// Invalidate castling
-			if copyBoard.sidetomove == 1 {
-				copyBoard.Edit(A1 + CASTLE, 0)
-				copyBoard.Edit(H1 + CASTLE, 0)
-
-			} else {
-				copyBoard.Edit(A8 + CASTLE, 0)
-				copyBoard.Edit(H8 + CASTLE, 0)
-			}
+			copyBoard.castleRights[copyBoard.sidetomove][0] = false
+			copyBoard.castleRights[copyBoard.sidetomove][1] = false
 		}
 
-
-		if copyBoard.squares[int(move.start)+CASTLE] != 0 {
-			copyBoard.Edit(int(move.start)+CASTLE, 0)
-		}
-		if copyBoard.squares[int(move.end)+CASTLE] != 0 {
-			copyBoard.Edit(int(move.end)+CASTLE, 0)
-		}
+		copyBoard.castleRights[0][0] = copyBoard.castleRights[0][0] && !(move.end == A8 || move.start == A8)
+		copyBoard.castleRights[0][1] = copyBoard.castleRights[0][1] && !(move.end == H8 || move.start == H8)
+		copyBoard.castleRights[1][0] = copyBoard.castleRights[1][0] && !(move.end == A1 || move.start == A1)
+		copyBoard.castleRights[1][1] = copyBoard.castleRights[1][1] && !(move.end == H1 || move.start == H1)
 	}
 
 	if copyBoard.attacked(copyBoard.kings[copyBoard.sidetomove], 1 - copyBoard.sidetomove) {
@@ -472,7 +462,7 @@ func (board *Board) Apply(move Move) *Board {
 func (board *Board) print(){
 	for i, piece := range board.squares {
 		fmt.Print(string(PIECE[piece]))
-		if i % 16 == 15 {
+		if i % 10 == 9 {
 			fmt.Println("")
 		}
 	}
@@ -480,7 +470,7 @@ func (board *Board) print(){
 }
 
 func (board *Board) Hash() uint64 {
-	return board.zobrist ^ Zobrist[15][board.enpassant] ^ Zobrist[15][120+board.sidetomove]
+	return board.zobrist ^ Zobrist[15][board.enpassant] ^ Zobrist[15][board.sidetomove] ^ Zobrist[15][2+BOOL(board.castleRights[0][0])] ^ Zobrist[15][4+BOOL(board.castleRights[0][1])] ^ Zobrist[15][6+BOOL(board.castleRights[1][0])] ^ Zobrist[15][8+BOOL(board.castleRights[1][1])]
 }
 
 func findAfter(word string, strlist []string) []string {
@@ -567,7 +557,7 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 
 		// Null move pruning NMP
 		if staticEval >= beta && nullallowed && depth >= 3 && (0 < board.pieceCount[4+board.sidetomove] + board.pieceCount[6+board.sidetomove] + board.pieceCount[8+board.sidetomove] + board.pieceCount[10+board.sidetomove]) {
-			if -alphabeta(board.Apply(Move{9,9}), -beta, -alpha, ((depth - 4) - (depth / 5)) - ((staticEval - beta)/200), false) >= beta {
+			if -alphabeta(board.Apply(Move{}), -beta, -alpha, ((depth - 4) - (depth / 5)) - ((staticEval - beta)/200), false) >= beta {
 				return beta
 			}
 		}
@@ -687,7 +677,6 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 var uciBoard Board
 var repetition []uint64 = []uint64{}
 var openingBook = map[uint64][]string{}
-   
 func printpv() string {
 	pvstr := ""
 	board := &uciBoard
@@ -696,7 +685,7 @@ func printpv() string {
 			break
 		}
 		m := table[board.Hash() % hashsize].move
-		if board.Hash() != table[board.Hash() % hashsize].key {
+		if board.Hash() != table[board.Hash() % hashsize].key || m.end == m.start {
 			break
 		}
 
@@ -709,15 +698,16 @@ func printpv() string {
 func main() {
 	fmt.Println("info string Started")
 	for i := range 15 {
-		for j := range 128 {
+		for j := range 120 {
 			Zobrist[i+1][j] = rand.Uint64()
 		}
 	}
 
 	for a := range e_table {
+		mailbox_index := ((a>>3 + 2) * 10) + (a & 7) + 1
 		for b := range 4 {
-			weight_table[0][b][a] = (b * e_table[a^112] + (3-b) * e_table[a^112^7]) / 3
-			weight_table[1][b][a] = (b * e_table[a]     + (3-b) * e_table[a^7])     / 3
+			weight_table[1][b][mailbox_index] = (b * e_table[a]     + (3-b) * e_table[a^7])     / 3
+			weight_table[0][b][mailbox_index] = (b * e_table[a^56] + (3-b) * e_table[a^56^7]) / 3
 		}
 	}
 
@@ -744,8 +734,7 @@ func main() {
 
 	for {
 		line, _ := reader.ReadString('\n')
-		line = strings.Replace(line, "startpos", "fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 1)
-		args := strings.Fields(line)
+		args := strings.Fields(strings.Replace(line, "startpos", "fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 1))
 
 		if len(args) != 0 {
 			switch string(args[0]) {
@@ -757,6 +746,11 @@ func main() {
 				history = [2][14][128]int{}
 			case "print":
 				uciBoard.print()
+				uciBoard.sidetomove = 1 - uciBoard.sidetomove // TODO: merge this and print
+				uciBoard.Generate(true)
+				uciBoard.sidetomove = 1 - uciBoard.sidetomove
+				_, e := uciBoard.Generate(true)
+				fmt.Println("eval", e, "\n")
 			case "position":
 				uciBoard = FromFen(strings.Join(findAfter("fen", args)[0:4], " "))
 				for _, movestr := range findAfter("moves", args) {
@@ -787,32 +781,24 @@ func main() {
 
 				nodes = 0
 				start := time.Now().UnixMilli()
-				chosenMove := table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
+				chosenMove := table[uciBoard.Hash() % hashsize].move
 				
 				streak := 1.0
 				for depth := 1; depth <= 100; depth++ {
 					fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, true), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv())
 
 					streak *= 0.9
-					if chosenMove != table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard) {
+					if chosenMove.start != table[uciBoard.Hash() % hashsize].move.start || chosenMove.end != table[uciBoard.Hash() % hashsize].move.end {
 						streak = 1.0
 					}
-					chosenMove = table[uciBoard.Hash() % hashsize].move.stringify(&uciBoard)
+					chosenMove = table[uciBoard.Hash() % hashsize].move
 
 					if time.Now().UnixMilli() - start > int64(float64(timeAlloc) * streak) {
 						break
 					}
 				}
 
-				fmt.Println("bestmove", chosenMove)
-			
-			case "eval":
-				uciBoard.sidetomove = 1 - uciBoard.sidetomove
-				uciBoard.Generate(true)
-				uciBoard.sidetomove = 1 - uciBoard.sidetomove
-				_, e := uciBoard.Generate(true)
-
-				fmt.Println("eval", e)
+				fmt.Println("bestmove", chosenMove.stringify(&uciBoard))				
 			case "quit":
 				return
 			}
@@ -827,3 +813,4 @@ func main() {
 // - ^ srsly like half the eval terms are this
 // - mobility is somewhat duplicated with base mobility
 // TODO: spsa tune search params (make sure to get time usage as well)
+// Should probably retest all the passer and eg king pos terms since they were bugged prior to mailbox update
