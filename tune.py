@@ -282,6 +282,12 @@ for line in tqdm(lines):
         if bspawn < 10:
             shield[0][bkingfile + x] = 1
 
+        if virtualboard[kings[0] + S + x] == 6:
+            shieldbase[0][bkingfile + x] = 1
+
+        if virtualboard[kings[1] + N + x] == 7:
+            shieldbase[1][wkingfile + x] = 1
+
     pushers = np.zeros(8, dtype=np.int8)
 
     BTEMPO = 1
@@ -650,3 +656,5 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # - how can we simplify this more
 # - try taking into account the squares a pawn controls instead of the square its on
 # - could try some weird schenanigans with "psqt" generated at program runtime for each piece based on attention map
+
+#.3049

@@ -26,40 +26,39 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 }
 
 var e_contempt = 0
-var e_material = []int{0, 125, 482, 533, 863, 1819, 0, }
-var e_tempo = 17
-var e_passerRank = []int{0, 18, 7, 44, 87, 165, 218, 0, }
-var e_phalanx = []int{5, 28,}
-var e_chain = []int{21, 48,}
-var e_baseMobility = []int{0, 0, 12, 4, 6, -2, -2, }
-var e_passerKingDistance = []int{-73, -35, -22, -9, 0, 18, 31, 3, 62, }
-var e_passerSupportDistance = []int{25, 36, 31, 6, 0, -19, -41, -28, -8, }
-var e_bishopPair = 76
-var e_egKingFile = []int{0, -90, -36, -12, 12, 0, -5, -39, -93, 0}
-var e_egKingRank = []int{63, 135, 154, 147, 119, 92, 64, 0 }
+var e_material = []int{0, 122, 474, 528, 866, 1796, 0, }
+var e_tempo = 14
+var e_passerRank = []int{0, 6, 14, 39, 82, 147, 242, 0, }
+var e_phalanx = []int{11, 30,}
+var e_chain = []int{19, 42,}
+var e_baseMobility = []int{0, 0, 13, 6, 6, 2, -6, }
+var e_passerKingDistance = []int{-65, -41, -25, -19, 0, 19, 28, 14, 60, }
+var e_passerSupportDistance = []int{27, 56, 44, 12, 0, -24, -15, -33, 0, }
+var e_bishopPair = 67
+var e_egKingFile = []int{0,-97, -37, -9, 11, 0, -3, -38, -92,0}
+var e_egKingRank = []int{55, 155, 164, 148, 120, 93, 60, 0, }
 
-var e_mobility = []int{0, 69, 34, 24, 15, 16, -17, }
+var e_mobility = []int{0, 70, 33, 21, 20, 22, -1,}
 
 var e_altmaterial = []int{0, -28, 0, 0, 0, 0, 0, }
-var e_shield = []int{0, 74, 80, 28, 13, 27, 12, 56, 41, 0, }
-var e_shieldbase = []int{0, -17, 15, 24, 16, 5, 30, 3, 2, 0, }
-var e_mgKingFile = []int{0, 61, -19, -12, -36, 0, -15, 45, 93, 0}
-var e_mgKingRank = []int{-20, -36, -44, -95, -130, -99, -34, 0, }
-var e_pawnattacked = 82
+var e_shield = []int{0, 72, 64, 32, 21, 35, 12, 44, 37, 0, }
+var e_shieldbase = []int{0, -7, 29, 21, 26, 11, 22, 32, 0, 0, }
+var e_mgKingFile = []int{0, 41, -6, -6, -40, 0, -32, 38, 88, 0}
+var e_mgKingRank = []int{0, -45, -69, -130, -150, -103, -40, 0, }
+var e_pawnattacked = 90
 
-var e_risk = []int{3395, 1785, 1014,  602,  318,  171,    0,   72,  312}
-var phaseWeights = [14]int{0, -18,  45,  84,  84, 358,  94 }
+var e_risk = []int{3358, 1723,  958,  482,  307,  161,    0,  114,  362}
+var phaseWeights = [14]int{0, -21,  57,  69, 102, 425,  88 }
 
-var e_table = [64]int { 
-  -301,  -607,   -99,   176,    69,   419,   760,  1800,  
-    64,   343,   511,   255,   367,   368,  1182,   632,   
-   167,   411,   462,   265,   799,  1346,  1618,   688,   
-   180,   364,   371,   443,   622,   536,   400,   384,   
-    27,   177,   268,   378,   481,   356,   185,     2,   
-   -42,   153,   130,   228,   273,   275,   351,    -8,   
-   -59,   193,   159,    -6,   101,   316,   276,   -93,   
-   -92,   -26,    -5,  -154,    12,   225,  -160,   197,}
-
+var e_table = [64]int {
+ -197, -522,  -97,   94,  158,  405,  904, 1554,
+  135,  399,  520,  162,  356,  360, 1189,  722,
+  285,  466,  447,  322,  773, 1229, 1461,  568,
+  203,  382,  329,  396,  584,  671,  498,  470,
+   97,  226,  306,  427,  508,  313,  220,    8,
+  -79,  132,  141,  306,  327,  239,  390,  -90,
+  -66,   60,  146,   78,   89,  292,   88,  -61,
+  -25,  -91,   -7, -147,  -55,  176,  -43,  126,}
 
 var weight_table = [2][4][120]int{}
 
@@ -300,9 +299,9 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	bkingfile := board.kings[0] % 10
 
 	for i := -1; i <= 1; i++ {
-		dynamic_score += e_shieldbase[wkingfile + i] * BOOL(whiterear[wkingfile + i] == 6)
+		dynamic_score += e_shieldbase[wkingfile + i] * BOOL(whiterear[wkingfile + i] == 6 || board.squares[board.kings[1] + N + i] == 7)
 		dynamic_score += e_shield[wkingfile + i]     * BOOL(whiterear[wkingfile + i] != 0)
-		dynamic_score -= e_shieldbase[bkingfile + i] * BOOL(blackrear[bkingfile + i] == 1)
+		dynamic_score -= e_shieldbase[bkingfile + i] * BOOL(blackrear[bkingfile + i] == 1 || board.squares[board.kings[0] + S + i] == 6)
 		dynamic_score -= e_shield[bkingfile + i]     * BOOL(blackrear[bkingfile + i] != 7)
 	}
 	
