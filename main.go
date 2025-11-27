@@ -676,10 +676,10 @@ func alphabeta(board *Board, alpha, beta, depth int, nullallowed bool) int {
 var uciBoard Board
 var repetition []uint64 = []uint64{}
 var openingBook = map[uint64][]string{}
-func printpv() string {
+func printpv(maxdepth int) string {
 	pvstr := ""
 	board := &uciBoard
-	for range 40 {
+	for range maxdepth + 4 {
 		if board == nil {
 			break
 		}
@@ -745,7 +745,7 @@ func main() {
 				history = [2][14][128]int{}
 			case "print":
 				uciBoard.print()
-				uciBoard.sidetomove = 1 - uciBoard.sidetomove // TODO: merge this and print
+				uciBoard.sidetomove = 1 - uciBoard.sidetomove
 				uciBoard.Generate(true)
 				uciBoard.sidetomove = 1 - uciBoard.sidetomove
 				_, e := uciBoard.Generate(true)
@@ -770,29 +770,29 @@ func main() {
 
 				if len(findAfter("wtime", args)) != 0 && uciBoard.sidetomove == 1 {
 					timeAlloc, _ = strconv.Atoi(findAfter("wtime", args)[0])
-					timeAlloc /= 10
+					timeAlloc /= 30
 				}
 
 				if len(findAfter("btime", args)) != 0 && uciBoard.sidetomove == 0 {
 					timeAlloc, _ = strconv.Atoi(findAfter("btime", args)[0])
-					timeAlloc /= 10
+					timeAlloc /= 30
 				}
 
 				nodes = 0
 				start := time.Now().UnixMilli()
 				chosenMove := table[uciBoard.Hash() % hashsize].move
 				
-				streak := 1.0
+				streak := 0.0
 				for depth := 1; depth <= 100; depth++ {
-					fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, true), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv())
+					fmt.Println("info score cp", alphabeta(&uciBoard, -10000, 10000, depth, true), "depth", depth, "time", time.Now().UnixMilli() - start, "nodes", nodes, "pv", printpv(depth))
 
-					streak *= 0.9
+					streak *= 0.666
 					if chosenMove.start != table[uciBoard.Hash() % hashsize].move.start || chosenMove.end != table[uciBoard.Hash() % hashsize].move.end {
-						streak = 1.0
-					}
+						streak += 0.4
+					} 
 					chosenMove = table[uciBoard.Hash() % hashsize].move
 
-					if time.Now().UnixMilli() - start > int64(float64(timeAlloc) * streak) {
+					if time.Now().UnixMilli() - start > int64(float64(timeAlloc) * (1+streak)) {
 						break
 					}
 				}

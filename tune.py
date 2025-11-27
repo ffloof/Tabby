@@ -282,10 +282,10 @@ for line in tqdm(lines):
         if bspawn < 10:
             shield[0][bkingfile + x] = 1
 
-        if virtualboard[kings[0] + S + x] == 6:
+        if virtualboard[kings[0] + S + x] == 6: #and bkingfile == 2:
             shieldbase[0][bkingfile + x] = 1
 
-        if virtualboard[kings[1] + N + x] == 7:
+        if virtualboard[kings[1] + N + x] == 7: #and wkingrank == 9:
             shieldbase[1][wkingfile + x] = 1
 
     pushers = np.zeros(8, dtype=np.int8)
@@ -343,11 +343,6 @@ for line in tqdm(lines):
     oppCastle[0] = int((wkingfile >= 5) != (bkingfile >= 5))
     differentCastle = np.zeros(1, dtype=np.int8)
     differentCastle[0] = int((wkingfile >= bkingfile-1) and (bkingfile+1 >= wkingfile))
-    #shieldsum = np.zeros(1, dtype=np.int8)
-    #shieldsum[0] = np.sum(shield)
-    #shieldbasesum = np.zeros(1, dtype=np.int8)
-    #shieldbasesum[0] = np.sum(shieldbase)
-
     #pieceCount = np.zeros(1, dtype=np.int8)
     #pieceCount[0] = np.sum(material[1,2:]) - np.sum(material[0,2:])
 
@@ -378,12 +373,20 @@ for line in tqdm(lines):
 
     npawns[:,6] = 0
 
-    kingFile = np.zeros((8), dtype=np.int8)
+    fullyopen = np.zeros(9, dtype=np.int8)
+    fullopencounter = 0
+    for i in range(1,9):
+        if rearpawns[1][i] == 0 and rearpawns[0][i] == 11:
+            fullopencounter += 1
+    fullyopen[fullopencounter] = 1
+
+
+    kingFile = np.zeros((10), dtype=np.int8)
     kingRank = np.zeros((8), dtype=np.int8)
 
-    kingFile[wkingfile-1] += 1
+    kingFile[wkingfile] += 1
     kingRank[wkingrank-2] += 1
-    kingFile[bkingfile-1] -= 1
+    kingFile[bkingfile] -= 1
     kingRank[9-bkingrank] -= 1 
     
     # Create a base case for terms creates more consistent and faster tuning
@@ -422,6 +425,7 @@ for line in tqdm(lines):
         #print(starts, sizes)
 
         print("\nfen " + fen)
+        print(fullyopen)
         #print(oppBishopEndgame)
         #for a in range(2):
         #    plt.imshow(kwhite[1].reshape((8,8)))
@@ -593,52 +597,6 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # Should be more or less linear/logistic regression, with easily interpretable values
 # The evaluation should represent the practical chances of a position rather than the true value
 
-# 
-#.4824 5M ALL
-#.4816 5M BISHOP PAIR
-#.4850 5M -restricted -pawn structure
-#.4842 5M +restricted
-#.4818 5M +pawn structure +defended pieces x2
-#.4815 5M -defended pieces +unprotected passer x2
-#.4820 5M -unprotected passer -king pawn endgame scaling
-#.4812. 5M +king pawn endgame scaling +rooks on semi open files
-#.4818 -rooks on semi open files +pawn mobility
-#.4811 -pawn mobility +blockaded passers
-#.4817 -blockaded passer +king rays
-#.4793 -king rays +complex attacks
-#.4815 -complex attacks +tropism
-#.4811 -tropism +pawn tropism
-#.4821 -pawn tropism -tempo
-#.4803 +tempo +simplish attacks
-#.4808 simplish attacks but only in static
-#.4814 simplish attacks but only in dynamic
-#.4825 -simplish attacks -shieldbase
-#.4834 +shieldbase -base mobility
-#.4815 +base mobility +enemy passer king distance
-#.4811 +friendly passer king distance
-#.4814 -passer distance -friendly passser distance, restricted cuts out of base mobility
-#.4812 restricted cuts out of main mobility not base
-#.4817 restricted cuts out both
-#.4805 base mobility counts attacks on friendly squares, restricted cuts only main mobility
-#.4810 -shieldbase
-#.4816 +shieldbase -both passer king distances
-#.4810 +endgame kingfile kingrank
-#.4803 both mg and eg kingfile kingrank
-
-# various scaling factors, drawish bishop endgame, king pawn endgame, rook endgame, blocked/rammed pawn position.
-
-# 4755 attacks all
-# 4780 no attacking pieces
-# 4776 ^ this but modifier to add restricted squares which had piece on them
-# 4783 no attacks at all
-# 4774 only attacks on pieces
-
-
-#.4783 current (pawn defended squares are counted if an actual piece is sitting on them)
-#.4788 remove middle game king position
-#.4773 simple blocked as part of game state
-#.4784 -blockaded passer
-
 #.3065 baseline lichessbig
 #.3067 no scaling besides phase
 #.3084 - passer distance
@@ -652,9 +610,7 @@ for epoch in range(epochs):  # Adjust the number of epochs
 
 # ideas left to try:
 # - scaling dynamics terms in various ways
-# - try adding pieces/other stuff to mobtable?
 # - how can we simplify this more
-# - try taking into account the squares a pawn controls instead of the square its on
-# - could try some weird schenanigans with "psqt" generated at program runtime for each piece based on attention map
 
 #.3049
+#.3042 bishop as pawn shield changes
