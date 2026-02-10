@@ -26,38 +26,38 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 }
 
 var e_contempt = 0
-var e_material = []int{0, 106, 507, 531, 833, 1701, 0, }
+var e_material = []int{0, 107, 495, 558, 831, 1720, 0, }
 var e_tempo = 15
-var e_passerRank = []int{0, 3, 6, 30, 68, 148, 222, 0, }
-var e_phalanx = []int{6, 16, }
-var e_chain = []int{12, 41, }
-var e_passerKingDistance = []int{-63, -38, -36, -22, 0, 14, 12, 33, 82, }
-var e_passerSupportDistance = []int{41, 56, 40, 10, 9, 5, 13, 5, 0, }
-var e_bishopPair = 49
-var e_egKingFile = []int{0, -83, -35, -9, 0, -13, -1, -29, -71, 0, }
-var e_egKingRank = []int{4, 74, 103, 89, 80, 70, 40, 0, }
+var e_passerRank = []int{0, 5, 13, 25, 69, 142, 216, 0, }
+var e_phalanx = []int{8, 21, } //D
+var e_chain = []int{16, 33, } //D
+var e_passerKingDistance = []int{-63, -52, -26, -15, 0, 26, 17, 34, 90, } //C
+var e_passerSupportDistance = []int{45, 40, 37, 12, 9, 5, 10, 4, 0, } //C
 
-var e_mobility = []int{0, 69, 37, 21, 25, 17, 0, }
+var e_egKingFile = []int{0, -104, -31, -11, 0, -18, -4, -33, -76, 0, } //B
+var e_egKingRank = []int{5, 61, 89, 91, 90, 69, 39, 0, } //B
 
-var e_altmaterial = []int{0, -34, 0, 0, 0, 0, 0, }
-var e_shield = []int{0, 137, 121, 56, 37, 41, 21, 86, 53, 0, }
-var e_shieldbase = []int{0, -40, 69, 36, 18, 21, 60, 52, 19, 0, }
-var e_mgKingFile = []int{0, 143, 26, 37, 0, 107, 3, 120, 197, 0, }
-var e_mgKingRank = []int{181, 63, 39, -91, -173, -144, -86, 0, }
+var e_mobility = []int{0, 66, 39, 22, 30, 18, -3, }
+
+var e_altmaterial = []int{0, -46, 0, 0, 0, 0, 0, }
+var e_shield = []int{0, 145, 106, 58, 31, 32, 20, 84, 57, 0, } //A
+var e_shieldbase = []int{0, -46, 55, 47, 25, 18, 64, 50, 16, 0, } //A
+var e_mgKingFile = []int{0, 156, 47, 43, 0, 126, 23, 136, 231, 0, } //B
+var e_mgKingRank = []int{192, 55, 35, -93, -170, -163, -84, 0, } //B
 var e_pawnattacked = 90
 
-var e_risk = []int{3992, 1734,  906,  533,  420,  160,    0,  -18,    0}
-var phaseWeights = [14]int{0, -18,  14,  46,  68, 176,  89, }
+var e_risk = []int{4103, 1764,  937,  608,  366,  194,    0,    0,  128}
+var phaseWeights = [14]int{0, -18,   7,  35,  56, 192,  80 } //F
 
 var e_table = [64]int {
--100, -593, -124,  132,  387,  447, 1480, 1238,
- 225,  283,  501,  245,  571,  303,  832,  509,
- 413,  491,  484,  389,  564,  904,  561,  442,
- 378,  484,  304,  516,  546,  471,  337,  508,
- 281,  188,  383,  514,  508,  371,  231,  173,
--141,  175,  169,  217,  300,  348,  470,   42,
-   4,  157,  393,  234,  179,  443,  328,   53,
- 115,  291,  284,  102,  298,  568,  102,  122,}
+-129, -431, -131,  135,  325,  440, 1462, 1243,
+  284,  365,  511,  257,  513,  323,  879,  543,
+  444,  459,  545,  216,  595,  767,  655,  469,
+  315,  548,  316,  486,  495,  489,  318,  523,
+  214,  194,  345,  498,  507,  333,  317,  169,
+ -140,  168,  142,  241,  339,  305,  484,   29,
+   24,  200,  269,  215,  172,  448,  312,   95,
+  171,  168,  239,   78,  237,  572,   87,  155,}
 
 var weight_table = [2][4][120]int{}
 
@@ -267,8 +267,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		dynamic_score += e_altmaterial[piecetype] * int((board.pieceCount[piecetype * 2 + 1] - board.pieceCount[piecetype * 2]))
 		dynamics_weight += phaseWeights[piecetype]* int((board.pieceCount[piecetype * 2 + 1] + board.pieceCount[piecetype * 2]))
 	}
-
-	score += e_bishopPair * (BOOL(board.pieceCount[7] == 2) - BOOL(board.pieceCount[6] == 2))
 
 	whiterear := [10]int{0,0,0,0,0,0,0,0,0,0,}
 	blackrear := [10]int{7,7,7,7,7,7,7,7,7,7,}
@@ -802,9 +800,12 @@ func main() {
 
 // Should make a stream where people vote on best move4
 // TODO: simplify eval even more? merge some features?
-// - for example having one pawn shield term would be nice
-// - similarly not having 4 terms for king position would be nice, in addition to two passer distance terms
+// A. - for example having one pawn shield term would be nice
+// B. - similarly not having 4 terms for king position would be nice, in addition to two passer distance terms
 // - ^ srsly like half the eval terms are this
-// - mobility is somewhat duplicated with base mobility
+// C. can passer distance be one term/simple
+// D. phalanx and chain could be unified
+// E. engine already likes bishop do we need bishoppair
+// F. phase can just be done with material
 // TODO: spsa tune search params (make sure to get time usage as well)
 // Should probably retest all the passer and eg king pos terms since they were bugged prior to mailbox update

@@ -402,7 +402,7 @@ for line in tqdm(lines):
         # Weighting
         [material[1] + material[0]], #differentCastle oppCastle, shieldsum, shieldbasesum
         # Statics
-        [material[1] - material[0], sidetomove, pushers, phalanx, chain, passerDistance, passerSupportDistance, bishoppair, kingFile, kingRank],
+        [material[1] - material[0], sidetomove, pushers, phalanx, chain, passerDistance, passerSupportDistance, kingFile, kingRank],
         # Dynamics
         [othertable[1].flatten()-othertable[0].flatten(), ],
         [mobtable[1].flatten()-mobtable[0].flatten(), ],
