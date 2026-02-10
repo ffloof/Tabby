@@ -402,10 +402,10 @@ for line in tqdm(lines):
         # Weighting
         [material[1] + material[0]], #differentCastle oppCastle, shieldsum, shieldbasesum
         # Statics
-        [material[1] - material[0], sidetomove, pushers, phalanx, chain, baseMob[1]-baseMob[0], passerDistance, passerSupportDistance, bishoppair, kingFile, kingRank],
+        [material[1] - material[0], sidetomove, pushers, phalanx, chain, passerDistance, passerSupportDistance, bishoppair, kingFile, kingRank],
         # Dynamics
-        [mobtable[1].flatten()-mobtable[0].flatten(), ],
         [othertable[1].flatten()-othertable[0].flatten(), ],
+        [mobtable[1].flatten()-mobtable[0].flatten(), ],
         [altmaterial, shield[1]-shield[0], shieldbase[1]-shieldbase[0], kingFile, kingRank, tempoCaptures],
         # Drawishness heuristic
         [npawns[0]],#oppBishopEndgame

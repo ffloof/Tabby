@@ -26,39 +26,38 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 }
 
 var e_contempt = 0
-var e_material = []int{0, 122, 474, 528, 866, 1796, 0, }
-var e_tempo = 14
-var e_passerRank = []int{0, 6, 14, 39, 82, 147, 242, 0, }
-var e_phalanx = []int{11, 30,}
-var e_chain = []int{19, 42,}
-var e_baseMobility = []int{0, 0, 13, 6, 6, 2, -6, }
-var e_passerKingDistance = []int{-65, -41, -25, -19, 0, 19, 28, 14, 60, }
-var e_passerSupportDistance = []int{27, 56, 44, 12, 0, -24, -15, -33, 0, }
-var e_bishopPair = 67
-var e_egKingFile = []int{0,-97, -37, -9, 11, 0, -3, -38, -92,0}
-var e_egKingRank = []int{55, 155, 164, 148, 120, 93, 60, 0, }
+var e_material = []int{0, 106, 507, 531, 833, 1701, 0, }
+var e_tempo = 15
+var e_passerRank = []int{0, 3, 6, 30, 68, 148, 222, 0, }
+var e_phalanx = []int{6, 16, }
+var e_chain = []int{12, 41, }
+var e_passerKingDistance = []int{-63, -38, -36, -22, 0, 14, 12, 33, 82, }
+var e_passerSupportDistance = []int{41, 56, 40, 10, 9, 5, 13, 5, 0, }
+var e_bishopPair = 49
+var e_egKingFile = []int{0, -83, -35, -9, 0, -13, -1, -29, -71, 0, }
+var e_egKingRank = []int{4, 74, 103, 89, 80, 70, 40, 0, }
 
-var e_mobility = []int{0, 70, 33, 21, 20, 22, -1,}
+var e_mobility = []int{0, 69, 37, 21, 25, 17, 0, }
 
-var e_altmaterial = []int{0, -28, 0, 0, 0, 0, 0, }
-var e_shield = []int{0, 72, 64, 32, 21, 35, 12, 44, 37, 0, }
-var e_shieldbase = []int{0, -7, 29, 21, 26, 11, 22, 32, 0, 0, }
-var e_mgKingFile = []int{0, 41, -6, -6, -40, 0, -32, 38, 88, 0}
-var e_mgKingRank = []int{0, -45, -69, -130, -150, -103, -40, 0, }
+var e_altmaterial = []int{0, -34, 0, 0, 0, 0, 0, }
+var e_shield = []int{0, 137, 121, 56, 37, 41, 21, 86, 53, 0, }
+var e_shieldbase = []int{0, -40, 69, 36, 18, 21, 60, 52, 19, 0, }
+var e_mgKingFile = []int{0, 143, 26, 37, 0, 107, 3, 120, 197, 0, }
+var e_mgKingRank = []int{181, 63, 39, -91, -173, -144, -86, 0, }
 var e_pawnattacked = 90
 
-var e_risk = []int{3358, 1723,  958,  482,  307,  161,    0,  114,  362}
-var phaseWeights = [14]int{0, -21,  57,  69, 102, 425,  88 }
+var e_risk = []int{3992, 1734,  906,  533,  420,  160,    0,  -18,    0}
+var phaseWeights = [14]int{0, -18,  14,  46,  68, 176,  89, }
 
 var e_table = [64]int {
- -197, -522,  -97,   94,  158,  405,  904, 1554,
-  135,  399,  520,  162,  356,  360, 1189,  722,
-  285,  466,  447,  322,  773, 1229, 1461,  568,
-  203,  382,  329,  396,  584,  671,  498,  470,
-   97,  226,  306,  427,  508,  313,  220,    8,
-  -79,  132,  141,  306,  327,  239,  390,  -90,
-  -66,   60,  146,   78,   89,  292,   88,  -61,
-  -25,  -91,   -7, -147,  -55,  176,  -43,  126,}
+-100, -593, -124,  132,  387,  447, 1480, 1238,
+ 225,  283,  501,  245,  571,  303,  832,  509,
+ 413,  491,  484,  389,  564,  904,  561,  442,
+ 378,  484,  304,  516,  546,  471,  337,  508,
+ 281,  188,  383,  514,  508,  371,  231,  173,
+-141,  175,  169,  217,  300,  348,  470,   42,
+   4,  157,  393,  234,  179,  443,  328,   53,
+ 115,  291,  284,  102,  298,  568,  102,  122,}
 
 var weight_table = [2][4][120]int{}
 
@@ -75,7 +74,7 @@ type Board struct {
 	kings      [2]int
 	enpassant  int
 	zobrist    uint64
-	mobilities [2][2]int
+	mobilities [2]int
 	castleRights [2][2]bool
 	sidetomove int8
 	inCheck bool
@@ -176,7 +175,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	moves := []Move{}
 
 	advance := ADVANCES[board.sidetomove]
-	baseMobility, dynamicMobility := 0, 0
+	dynamicMobility := 0
 	pawnIndexes := make([]int8, 0, 16)
 
 	for i:=A8;i<=H1;i++ {
@@ -218,9 +217,6 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 			for _, dir := range pattern {
 				for end := i + dir;; end += dir {
 					victim := board.squares[end]
-					if victim != 1 {
-						baseMobility += e_baseMobility[piecetype]
-					}
 
 					if victim == 0 || (victim > 1 && victim&1 != piece&1) {
 						if !board.PawnDefends(end, 1-board.sidetomove) {
@@ -261,9 +257,8 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		}
 	}
 
-	board.mobilities[board.sidetomove][0] = baseMobility
-	board.mobilities[board.sidetomove][1] = dynamicMobility / e_divider
-	score, dynamic_score, dynamics_weight := board.mobilities[1][0] - board.mobilities[0][0],board.mobilities[1][1] - board.mobilities[0][1],0
+	board.mobilities[board.sidetomove] = dynamicMobility / e_divider
+	score, dynamic_score, dynamics_weight := board.mobilities[1] - board.mobilities[0],0,0
 	dynamic_score += (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 1)) - (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 0))  
 
 
