@@ -26,38 +26,36 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 }
 
 var e_contempt = 0
-var e_material = []int{0, 107, 495, 558, 831, 1720, 0, }
+var e_material = []int{0, 112, 482, 542, 806, 1671, 0, }
 var e_tempo = 15
-var e_passerRank = []int{0, 5, 13, 25, 69, 142, 216, 0, }
-var e_phalanx = []int{8, 21, } //D
-var e_chain = []int{16, 33, } //D
-var e_passerKingDistance = []int{-63, -52, -26, -15, 0, 26, 17, 34, 90, } //C
-var e_passerSupportDistance = []int{45, 40, 37, 12, 9, 5, 10, 4, 0, } //C
+var e_passerRank = []int{0, 4, -3, 9, 48, 138, 243, 0, }
+var e_phalanx = []int{8, 24, } //D
+var e_chain = []int{13, 35, } //D
 
-var e_egKingFile = []int{0, -104, -31, -11, 0, -18, -4, -33, -76, 0, } //B
-var e_egKingRank = []int{5, 61, 89, 91, 90, 69, 39, 0, } //B
+var e_egKingFile = []int{0, -86, -37, -16, 0, -16, 2, -35, -74, 0, } //B
+var e_egKingRank = []int{-20, 53, 78, 72, 74, 67, 47, 0, } //B
 
-var e_mobility = []int{0, 66, 39, 22, 30, 18, -3, }
+var e_mobility = []int{0, 68, 38, 23, 27, 13, 0, }
 
-var e_altmaterial = []int{0, -46, 0, 0, 0, 0, 0, }
-var e_shield = []int{0, 145, 106, 58, 31, 32, 20, 84, 57, 0, } //A
-var e_shieldbase = []int{0, -46, 55, 47, 25, 18, 64, 50, 16, 0, } //A
-var e_mgKingFile = []int{0, 156, 47, 43, 0, 126, 23, 136, 231, 0, } //B
-var e_mgKingRank = []int{192, 55, 35, -93, -170, -163, -84, 0, } //B
-var e_pawnattacked = 90
+var e_altmaterial = []int{0, -50, 0, 0, 0, 0, 0, }
+var e_shield = []int{0, 160, 116, 63, 34, 43, 22, 81, 46, 0, } //A
+var e_shieldbase = []int{0, -55, 62, 43, 24, 17, 65, 56, 17, 0, } //A
+var e_mgKingFile = []int{0, 152, 32, 58, 0, 133, 51, 162, 253, 0, } //B
+var e_mgKingRank = []int{199, 87, 53, -83, -160, -167, -94, 0, } //B
+var e_pawnattacked = 95
 
-var e_risk = []int{4103, 1764,  937,  608,  366,  194,    0,    0,  128}
-var phaseWeights = [14]int{0, -18,   7,  35,  56, 192,  80 } //F
+var e_risk = []int{4157, 1680,  825,  570,  419,  230,    0,  -36,  -31,}
+var phaseWeights = [14]int{0, -13,  20,  40,  70, 166,  51, } //F
 
 var e_table = [64]int {
--129, -431, -131,  135,  325,  440, 1462, 1243,
-  284,  365,  511,  257,  513,  323,  879,  543,
-  444,  459,  545,  216,  595,  767,  655,  469,
-  315,  548,  316,  486,  495,  489,  318,  523,
-  214,  194,  345,  498,  507,  333,  317,  169,
- -140,  168,  142,  241,  339,  305,  484,   29,
-   24,  200,  269,  215,  172,  448,  312,   95,
-  171,  168,  239,   78,  237,  572,   87,  155,}
+-119, -461,  -60,  158,  429,  412, 1397, 1163,
+ 204,  370,  611,  272,  442,  300,  680,  602,
+ 459,  544,  484,  272,  477,  671,  522,  380,
+ 408,  570,  250,  495,  477,  403,  327,  384,
+ 291,  236,  300,  505,  392,  343,  216,  163,
+ -62,  194,  167,  184,  252,  289,  422,   64,
+   4,  200,  398,  265,  188,  451,  330,   86,
+ 162,  213,  321,   80,  275,  593,   71,  131,}
 
 var weight_table = [2][4][120]int{}
 
@@ -330,13 +328,9 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	for file := range 10 {
 		if whitepasser[file] != 0 {
 			score += e_passerRank[whitepasser[file]]
-			score += e_passerKingDistance[max(8*BOOL(7-whitepasser[file]<((board.kings[0]/10) - 2)),max(file - bkingfile, bkingfile - file))]
-			score += e_passerSupportDistance[max(8*BOOL(7-whitepasser[file]<((board.kings[1]/10) - 2)),max(file - wkingfile, wkingfile - file))]
 		}
 		if blackpasser[file] != 0 {
 			score -= e_passerRank[blackpasser[file]]
-			score -= e_passerKingDistance[max(8*BOOL(blackpasser[file]>((board.kings[1]/10) - 2)),max(file - wkingfile, wkingfile - file))]
-			score -= e_passerSupportDistance[max(8*BOOL(blackpasser[file]>((board.kings[0]/10) - 2)),max(file - bkingfile, bkingfile - file))]
 		}
 	}
 
@@ -805,7 +799,6 @@ func main() {
 // - ^ srsly like half the eval terms are this
 // C. can passer distance be one term/simple
 // D. phalanx and chain could be unified
-// E. engine already likes bishop do we need bishoppair
 // F. phase can just be done with material
 // TODO: spsa tune search params (make sure to get time usage as well)
 // Should probably retest all the passer and eg king pos terms since they were bugged prior to mailbox update

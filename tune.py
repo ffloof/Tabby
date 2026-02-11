@@ -122,7 +122,6 @@ for line in tqdm(lines):
     phalanx = np.zeros(2, dtype=np.int8)
     chain = np.zeros(2, dtype=np.int8)
     passerDistance = np.zeros(9, dtype=np.int8)
-    passerSupportDistance = np.zeros(9, dtype=np.int8)
     
     passerRank = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -306,12 +305,12 @@ for line in tqdm(lines):
         if wPass >= 0:
             pushers[wPass] += 1
             passerDistance[max(abs(i-bkingfile),8*int(passerRank[1][i]<bkingrank))] += 1
-            passerSupportDistance[max(abs(i-wkingfile),8*int(passerRank[1][i]<wkingrank))] += 1
+            passerDistance[max(abs(i-wkingfile),8*int(passerRank[1][i]<wkingrank))] -= 1
 
         if bPass >= 0:
             pushers[bPass] -= 1
             passerDistance[max(abs(i-wkingfile),8*int(passerRank[0][i]>wkingrank))] -= 1
-            passerSupportDistance[max(abs(i-bkingfile),8*int(passerRank[0][i]>bkingrank))] -= 1
+            passerDistance[max(abs(i-bkingfile),8*int(passerRank[0][i]>bkingrank))] += 1
 
     sidetomove[0] = sign[turn]
 
@@ -393,7 +392,6 @@ for line in tqdm(lines):
     kingFile[4] = 0
     kingRank[7] = 0
     passerDistance[4] = 0
-    passerSupportDistance[8] = 0
 
     altmaterial = material[1] - material[0]
     altmaterial[2:] = 0
@@ -402,7 +400,7 @@ for line in tqdm(lines):
         # Weighting
         [material[1] + material[0]], #differentCastle oppCastle, shieldsum, shieldbasesum
         # Statics
-        [material[1] - material[0], sidetomove, pushers, phalanx, chain, passerDistance, passerSupportDistance, kingFile, kingRank],
+        [material[1] - material[0], sidetomove, pushers, phalanx, chain, kingFile, kingRank],
         # Dynamics
         [othertable[1].flatten()-othertable[0].flatten(), ],
         [mobtable[1].flatten()-mobtable[0].flatten(), ],
