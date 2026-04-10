@@ -236,7 +236,6 @@ for line in tqdm(lines):
                     passerRank[1][pfile] = min(prank, passerRank[1][pfile])
         
         
-        
 
         for direction in pattern:
             current = sq
@@ -400,11 +399,11 @@ for line in tqdm(lines):
         # Weighting
         [material[1] + material[0]], #differentCastle oppCastle, shieldsum, shieldbasesum
         # Statics
-        [material[1] - material[0], sidetomove, pushers, phalanx, chain, kingFile, kingRank],
+        [material[1] - material[0], sidetomove, pushers, phalanx, chain],
         # Dynamics
         [othertable[1].flatten()-othertable[0].flatten(), ],
         [mobtable[1].flatten()-mobtable[0].flatten(), ],
-        [altmaterial, shield[1]-shield[0], shieldbase[1]-shieldbase[0], kingFile, kingRank, tempoCaptures],
+        [altmaterial, tempoCaptures, shield[1]-shield[0], shieldbase[1]-shieldbase[0]], #shield[1]-shield[0], shieldbase[1]-shieldbase[0]
         # Drawishness heuristic
         [npawns[0]],#oppBishopEndgame
         [npawns[1]],#oppBishopEndgame

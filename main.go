@@ -25,7 +25,6 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 	return 0
 }
 
-var e_contempt = 0
 var e_material = []int{0, 112, 482, 542, 806, 1671, 0, }
 var e_tempo = 15
 var e_passerRank = []int{0, 4, -3, 9, 48, 138, 243, 0, }
@@ -60,6 +59,7 @@ var e_table = [64]int {
 var weight_table = [2][4][120]int{}
 
 const e_divider = 1000
+var e_contempt = 0
 
 var Zobrist [16][120]uint64
 var nodes int = 0
@@ -256,7 +256,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	}
 
 	board.mobilities[board.sidetomove] = dynamicMobility / e_divider
-	score, dynamic_score, dynamics_weight := board.mobilities[1] - board.mobilities[0],0,0
+	score, dynamic_score, dynamics_weight := board.mobilities[1] - board.mobilities[0],board.mobilities[1] - board.mobilities[0],0
 	dynamic_score += (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 1)) - (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 0))  
 
 
@@ -697,7 +697,7 @@ func main() {
 		}
 	}
 
-	file, err := os.Open("book.txt")
+	file, err := os.Open("book2.txt")
     if err == nil {
     	scanner := bufio.NewScanner(file)
         for scanner.Scan() {
@@ -802,3 +802,12 @@ func main() {
 // F. phase can just be done with material
 // TODO: spsa tune search params (make sure to get time usage as well)
 // Should probably retest all the passer and eg king pos terms since they were bugged prior to mailbox update
+
+// Material        = 2 -> 1 term
+// Passed Pawns    = 1 term
+// Mobility        = 1 term
+// Pawn Structure  = 2 -> 1 term
+// King Safety     = 6 -> 2 terms (This is the hardest)
+// Drawishness?    = 1 term
+// Threats?        = 1 term (we could try to remove this term by treating pawn captures as mobility?, or maybe as part of tempo?)
+// Tempo?          = 1 term 
