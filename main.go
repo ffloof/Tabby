@@ -43,10 +43,10 @@ var e_mgKingFile = []int{0, 152, 32, 58, 0, 133, 51, 162, 253, 0, } //B
 var e_mgKingRank = []int{199, 87, 53, -83, -160, -167, -94, 0, } //B
 var e_pawnattacked = 95
 
-var e_risk = []int{4157, 1680,  825,  570,  419,  230,    0,  -36,  -31,}
-var phaseWeights = [14]int{0, -13,  20,  40,  70, 166,  51, } //F
+var e_risk = []int{4157, 1680,  825,  570,  419,  230,    0,  -36,  -31,} 
+var phaseWeights = [14]int{0, -13,  20,  40,  70, 166,  51, } //F 3 LOC
 
-var e_table = [64]int {
+var e_table = [64]int { // 20+ LOC
 -119, -461,  -60,  158,  429,  412, 1397, 1163,
  204,  370,  611,  272,  442,  300,  680,  602,
  459,  544,  484,  272,  477,  671,  522,  380,
@@ -326,7 +326,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	// Passer evaluation
 	for file := range 10 {
-		if whitepasser[file] != 0 {
+		if whitepasser[file] != 0 { // TODO: we can abuse BOOL here
 			score += e_passerRank[whitepasser[file]]
 		}
 		if blackpasser[file] != 0 {
@@ -336,9 +336,9 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 
 	final_score := score + (dynamic_score * max(0,dynamics_weight)) / e_divider
 
-	leadingpawns := board.pieceCount[2 + BOOL(final_score >= 0)]
+	leadingpawns := board.pieceCount[2 + BOOL(final_score >= 0)] // TODO: inline this
 
-	drawishness_weight := e_risk[leadingpawns]
+	drawishness_weight := e_risk[leadingpawns] // TODO: we can just inline this line lol
 	final_score = (final_score * e_divider) / (e_divider + dynamics_weight + drawishness_weight) 
 	if board.sidetomove == 0 {
 		final_score = -final_score
@@ -797,7 +797,6 @@ func main() {
 // A. - for example having one pawn shield term would be nice
 // B. - similarly not having 4 terms for king position would be nice, in addition to two passer distance terms
 // - ^ srsly like half the eval terms are this
-// C. can passer distance be one term/simple
 // D. phalanx and chain could be unified
 // F. phase can just be done with material
 // TODO: spsa tune search params (make sure to get time usage as well)
