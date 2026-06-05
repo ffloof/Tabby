@@ -386,35 +386,46 @@ for line in tqdm(lines):
 
     npawns[:,6] = 0
 
-    kingFile = np.zeros((10), dtype=np.int8)
-    kingRank = np.zeros((8), dtype=np.int8)
+    kingFile = np.zeros((2,10), dtype=np.int8)
+    kingRank = np.zeros((2,8), dtype=np.int8)
 
-    kingFile[wkingfile] += 1
-    kingRank[wkingrank-2] += 1
-    kingFile[bkingfile] -= 1
-    kingRank[9-bkingrank] -= 1 
+    kingFile[1][wkingfile] = 1
+    kingRank[1][wkingrank-2] = 1
+    kingFile[0][bkingfile] = 1
+    kingRank[0][9-bkingrank] = 1 
     
     # Create a base case for terms creates more consistent and faster tuning
-    kingFile[4] = 0
-    kingRank[7] = 0
+    kingFile[:,4] = 0
+    kingRank[:,7] = 0
     passerDistance[4] = 0
 
     altmaterial = material[1] - material[0]
     altmaterial[2:] = 0
 
     terms = [
-        # Weighting
+        # Phase
         [material[1] + material[0],],
-        # Statics
-        [material[1] - material[0], pushers, phalanx, sidetomove, kingFile, kingRank, bishoppair, baseMob[1]-baseMob[0]],
-        # Dynamics
-	    [mobtable[1].flatten()-mobtable[0].flatten(), ],
-        [othertable[1].flatten()-othertable[0].flatten(), ],
-        [altmaterial, tempoCaptures, kingFile, kingRank, shieldbase[1]-shieldbase[0], shield[1]-shield[0]],
+        # Linear
+        [material[1] - material[0], pushers, phalanx, sidetomove, kingFile[1]-kingFile[0], kingRank[1]-kingRank[0], bishoppair, tempoCaptures],
+        # Mobility
+	    [mobtable[1].flatten(), ],
+        [mobtable[0].flatten(), ],
+        # King Scaling
+        [kingFile[0], kingRank[0], shieldbase[0], shield[0], baseMob[1]],
+        [kingFile[1], kingRank[1], shieldbase[1], shield[1], baseMob[0]],
         # Drawishness heuristic
         [npawns[0]],
         [npawns[1]],
     ]
+
+    # Phase 0:1
+    # Linear 1:2
+    # MobilityW 2:3
+    # MobilityB 3:4
+    # KingW 4:5
+    # KingB 5:6
+    # Draw1 6:7
+    # Draw2 7:8
 
     if first:
         startCount = 0
@@ -422,6 +433,7 @@ for line in tqdm(lines):
             lengths = []
             for item in group:
                 startCount += len(item)
+                #print(item.shape)
                 lengths.append(len(item))
             starts.append(startCount)
             sizes.append(lengths)
@@ -429,27 +441,15 @@ for line in tqdm(lines):
         #print(starts, sizes)
 
         print("\nfen " + fen)
-        #print(candidateFile)
-        #print(candidateRank)
-        #print(nonPasserRank)
-        #print(oppBishopEndgame)
         #for a in range(2):
         #    plt.imshow(kwhite[1].reshape((8,8)))
         #    plt.show()
         #    plt.imshow(qwhite[1].reshape((8,8)))
         #    plt.show()
-        #    plt.imshow((kwhite+qwhite)[1].reshape((8,8)))
-        #    plt.show()
         #    plt.imshow(mobtable[a][6].reshape((8,8)))
         #    plt.show()
         #    break
         #    ...
-
-        #plt.imshow((mobtable[0][8]).reshape((8,8)))
-        #plt.show()
-
-        #print(shield)
-        #print(shieldbase)
         #sys.exit()
 
     finalterms = []
@@ -469,36 +469,35 @@ class HCE(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.npieces = (starts[3] - starts[2]) // 64
-        self.nspecial = (starts[4] - starts[3]) // 64
 
         self.static_terms = torch.nn.Parameter(torch.randn(starts[2]-starts[1]))
         self.dynamic_terms = torch.nn.Parameter(torch.randn(starts[5]-starts[4]))
         self.mobilitytable = torch.nn.Parameter(torch.randn(64))
         self.piecemobility = torch.nn.Parameter(torch.randn(self.npieces))
-        self.special = torch.nn.Parameter(torch.randn(self.nspecial))
 
-        self.phase = torch.nn.Parameter(torch.abs(torch.randn(starts[1])))
-        self.risk = torch.nn.Parameter(torch.randn(starts[6]-starts[5]))
+        self.phase = torch.nn.Parameter(torch.abs(torch.randn(starts[1]-starts[0])))
+        self.risk = torch.nn.Parameter(torch.randn(starts[7]-starts[6]))
+        # TODO: do we want this approach or just add an always 1 value at the start, hmmmm
+        self.intercept = torch.nn.Parameter(torch.randn(1))
 
     def forward(self, x):     
         phase = (x[:,2] +x[:,3] +(x[:,4]*2) +(x[:,5]*4))/24
 
-        mobilityMg = torch.matmul(torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64), self.mobilitytable), self.piecemobility) / 3
-        mobilityEg = torch.matmul(torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.nspecial,64), self.mobilitytable), self.special) / 3
+        mobilityW = torch.matmul(torch.matmul(x[:, starts[2]:starts[3]].reshape(x.shape[0],self.npieces,64), self.mobilitytable), self.piecemobility) / 3
+        mobilityB = torch.matmul(torch.matmul(x[:, starts[3]:starts[4]].reshape(x.shape[0],self.npieces,64), self.mobilitytable), self.piecemobility) / 3
 
-        statics = mobilityEg + torch.matmul(x[:,starts[1]:starts[2]], self.static_terms)
-        dynamics = mobilityMg + torch.matmul(x[:,starts[4]:starts[5]], self.dynamic_terms)
+        score = mobilityW - mobilityB + torch.matmul(x[:,starts[1]:starts[2]], self.static_terms)
         
-        dynamics_weight = torch.clamp(torch.matmul(x[:,starts[0]:starts[1]], self.phase), min=0.00001) #phase
-
-        score = statics + dynamics * dynamics_weight
+        dangerB = torch.matmul(x[:,starts[4]:starts[5]], self.dynamic_terms) * torch.clamp(torch.matmul(x[:,starts[0]:starts[1]], self.phase), min=0.00001)
+        dangerW = torch.matmul(x[:,starts[5]:starts[6]], self.dynamic_terms) * torch.clamp(torch.matmul(x[:,starts[0]:starts[1]], self.phase), min=0.00001)
         
-        pawnscalar = torch.sign(torch.clamp(score, min=0)) * torch.matmul(x[:,starts[6]:starts[7]], self.risk) + torch.sign(torch.clamp(-(score), min=0)) * torch.matmul(x[:,starts[5]:starts[6]], self.risk)
-        drawishness_weight = torch.clamp(pawnscalar, min=0)
+        pawnscalar = torch.sign(torch.clamp(score, min=0)) * torch.matmul(x[:,starts[7]:starts[8]], self.risk) + torch.sign(torch.clamp(-(score), min=0)) * torch.matmul(x[:,starts[6]:starts[7]], self.risk)
 
-        finalscore = score / (1 + dynamics_weight + drawishness_weight)
+        Pw = torch.sigmoid(dangerB * phase + self.intercept)
+        Pb = torch.sigmoid(dangerW * phase + self.intercept)
+        Pdraw = torch.clamp(pawnscalar, min=0)
 
-        return torch.tanh(finalscore) 
+        return torch.tanh(score) * torch.clamp(Pw + Pb + Pdraw, max=1) + Pw - Pb
 
     def printfinal(self, finalEpoch=False):
         #print((self.risk.detach().numpy()))
@@ -527,12 +526,10 @@ class HCE(torch.nn.Module):
 
         print("\nLinear static terms")
         printparams(self.static_terms, sizes[1])
-        print("Linear dynamic terms")
-        printparams(self.dynamic_terms, sizes[4])
         print("\nMobility weights")
         printparams(self.piecemobility, sizes[2])
-        print("EGMob Weights")
-        printparams(self.special, sizes[3])
+
+        # TODO: print out for dynamic weights when we figure out how to scale them in a meaningful
 
         print("\nRisk weights")
         print(np.around((self.risk.detach().numpy()) * 1000).astype(np.int32))
@@ -540,9 +537,13 @@ class HCE(torch.nn.Module):
         print("\nPhase weights")
         print(np.around((self.phase.detach().numpy()) * 1000).astype(np.int32))
 
-        
         print("\nBoard Weights")
         print(np.around(self.mobilitytable.detach().numpy().reshape((8,8)) * 1000).astype(np.int32) * mobilitysign)
+
+        print("\nDynamic Terms")
+        printparams(self.dynamic_terms, sizes[5])
+        print(self.intercept)
+        print(self.dynamic_terms)
 
         print("===")
         if finalEpoch:
@@ -592,17 +593,11 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # Piece Activity
 # King Safety
 
-# Trade pieces when you're up material limit counterplay, when down material play for attack/initiative
+# Trade pieces when you're up material limit counterplay, when down material play for attack/initiative, should scale accordingly
 # Don't trade off too many pawns (drawishness)
 # Spend more time in positions where there are multiple possible moves, i.e. decision nodes
-# Should be more or less linear/logistic regression, with easily interpretable values
+# Should have easily interpretable values
 # The evaluation should represent the practical chances of a position rather than the true value (especially for endgames)
-
-# Maybe for king safety we could have 1 term for pawn shield, 1 term for king position
-# Could have it take into account possible future castling positions
-# Could have it scan outwards for xrays
-# Could have it do a million things lets be honest
-# Could have it based around the pawn structure around the king, at the very least we want connected pawns
 
 # .2329
 # .2334 Pawn connected shield
@@ -617,3 +612,13 @@ for epoch in range(epochs):  # Adjust the number of epochs
 # .2273 re-add base mobility
 # mg only basemob: .2275 eg only basemob: .2277
 # undo basemob candidate file vs candidate rank
+
+# I want new scaling probabilities Pw and Pb representing roughly the odds that the games material will drastically shift/mate will occur due to king attack
+# The idea is that 1-Pw-Pb should roughly be the scaling factor for all other terms
+# In general we want a value that scales with some curve, that downscales classical terms when it is high
+# Doesn't necessarily have to follow a probabilistic model of any sort, but its helpful if there is some kind of interpretation
+# Problem is probebalistic model is were modeling for each side so its hard to make them add to 1 nicely
+#   - Could just cap each at 0.5
+#   - Could take the higher value and fraction between them
+#   - Could cope?
+# Need something that results with an output on a numberline not a probability lol
