@@ -25,36 +25,35 @@ func BOOL(b bool) int { // golang for reasons unknown to me has no native way to
 	return 0
 }
 
-var e_material = []int{0, 112, 482, 542, 806, 1671, 0, }
+var e_material = []int{0, 89, 378, 414, 662, 1340, 0, }
 var e_tempo = 15
-var e_passerRank = []int{0, 4, -3, 9, 48, 138, 243, 0, }
-var e_phalanx = []int{8, 24, } //D
-var e_chain = []int{13, 35, } //D
+var e_passerRank = []int{0, 3, 1, 17, 47, 132, 213, 0, }
+var e_phalanx = []int{6, 13, }
 
-var e_egKingFile = []int{0, -86, -37, -16, 0, -16, 2, -35, -74, 0, } //B
-var e_egKingRank = []int{-20, 53, 78, 72, 74, 67, 47, 0, } //B
+var e_egKingFile = []int{0, -54, -25, -9, 0, -10, -4, -40, -58, 0, } //B
+var e_egKingRank = []int{14, 47, 59, 59, 64, 51, 31, 0, } //B
 
-var e_mobility = []int{0, 68, 38, 23, 27, 13, 0, }
+var e_mobility = []int{0, 51, 41, 34, 27, 15, -24, }
 
-var e_altmaterial = []int{0, -50, 0, 0, 0, 0, 0, }
-var e_shield = []int{0, 160, 116, 63, 34, 43, 22, 81, 46, 0, } //A
-var e_shieldbase = []int{0, -55, 62, 43, 24, 17, 65, 56, 17, 0, } //A
-var e_mgKingFile = []int{0, 152, 32, 58, 0, 133, 51, 162, 253, 0, } //B
-var e_mgKingRank = []int{199, 87, 53, -83, -160, -167, -94, 0, } //B
-var e_pawnattacked = 95
+var e_altmaterial = []int{0, -44, 0, 0, 0, 0, 0, }
+var e_shield = []int{0, 103, 101, 30, 23, 20, 12, 48, 25, 0, } //A
+var e_shieldbase = []int{0, -34, 25, 18, 13, 16, 28, 47, 2, 0, } //A
+var e_mgKingFile = []int{0, 17, 23, 40, 0, 73, 33, 113, 134, 0, } //B
+var e_mgKingRank = []int{135, 102, 165, 24, -95, -85, -52, 0, } //B
+var e_pawnattacked = 100
 
-var e_risk = []int{4157, 1680,  825,  570,  419,  230,    0,  -36,  -31,} 
-var phaseWeights = [14]int{0, -13,  20,  40,  70, 166,  51, } //F 3 LOC
+var e_risk = []int{3269,  956,  376,   -5,  -31,    0,    0,    0,   -9,} 
+var phaseWeights = [14]int{0,  -1,   9,  35,  51, 168,  31, } //F 3 LOC
 
 var e_table = [64]int { // 20+ LOC
--119, -461,  -60,  158,  429,  412, 1397, 1163,
- 204,  370,  611,  272,  442,  300,  680,  602,
- 459,  544,  484,  272,  477,  671,  522,  380,
- 408,  570,  250,  495,  477,  403,  327,  384,
- 291,  236,  300,  505,  392,  343,  216,  163,
- -62,  194,  167,  184,  252,  289,  422,   64,
-   4,  200,  398,  265,  188,  451,  330,   86,
- 162,  213,  321,   80,  275,  593,   71,  131,}
+ 363, -657,  416,  506,  792,  900, 1068, 2194,
+ 225,  471,  802,  629, 1083,  881, 1855, 1154,
+ 556,  861,  893,  457, 1872, 1950, 2226,  772,
+ 725,  698,  478, 1054, 1031, 1068,  832, 1162,
+ 606,  347,  816, 1129, 1278,  785,  381,  452,
+ -92,  448,  669,  717,  715,  697,  794,   93,
+-258,  336,  595,  544,  485,  813,  599, -141,
+  57,  306,  521,  418,  610,  813,  330, -742,}
 
 var weight_table = [2][4][120]int{}
 
@@ -158,13 +157,8 @@ var patterns = [7][]int{
 	{N, S, E, W, N + W, N + E, S + W, S + E},
 }
 
-func (board *Board) PawnDefends(sq int, attacker int8) bool {
-	for _, dir := range []int{W - ADVANCES[attacker], E - ADVANCES[attacker]} {
-		if (board.squares[sq + dir] == 2 + attacker) {
-			return true
-		}
-	}
-	return false
+func (board *Board) PawnDefends(sq int, attacker int8) int {
+	return BOOL(board.squares[sq + W - ADVANCES[attacker]] == 2 + attacker) + BOOL(board.squares[sq + E - ADVANCES[attacker]] == 2 + attacker)
 }
 
 func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
@@ -217,7 +211,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 					victim := board.squares[end]
 
 					if victim == 0 || (victim > 1 && victim&1 != piece&1) {
-						if !board.PawnDefends(end, 1-board.sidetomove) {
+						if board.PawnDefends(end, 1-board.sidetomove) == 0 {
 							mobValue += attention[end]
 						}
 
@@ -256,7 +250,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 	}
 
 	board.mobilities[board.sidetomove] = dynamicMobility / e_divider
-	score, dynamic_score, dynamics_weight := board.mobilities[1] - board.mobilities[0],board.mobilities[1] - board.mobilities[0],0
+	score, dynamic_score, dynamics_weight := 0,board.mobilities[1] - board.mobilities[0],0
 	dynamic_score += (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 1)) - (e_contempt * BOOL((board.ply - int(board.sidetomove)) % 2 == 0))  
 
 
@@ -311,16 +305,14 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 				whitepasser[pfile] = max(whitepasser[pfile], 7-prank)
 			}
 
-			score += e_phalanx[semiopen] * BOOL(piece == board.squares[sq+W] || piece == board.squares[sq+E])
-			score += e_chain[semiopen] * BOOL(board.PawnDefends(int(sq), 1))
+			score += e_phalanx[semiopen] * (BOOL(piece == board.squares[sq+W]) + BOOL(piece == board.squares[sq+E]) + 2 * board.PawnDefends(int(sq), 1))
 		} else {
 			semiopen := BOOL(whiterear[pfile] == 0)
 			if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
 				blackpasser[pfile] = max(blackpasser[pfile], prank)
 			}
 
-			score -= e_phalanx[semiopen] * BOOL(piece == board.squares[sq+W] || piece == board.squares[sq+E])
-			score -= e_chain[semiopen] * BOOL(board.PawnDefends(int(sq), 0))
+			score -= e_phalanx[semiopen] * (BOOL(piece == board.squares[sq+W]) + BOOL(piece == board.squares[sq+E]) + 2 * board.PawnDefends(int(sq), 0))
 		}
 	}
 
@@ -347,7 +339,7 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 }
 
 func (board *Board) attacked(start int, attacker int8) bool {
-	if board.PawnDefends(start, attacker) {
+	if board.PawnDefends(start, attacker) > 0 {
 		return true
 	}
 

@@ -281,6 +281,7 @@ for line in tqdm(lines):
                     break
 
                 if virtualboard[current] != 0:
+                    break # TODO: remove
                     if virtualboard[current] <= 3:
                         break
 
@@ -406,7 +407,7 @@ for line in tqdm(lines):
         # Weighting
         [material[1] + material[0],],
         # Statics
-        [material[1] - material[0], pushers, phalanx, sidetomove, kingFile, kingRank, bishoppair, baseMob[1]-baseMob[0]],
+        [material[1] - material[0], pushers, phalanx, sidetomove, kingFile, kingRank ],#bishoppair,
         # Dynamics
 	    [mobtable[1].flatten()-mobtable[0].flatten(), ],
         [othertable[1].flatten()-othertable[0].flatten(), ],
