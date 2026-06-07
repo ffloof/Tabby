@@ -145,7 +145,7 @@ func (board *Board) Edit(index int, newpiece int8) {
 	board.pieceCount[oldpiece] -= 1
 	board.pieceCount[newpiece] += 1
 	board.squares[index] = newpiece
-}
+}  
 
 var patterns = [7][]int{
 	{},
@@ -300,42 +300,34 @@ func (board *Board) Generate(capturesOnly bool) ([]Move, int) {
 		prank := int(sq) / 10 - 2
 
 		if piece & 1 == 1 {
-			semiopen := BOOL(blackrear[pfile] == 7) // TODO: can probably inline semi open
 			if blackrear[pfile - 1] >= prank && blackrear[pfile] >= prank && blackrear[pfile + 1] >= prank {
 				whitepasser[pfile] = max(whitepasser[pfile], 7-prank)
 			}
 
-			score += e_phalanx[semiopen] * (BOOL(piece == board.squares[sq+W]) + BOOL(piece == board.squares[sq+E]) + 2 * board.PawnDefends(int(sq), 1))
+			score += e_phalanx[BOOL(blackrear[pfile] == 7)] * (BOOL(piece == board.squares[sq+W]) + BOOL(piece == board.squares[sq+E]) + 2 * board.PawnDefends(int(sq), 1))
 		} else {
-			semiopen := BOOL(whiterear[pfile] == 0)
 			if whiterear[pfile - 1] <= prank && whiterear[pfile] <= prank && whiterear[pfile + 1] <= prank {
 				blackpasser[pfile] = max(blackpasser[pfile], prank)
 			}
 
-			score -= e_phalanx[semiopen] * (BOOL(piece == board.squares[sq+W]) + BOOL(piece == board.squares[sq+E]) + 2 * board.PawnDefends(int(sq), 0))
+			score -= e_phalanx[BOOL(whiterear[pfile] == 0)] * (BOOL(piece == board.squares[sq+W]) + BOOL(piece == board.squares[sq+E]) + 2 * board.PawnDefends(int(sq), 0))
 		}
 	}
 
 	// Passer evaluation
 	for file := range 10 {
-		if whitepasser[file] != 0 { // TODO: we can abuse BOOL here
-			score += e_passerRank[whitepasser[file]]
-		}
-		if blackpasser[file] != 0 {
-			score -= e_passerRank[blackpasser[file]]
-		}
+		score += e_passerRank[whitepasser[file]] * BOOL(whitepasser[file] != 0)
+		score -= e_passerRank[blackpasser[file]] * BOOL(blackpasser[file] != 0)
 	}
 
 	final_score := score + (dynamic_score * max(0,dynamics_weight)) / e_divider
 
-	leadingpawns := board.pieceCount[2 + BOOL(final_score >= 0)] // TODO: inline this
-
-	drawishness_weight := e_risk[leadingpawns] // TODO: we can just inline this line lol
+	drawishness_weight := e_risk[board.pieceCount[2 + BOOL(final_score >= 0)]] // TODO: we can just inline this line lol
 	final_score = (final_score * e_divider) / (e_divider + dynamics_weight + drawishness_weight) 
 	if board.sidetomove == 0 {
 		final_score = -final_score
 	}
-	return moves, final_score + e_tempo // TODO: maybe we should properly address tempo in tuning
+	return moves, final_score + e_tempo
 }
 
 func (board *Board) attacked(start int, attacker int8) bool {
